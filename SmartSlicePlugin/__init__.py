@@ -7,7 +7,7 @@ i18n_catalog = i18nCatalog("smartslice")
 def getMetaData():
     return {
         "stage": {
-            "name": i18n_catalog.i18nc("@item:inmenu", "SmartSlice"),
+            "name": i18n_catalog.i18nc("@item:inmenu", "Smart Slice"),
             "weight": 15
         }
     }
