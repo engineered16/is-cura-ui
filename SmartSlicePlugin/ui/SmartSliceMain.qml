@@ -11,11 +11,11 @@ import Cura 1.0 as Cura
 
 Item
 {
-    id: prepareMain
+    id: smartSliceMain
 
     Cura.ActionPanelWidget
     {
-        id: actionPanelWidget
+        id: smartSliceWidget
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         anchors.rightMargin: UM.Theme.getSize("thick_margin").width
