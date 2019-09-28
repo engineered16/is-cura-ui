@@ -43,30 +43,12 @@ Item
             height: parent.height
             spacing: 0
 
-            Cura.MachineSelector
-            {
-                id: machineSelection
-                headerCornerSide: Cura.RoundedRectangle.Direction.Left
-                Layout.minimumWidth: UM.Theme.getSize("machine_selector_widget").width
-                Layout.maximumWidth: UM.Theme.getSize("machine_selector_widget").width
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-            }
-
-            // Separator line
-            Rectangle
-            {
-                height: parent.height
-                width: UM.Theme.getSize("default_lining").width
-                color: UM.Theme.getColor("lining")
-            }
-
             Cura.ConfigurationMenu
             {
                 id: printerSetup
                 Layout.fillHeight: true
                 Layout.fillWidth: true
-                Layout.preferredWidth: itemRow.width - machineSelection.width - printSetupSelectorItem.width - 2 * UM.Theme.getSize("default_lining").width
+                Layout.preferredWidth: itemRow.width - printSetupSelectorItem.width - 2 * UM.Theme.getSize("default_lining").width
             }
 
             // Separator line
