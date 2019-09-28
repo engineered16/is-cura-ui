@@ -13,21 +13,35 @@ from cura.Scene.BuildPlateDecorator import BuildPlateDecorator
 class SmartSliceStage(CuraStage):
     def __init__(self, parent=None):
         super().__init__(parent)
+
         Application.getInstance().engineCreatedSignal.connect(self._engineCreated)
 
-        self._is_buildvolume_hidden = None
+        self._was_buildvolume_hidden = None
+        self._was_presliced = None
 
     def onStageSelected(self):
         buildvolume = Application.getInstance().getBuildVolume()
         if buildvolume.isVisible():
             buildvolume.setVisible(False)
-            self._is_buildvolume_hidden = True
+            self._was_buildvolume_hidden = True
+            
+        print_information = Application.getInstance().getPrintInformation()
+        if not print_information.preSliced:
+            print_information.setPreSliced(True)
+            self._was_presliced = False
+        
 
     def onStageDeselected(self):
-        buildvolume = Application.getInstance().getBuildVolume()
-        if self._is_buildvolume_hidden:
+        if self._was_buildvolume_hidden:
+            buildvolume = Application.getInstance().getBuildVolume()
             buildvolume.setVisible(True)
-            self._is_buildvolume_hidden = False
+            self._is_buildvolume_hidden = None
+            
+        if not self._was_presliced:
+            print_information = Application.getInstance().getPrintInformation()
+            if print_information.preSliced:
+                print_information.setPreSliced(False)
+            self._was_presliced = True
 
     def _engineCreated(self):
 
