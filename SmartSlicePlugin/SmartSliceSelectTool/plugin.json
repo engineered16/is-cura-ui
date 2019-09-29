@@ -1,0 +1,8 @@
+{
+    "name": "Smart Slice SelectTool",
+    "author": "Teton Simulation, Inc.",
+    "version": "0.0.1",
+    "description": "Optimizes your model and slicing properties based on given boudary conditions set by the user.",
+    "api": "6.0",
+    "i18n-catalog": "cura"
+}

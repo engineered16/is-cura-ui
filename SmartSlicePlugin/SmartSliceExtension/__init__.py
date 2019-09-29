@@ -1,4 +1,4 @@
-from . import SmartSlicePlugin
+from . import SmartSliceExtension
 
 from UM.i18n import i18nCatalog
 i18n_catalog = i18nCatalog("smartslice")
@@ -15,5 +15,5 @@ def getMetaData():
 
 def register(app):
     return {
-        "stage": SmartSlicePlugin.SmartSliceStage()
+        "extension": SmartSliceExtension.SmartSliceExtension()
     }

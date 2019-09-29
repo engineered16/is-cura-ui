@@ -14,7 +14,7 @@ Item
     UM.I18nCatalog
     {
         id: catalog
-        name: "cura"
+        name: "smartslice"
     }
 
     anchors
