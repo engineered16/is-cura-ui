@@ -20,16 +20,16 @@ Item
         anchors.bottomMargin: UM.Theme.getSize("thick_margin").height
     }
 
-/*
-    Cura.Toolbar
-    {
-        id: smartSliceToolbar
-        
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.left: parent.left
-        
-        model: SmartSlice.ToolModel
+    Image {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.leftMargin: UM.Theme.getSize("thick_margin").width
+        anchors.bottomMargin: UM.Theme.getSize("thick_margin").height
+
+        width: 250
+        fillMode: Image.PreserveAspectFit
+        source: "../images/horizontal.png"
+        mipmap: true
     }
-*/
 }
 
