@@ -1,6 +1,6 @@
 # Intelligent Slice Plugin (USER INTERFACE)
 
-**VERSION: 19.0.2.0**
+**VERSION: 19.0.3.0**
 
 This repository contains the **USER INTERFACE** to be used with the Intelligent Slice Plugin.  
 This plugin provides an interface within Ultimaker Cura so that Teton Simulation's proprietary
