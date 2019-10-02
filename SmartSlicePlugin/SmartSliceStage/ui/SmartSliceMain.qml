@@ -7,9 +7,9 @@ import UM 1.2 as UM
 import Cura 1.0 as Cura
 import SmartSlice 1.0 as SmartSlice
 
-Item
-{
+Item {
     id: smartSliceMain
+
 
     Image {
         id: tetonBranding 
@@ -31,6 +31,34 @@ Item
         anchors.bottom: parent.bottom
         anchors.rightMargin: UM.Theme.getSize("thick_margin").width
         anchors.bottomMargin: UM.Theme.getSize("thick_margin").height
+    }
+
+    /*
+        Smart Slice Main Widget Window
+    */
+    Rectangle {
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.rightMargin: UM.Theme.getSize("thick_margin").width
+        anchors.bottomMargin: UM.Theme.getSize("thick_margin").height
+        opacity: .6
+        color: "#cccccc"
+        width: 200 
+        height: 75
+    }
+
+    /*
+        Smart Slice Validation/Requirements Window
+    */
+    Rectangle {
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.rightMargin: UM.Theme.getSize("thick_margin").width
+        anchors.bottomMargin: 2*UM.Theme.getSize("thick_margin").height+75
+        opacity: .6
+        color: "#cccccc"
+        width: 200 
+        height: 300
     }
 
     
