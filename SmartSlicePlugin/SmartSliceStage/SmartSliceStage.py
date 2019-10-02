@@ -144,14 +144,19 @@ class SmartSliceStage(CuraStage):
         """
         
         base_path = PluginRegistry.getInstance().getPluginPath("SmartSliceStage")
-        
+
         # Slicing windows in lower right corner
         component_path = os.path.join(base_path, "ui", "SmartSliceMain.qml")
         self.addDisplayComponent("main", component_path)
         
+        # Left center toolbar
+        component_path = os.path.join(base_path, "ui", "SmartSliceSidebar.qml")
+        self.addDisplayComponent("sidebar", component_path)
+        
         # Top menu bar of stage
         component_path = os.path.join(base_path, "ui", "SmartSliceMenu.qml")
         self.addDisplayComponent("menu", component_path)
+
         
         # Setting state after all plugins are loaded
         self._was_buildvolume_hidden = not Application.getInstance().getBuildVolume().isVisible()

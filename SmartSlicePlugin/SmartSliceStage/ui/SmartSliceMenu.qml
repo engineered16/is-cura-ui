@@ -7,18 +7,15 @@ import Cura 1.1 as Cura
 
 import QtGraphicalEffects 1.0 // For the dropshadow
 
-Item
-{
+Item {
     id: smartSliceMenu
 
-    UM.I18nCatalog
-    {
+    UM.I18nCatalog {
         id: catalog
         name: "smartslice"
     }
 
-    anchors
-    {
+    anchors {
         left: parent.left
         right: parent.right
         leftMargin: UM.Theme.getSize("wide_margin").width
@@ -43,8 +40,7 @@ Item
             height: parent.height
             spacing: 0
 
-            Cura.ConfigurationMenu
-            {
+            Cura.ConfigurationMenu {
                 id: printerSetup
                 Layout.fillHeight: true
                 Layout.fillWidth: true
@@ -52,8 +48,7 @@ Item
             }
 
             // Separator line
-            Rectangle
-            {
+            Rectangle {
                 height: parent.height
                 width: UM.Theme.getSize("default_lining").width
                 color: UM.Theme.getColor("lining")
