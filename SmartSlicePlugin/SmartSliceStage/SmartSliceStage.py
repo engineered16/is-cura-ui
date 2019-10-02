@@ -88,6 +88,9 @@ class SmartSliceStage(CuraStage):
 
     @property
     def our_toolset(self):
+        """
+        Generates a dictionary of tool id and instance from our id list in __init__.
+        """
         plugin_registry = Application.getInstance()._plugin_registry
         our_toolset_with_objects = {}
         for tool in self._our_toolset:
@@ -96,9 +99,18 @@ class SmartSliceStage(CuraStage):
 
     @property
     def our_first_tool(self):
+        """
+        Takes the first tool if out of our tool dictionary.
+        Defining a dict here is the way Cura's controller works.
+        """
         return list(self.our_toolset.keys())[0]
 
     def _engineCreated(self):
+        """
+        Executed when the Qt/QML engine is up and running.
+        This is at the time when all plugins are loaded, slots registered and basic signals connected.
+        """
+        
         base_path = PluginRegistry.getInstance().getPluginPath("SmartSliceStage")
         
         # Slicing windows in lower right corner
