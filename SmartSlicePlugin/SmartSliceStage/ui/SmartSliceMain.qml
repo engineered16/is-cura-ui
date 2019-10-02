@@ -11,16 +11,8 @@ Item
 {
     id: smartSliceMain
 
-    Cura.ActionPanelWidget
-    {
-        id: smartSliceWidget
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        anchors.rightMargin: UM.Theme.getSize("thick_margin").width
-        anchors.bottomMargin: UM.Theme.getSize("thick_margin").height
-    }
-
     Image {
+        id: tetonBranding 
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.leftMargin: UM.Theme.getSize("thick_margin").width
@@ -31,5 +23,16 @@ Item
         source: "../images/horizontal.png"
         mipmap: true
     }
+
+    Cura.ActionPanelWidget
+    {
+        id: smartSliceWidget
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.rightMargin: UM.Theme.getSize("thick_margin").width
+        anchors.bottomMargin: UM.Theme.getSize("thick_margin").height
+    }
+
+    
 }
 
