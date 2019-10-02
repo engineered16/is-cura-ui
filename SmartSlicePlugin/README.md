@@ -8,7 +8,7 @@
 *  **SmartSliceJobs:**  AWS Job Integration
 
 
-####  Load Order
+####  Sub-Plugin Load Order
 
 * *SmartSliceExtension* calls initialization (Staging) operations within *SmartSliceStage*
 * *SmartSliceStage* calls initialization operations for each plugin-specific tool in following order
