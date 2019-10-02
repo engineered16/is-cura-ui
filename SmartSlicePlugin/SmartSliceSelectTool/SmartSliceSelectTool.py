@@ -98,9 +98,28 @@ class SmartSliceSelectTool(Tool):
                                                                                                           Selection.getFaceSelectMode()
                                                                                                           )
                                                      )
+            return True
 
     def _onSelectedFaceChanged(self):
         self.selected_face = Selection.getSelectedFace()
+        if self.selected_face:
+            scene_node, face_id = self.selected_face
+            mesh_data =scene_node.getMeshData()
+            print(dir(scene_node.getMeshData()))
+            
+            if not mesh_data._indices or len(mesh_data._indices) == 0:
+                base_index = face_id * 3
+                v_a = mesh_data._vertices[base_index]
+                v_b = mesh_data._vertices[base_index + 1]
+                v_c = mesh_data._vertices[base_index + 2]
+            else:
+                v_a = mesh_data._vertices[mesh_data._indices[face_id][0]]
+                v_b = mesh_data._vertices[mesh_data._indices[face_id][1]]
+                v_c = mesh_data._vertices[mesh_data._indices[face_id][2]]
+            
+            print("v_a", v_a)
+            print("v_b", v_b)
+            print("v_c", v_c)
 
     def _onActiveStateChanged(self):
         active_tool = Application.getInstance().getController().getActiveTool()
