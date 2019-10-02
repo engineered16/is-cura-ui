@@ -40,28 +40,32 @@ class SmartSliceSelectTool(Tool):
         Selection.selectedFaceChanged.connect(self._onSelectedFaceChanged)
         self.selected_face = None
 
+        self._controller.activeToolChanged.connect(self._onActiveStateChanged)
+
+
     ##  Handle mouse and keyboard events
     #
     #   \param event type(Event)
     def event(self, event):
         super().event(event)
 
+        """
         if event.type == Event.KeyPressEvent and event.key == KeyEvent.ShiftKey:
             Logger.log("d", "Enabling faceSelectMode!")
-            Selection.setFaceSelectMode(True)
+            #Selection.setFaceSelectMode(True)
 
         if event.type == Event.KeyReleaseEvent and event.key == KeyEvent.ShiftKey:
             Logger.log("d", "Disabling faceSelectMode!")
-            Selection.setFaceSelectMode(False)
-
-        if event.type == Event.MousePressEvent and self._controller.getToolsEnabled():
-            # Start a rotate operation
+            #Selection.setFaceSelectMode(False)
+        """
+        
+        if event.type == Event.MousePressEvent:
             if MouseEvent.LeftButton not in event.buttons:
                 return False
 
-            id = self._selection_pass.getIdAtPosition(event.x, event.y)
-            if not id:
-                return False
+            #id = self._selection_pass.getIdAtPosition(event.x, event.y)
+            #if not id:
+            #    return False
 
             """
             if self._handle.isAxis(id):
@@ -73,13 +77,17 @@ class SmartSliceSelectTool(Tool):
             handle_position = self._handle.getWorldPosition()
             """
 
-            # Save the current positions of the node, as we want to rotate around their current centres
-            self._saved_node_positions = []
-            for node in self._getSelectedObjectsWithoutSelectedAncestors():
-                self._saved_node_positions.append((node, node.getPosition()))
+            """
+            if Selection.hasSelection() and not Selection.getFaceSelectMode():
+                Selection.setFaceSelectMode(True)
+                Logger.log("d", "Enabled faceSelectMode!")
+            elif not Selection.getSelectedFace() and Selection.getFaceSelectMode():
+                Selection.setFaceSelectMode(False)
+                Logger.log("d", "Disabled faceSelectMode!")
+            """
 
-            self.setDragStart(event.x, event.y)
-            self._rotating = False
+            Logger.log("d", "Selection.getSelectedFace(): {}".format(Selection.getSelectedFace()))
+
             return True
 
         if event.type == Event.MouseReleaseEvent:
@@ -90,22 +98,39 @@ class SmartSliceSelectTool(Tool):
                                                                                                           Selection.getFaceSelectMode()
                                                                                                           )
                                                      )
+            return True
+
     def _onSelectedFaceChanged(self):
-        # Keeping tool handle disabled for now
-        #self._handle.setEnabled(not Selection.getFaceSelectMode())
+        self.selected_face = Selection.getSelectedFace()
+        if self.selected_face:
+            scene_node, face_id = self.selected_face
+            mesh_data =scene_node.getMeshData()
+            print(dir(scene_node.getMeshData()))
+            
+            if not mesh_data._indices or len(mesh_data._indices) == 0:
+                base_index = face_id * 3
+                v_a = mesh_data._vertices[base_index]
+                v_b = mesh_data._vertices[base_index + 1]
+                v_c = mesh_data._vertices[base_index + 2]
+            else:
+                v_a = mesh_data._vertices[mesh_data._indices[face_id][0]]
+                v_b = mesh_data._vertices[mesh_data._indices[face_id][1]]
+                v_c = mesh_data._vertices[mesh_data._indices[face_id][2]]
+            
+            print("v_a", v_a)
+            print("v_b", v_b)
+            print("v_c", v_c)
 
-        if Selection.getFaceSelectMode() and Selection.hasSelection():
-            self.selected_face = Selection.getSelectedFace()
+    def _onActiveStateChanged(self):
+        active_tool = Application.getInstance().getController().getActiveTool()
+        Logger.log("d", "Application.getInstance().getController().getActiveTool(): {}".format(Application.getInstance().getController().getActiveTool()))
+
+        if active_tool == self and Selection.hasSelection():
+            Selection.setFaceSelectMode(True)
+            Logger.log("d", "Enabled faceSelectMode!")
         else:
-            self.selected_face = None
-
-        Logger.log("d", "getFaceSelectMode: {}".format(Selection.getFaceSelectMode()))
-        Logger.log("d", "getHoverFace: {}".format(Selection.getHoverFace()))
-        if not self.selected_face:
-            # Just an early exit for some code below...
-            return
-
-
+            Selection.setFaceSelectMode(False)
+            Logger.log("d", "Disabled faceSelectMode!")
 
     ##  Get whether the select face feature is supported.
     #   \return True if it is supported, or False otherwise.
