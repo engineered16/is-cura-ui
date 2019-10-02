@@ -17,7 +17,7 @@ from UM.View.GL.OpenGL import OpenGL
 from .SmartSliceSelectHandle import SmartSliceSelectHandle
 
 from UM.i18n import i18nCatalog
-i18n_catalog = i18nCatalog("uranium")
+i18n_catalog = i18nCatalog("smartslice")
 
 
 ##  Provides the tool to rotate meshes and groups
