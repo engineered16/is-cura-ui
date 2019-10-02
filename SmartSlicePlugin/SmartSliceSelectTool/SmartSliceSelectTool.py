@@ -28,7 +28,7 @@ class SmartSliceSelectTool(Tool):
         super().__init__()
         #self._handle = SmartSliceSelectHandle()
 
-        self._shortcut_key = Qt.Key_R
+        self._shortcut_key = Qt.Key_S
 
         self._progress_message = None
         self._iterations = 0
