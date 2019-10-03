@@ -146,14 +146,25 @@ Item {
         id: dialogConstraints
         anchors.bottom: parent.verticalCenter
         anchors.left: parent.right
+        anchors.leftMargin: 25
         height: 175
         width: 125
         radius: 5
 
-        opacity: .7
-        color: "#cccccc"
+        border.width: 1
+        border.color: "#cccccc"
 
         visible: false
+
+        Text {
+          text: "Structural"
+          anchors.top: parent.top
+          anchors.topMargin: 8
+          anchors.left: parent.left
+          anchors.leftMargin: 8
+          font.bold: true
+          font.pixelSize: 18
+        }
       }
       
       //  Constraints Hover Field
@@ -186,12 +197,13 @@ Item {
         id: dialogRequirements
         anchors.bottom: parent.verticalCenter
         anchors.left: parent.right
-        height: 175
-        width: 125
+        anchors.leftMargin: 25
+        height: 125
+        width: 175
         radius: 5
 
-        opacity: .7
-        color: "#cccccc"
+        border.width: 1
+        border.color: "#cccccc"
 
         visible: false
       }
