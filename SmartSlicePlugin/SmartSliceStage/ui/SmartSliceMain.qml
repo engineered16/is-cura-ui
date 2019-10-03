@@ -147,7 +147,7 @@ Item {
         anchors.bottom: parent.verticalCenter
         anchors.left: parent.right
         anchors.leftMargin: 25
-        height: 175
+        height: 100
         width: 125
         radius: 5
 
@@ -155,24 +155,87 @@ Item {
         border.color: "#cccccc"
 
         visible: false
+        property bool inFocus: false
 
+        //  Header Text
         Text {
           text: "Structural"
           anchors.top: parent.top
-          anchors.topMargin: 8
+          anchors.topMargin: 4
           anchors.left: parent.left
-          anchors.leftMargin: 8
+          anchors.leftMargin: 10
+          font.bold: true
+          font.pixelSize: 22
+        }
+
+        //  Seperator
+        Rectangle { anchors.right: parent.right; anchors.top: parent.top; anchors.topMargin: 27; height: 2; width: 100; color: "#cccccc" }
+        
+        //  Subheader Text
+        Text {
+          text: "Mounting"
+          anchors.top: parent.top
+          anchors.topMargin: 30
+          anchors.left: parent.left
+          anchors.leftMargin: 15
           font.bold: true
           font.pixelSize: 18
         }
+
+        //  "Anchors" Text
+        Text {
+          text: "Anchors"
+          anchors.top: parent.top
+          anchors.topMargin: 52
+          anchors.left: parent.left
+          anchors.leftMargin: 35
+          font.pixelSize: 18
+        } 
+
+        //  Anchors Collapse Arrow
+        Image {
+          anchors.top: parent.top
+          anchors.topMargin: 52
+          anchors.left: parent.left
+          anchors.leftMargin: 15
+
+          width: 12
+          fillMode: Image.PreserveAspectFit
+          source: "../images/collapse.png"
+        }
+
+        //  "Loads" Text
+        Text {
+          text: "Loads"
+          anchors.top: parent.top
+          anchors.topMargin: 70
+          anchors.left: parent.left
+          anchors.leftMargin: 35
+          font.pixelSize: 18
+        }        
+        
+
+        //  Anchors Collapse Arrow
+        Image {
+          anchors.top: parent.top
+          anchors.topMargin: 70
+          anchors.left: parent.left
+          anchors.leftMargin: 15
+
+          width: 12
+          fillMode: Image.PreserveAspectFit
+          source: "../images/collapse.png"
+        }
+
       }
       
       //  Constraints Hover Field
       MouseArea {
         anchors.fill: parent
         hoverEnabled: true         //this line will enable mouseArea.containsMouse
+        onClicked: { if (dialogConstraints.inFocus) {dialogConstraints.inFocus = false} else {dialogConstraints.inFocus = true} }
         onEntered: { dialogConstraints.visible = true }
-        onExited:  { dialogConstraints.visible = false }
+        onExited:  { if (dialogConstraints.inFocus == true) {} else {dialogConstraints.visible = false } }
       }
       
     }
