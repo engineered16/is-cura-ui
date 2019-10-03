@@ -1,7 +1,7 @@
 {
     "name": "Smart Slice extension",
     "author": "Teton Simulation, Inc.",
-    "version": "19.0.3.0",
+    "version": "19.0.4.0",
     "description": "Optimizes your model and slicing properties based on given boudary conditions set by the user.",
     "api": "6.0",
     "i18n-catalog": "smartslice"

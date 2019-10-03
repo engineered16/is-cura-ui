@@ -1,6 +1,6 @@
 # Intelligent Slice Plugin (USER INTERFACE)
 
-**VERSION: 19.0.3.0**
+**VERSION: 19.0.4.0**
 
 This repository contains the **USER INTERFACE** to be used with the Intelligent Slice Plugin.  
 This plugin provides an interface within Ultimaker Cura so that Teton Simulation's proprietary
@@ -15,6 +15,7 @@ smart slicing algorithms can be conveniently used by end-users without leaving t
         * [Windows](#windows)
 *   [Project Features](#project-features)
     * [Loads](#loads)
+    * [Anchors](#anchors)
 
 
 ## Getting Started 
@@ -71,4 +72,8 @@ Semantic versioning is employed with the following format:
 
 A load can be a Pushing or Pulling kinetic force.  Users apply these loads by selecting a surface, while in 'Smart Slice' mode,  and modifying the values on the new dialogue within the canvas.  Loads can be further refined by right-clicking a surface and selecting *edit load*.  The load is represented by an arrow pointing in the normal direction of the force.  
 
+
+####  Anchors
+
+An anchor is a boundary condition where a subcomponent **must** remain static.  If it is not physically possible to do so, because of loads or some other reason, the entire part is reported as invalid.
 
