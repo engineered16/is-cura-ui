@@ -42,6 +42,10 @@ import SmartSlice 1.0 as SmartSlice
 Item {
   id: smartSliceMain
 
+  //  Main Stage Accessible Properties
+  property int smartLoads : 0
+  property int smartAnchors : 0
+
   //  1.) Brand Logo
   Image {
     id: tetonBranding 
@@ -88,15 +92,23 @@ Item {
 
     Rectangle
     {
-      id: smartSliceButtonInactive
+      id: smartSliceButton
       anchors.fill: parent
       anchors.leftMargin: 10
       anchors.rightMargin: 10
       anchors.topMargin: 10
       anchors.bottomMargin: 10
 
-      
-      color: "#bbbbbb"
+      //  Becomes "Active" after at minimum, 1 load and 1 anchor has been set
+      property bool isActive: (smartSliceMain.smartLoads > 0 && smartSliceMain.smartAnchors > 0) ? true : false
+      property string grayInactive: "#c0c0c0"
+      property string grayActive: "#cccccc"
+      property string blueInactive: "#2222ff"
+      property string blueActive: "#3333ff"
+
+
+      color: (isActive) ? blueInactive : grayInactive
+
       width: 180
       height: 40
       radius: 5
@@ -108,14 +120,15 @@ Item {
         verticalAlignment: Text.AlignVCenter
         width: parent.width
         height: parent.height
-
-        MouseArea {
-          anchors.fill: parent
-          hoverEnabled: true         //this line will enable mouseArea.containsMouse
-          onEntered: { parent.parent.color = "#cccccc" }
-          onExited:  { parent.parent.color = "#c2c2c2"}
-        }
       }   
+      
+
+      MouseArea {
+        anchors.fill: parent
+        hoverEnabled: true         //this line will enable mouseArea.containsMouse
+        onEntered: { if (parent.isActive) {parent.color = parent.blueActive} else {parent.color = parent.grayActive} }
+        onExited:  { if (parent.isActive) {parent.color = parent.blueInactive} else {parent.color = parent.grayInactive} }
+      }
     }
   }
   
@@ -133,7 +146,7 @@ Item {
     border.color: "black"
 
     height: 100
-    width: 50
+    width: 51
 
 
     /*
@@ -146,9 +159,9 @@ Item {
     Rectangle {
       id: buttonConstraints
       anchors.left: parent.left
-      anchors.leftMargin: 2.5
+      anchors.leftMargin: 3
       anchors.top: parent.top
-      anchors.topMargin: 2.5
+      anchors.topMargin: 3
       height: 45
       width: 45
       color: (dialogConstraints.inFocus) ? "green" : "blue"
@@ -214,6 +227,24 @@ Item {
             anchors.left: parent.left
             anchors.leftMargin: 15
             font.pixelSize: 17
+
+            Rectangle
+            {
+              anchors.left: parent.right
+              anchors.leftMargin: 10
+
+              width: 15
+              height: 15
+              color: "red"
+                      
+              MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true         //this line will enable mouseArea.containsMouse
+                onClicked: { smartSliceMain.smartAnchors += 1 }
+                onEntered: { parent.color = "black" }
+                onExited:  { parent.color = "red" }
+              }
+            }
           }     
         } 
 
@@ -245,6 +276,24 @@ Item {
             anchors.left: parent.left
             anchors.leftMargin: 15
             font.pixelSize: 17
+
+            Rectangle
+            {
+              anchors.left: parent.right
+              anchors.leftMargin: 10
+
+              width: 15
+              height: 15
+              color: "red"
+                      
+              MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true         //this line will enable mouseArea.containsMouse
+                onClicked: { smartSliceMain.smartLoads += 1 }
+                onEntered: { parent.color = "black" }
+                onExited:  { parent.color = "red" }
+              }
+            }
           }       
         }        
 
@@ -294,9 +343,9 @@ Item {
     Rectangle {
       id: buttonRequirements
       anchors.left: parent.left
-      anchors.leftMargin: 2.5
+      anchors.leftMargin: 3
       anchors.bottom: parent.bottom
-      anchors.bottomMargin: 2.5
+      anchors.bottomMargin: 3
       height: 45
       width: 45
       color: (dialogRequirements.inFocus) ? "green" : "blue"
