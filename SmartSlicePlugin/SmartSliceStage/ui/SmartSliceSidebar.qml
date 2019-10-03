@@ -34,52 +34,6 @@ import SmartSlice 1.0 as SmartSlice
 Item {
   id: smartSliceSidebar
 
-  Rectangle {
-    id: smartSliceSidebarButtons
-    anchors.left: parent.left
-    anchors.top: parent.top
-    anchors.leftMargin: UM.Theme.getSize("thick_margin").width
-    anchors.topMargin: UM.Theme.getSize("thick_margin").height
-
-    border.width: 1
-    border.color: "black"
-
-    height: 100
-    width: 50
-
-
-    /*
-      Dialogue Layout (1-COLUMN GRID LAYOUT)
-    */
-
-    /*
-      Use Case Constraints Button
-    */
-    /*Rectangle {
-      id: buttonConstraints
-
-      anchors.left: parent.left
-      anchors.top: parent.top
-
-      height: 45
-      width: 45
-      color: "blue"
-    }
-
-    /*
-      Requirements Requirements Button
-    */
-    /*Rectangle {
-      id: buttonRequirements
-
-      anchors.left: parent.left
-      anchors.bottom: parent.bottom
-
-      height: 45
-      width: 45
-      color: "blue"
-    }*/
-    
-  }
+  
 }
 
