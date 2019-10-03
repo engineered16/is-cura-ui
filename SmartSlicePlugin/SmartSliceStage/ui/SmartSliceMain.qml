@@ -11,6 +11,19 @@
         *  Brand Logo (Bottom Middle)
         *  "Smart Slice" Button (Bottom Right)
         *  Toolbox Sidebar (Middle Left)
+
+
+    Table of Contents
+    =================
+    1.) Brand Logo
+    2.) Smart Slice Button Window
+    3.) Smart Slice Sidebar Widget 
+      3.a) Constraints 
+        3.a.1) Constraints Button
+        3.a.2) Constraints Dialog
+      3.b) Requirements
+        3.b.1) Requirements Button
+        3.b.2) Requirements Dialog
 */
 
 
@@ -29,7 +42,7 @@ import SmartSlice 1.0 as SmartSlice
 Item {
   id: smartSliceMain
 
-  //  Brand Logo
+  //  1.) Brand Logo
   Image {
     id: tetonBranding 
     anchors.horizontalCenter: parent.horizontalCenter
@@ -56,7 +69,7 @@ Item {
   }
 
   /*
-      Smart Slice Main Widget Window
+      2.) Smart Slice Button Window
   */
   Rectangle {
     id: smartSliceWindow //  TODO: Change to Widget when everything works
@@ -72,7 +85,7 @@ Item {
     height: 60
     radius: 5
 
-    /* INACTIVE Smart Slice Button */
+
     Rectangle
     {
       id: smartSliceButtonInactive
@@ -107,7 +120,7 @@ Item {
   }
   
   /*
-      Smart Slice Sidebar Widget 
+    3.) Smart Slice Sidebar Widget 
   */
   Rectangle {
     id: smartSliceSidebarButtons
@@ -124,11 +137,11 @@ Item {
 
 
     /*
-      Dialogue Layout (1-COLUMN GRID LAYOUT)
+      3.a) Constraints
     */
 
     /*
-      Use Case Constraints Button
+      3.a.1) Constraints Button
     */
     Rectangle {
       id: buttonConstraints
@@ -138,16 +151,18 @@ Item {
       anchors.topMargin: 2.5
       height: 45
       width: 45
-      color: "blue"
+      color: (dialogConstraints.inFocus) ? "green" : "blue"
 
-      //  Constraints Dialog
+      /*
+        3.a.2) Constraints Dialog
+      */
       Rectangle
       {
         id: dialogConstraints
-        anchors.bottom: parent.verticalCenter
+        anchors.verticalCenter: parent.verticalCenter
         anchors.left: parent.right
         anchors.leftMargin: 25
-        height: 100
+        height: 135
         width: 125
         radius: 5
 
@@ -190,12 +205,22 @@ Item {
           anchors.left: parent.left
           anchors.leftMargin: 35
           font.pixelSize: 18
+
+          
+          //  "Mount Text"
+          Text {
+            text: "Mount"
+            anchors.top: parent.bottom
+            anchors.left: parent.left
+            anchors.leftMargin: 15
+            font.pixelSize: 17
+          }     
         } 
 
         //  Anchors Collapse Arrow
         Image {
           anchors.top: parent.top
-          anchors.topMargin: 52
+          anchors.topMargin: 54
           anchors.left: parent.left
           anchors.leftMargin: 15
 
@@ -208,25 +233,48 @@ Item {
         Text {
           text: "Loads"
           anchors.top: parent.top
-          anchors.topMargin: 70
+          anchors.topMargin: 90
           anchors.left: parent.left
           anchors.leftMargin: 35
           font.pixelSize: 18
-        }        
         
+          //  "Push" Text
+          Text {
+            text: "Push"
+            anchors.top: parent.bottom
+            anchors.left: parent.left
+            anchors.leftMargin: 15
+            font.pixelSize: 17
+          }       
+        }        
 
         //  Anchors Collapse Arrow
         Image {
           anchors.top: parent.top
-          anchors.topMargin: 70
+          anchors.topMargin: 90
           anchors.left: parent.left
           anchors.leftMargin: 15
 
           width: 12
           fillMode: Image.PreserveAspectFit
           source: "../images/collapse.png"
-        }
 
+          //  Collapsed option
+          property bool collapsed: false
+
+          MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true         //this line will enable mouseArea.containsMouse
+            onClicked: { 
+              if (parent.collapsed) 
+              {
+                parent.collapsed = false
+              } else {
+                parent.collapsed = true
+              } 
+            }
+          }
+        }
       }
       
       //  Constraints Hover Field
@@ -237,7 +285,6 @@ Item {
         onEntered: { dialogConstraints.visible = true }
         onExited:  { if (dialogConstraints.inFocus == true) {} else {dialogConstraints.visible = false } }
       }
-      
     }
     
 
@@ -252,31 +299,81 @@ Item {
       anchors.bottomMargin: 2.5
       height: 45
       width: 45
-      color: "blue"
+      color: (dialogRequirements.inFocus) ? "green" : "blue"
 
       //  Requirements Dialog
       Rectangle
       {
         id: dialogRequirements
-        anchors.bottom: parent.verticalCenter
+        anchors.verticalCenter: parent.verticalCenter
         anchors.left: parent.right
         anchors.leftMargin: 25
-        height: 125
-        width: 175
+        height: 60
+        width: 200
         radius: 5
 
         border.width: 1
         border.color: "#cccccc"
 
         visible: false
+        property bool inFocus: false
+
+        Text {
+          id: textSafetyFactor
+          anchors.top: parent.top
+          anchors.topMargin: 8
+          anchors.left: parent.left
+          anchors.leftMargin: 20
+
+          font.pixelSize: 20
+          font.bold: true
+        
+          text: "Factor of Safety  \u2265"
+
+          TextField {
+            id: valueSafetyFactor
+            anchors.left: parent.right
+            anchors.leftMargin: 10
+
+            width: 40
+            height: 20
+
+            placeholderText: ""
+          }
+        }
+        
+        Text {
+          id: textMaxDeflect
+          anchors.top: parent.top
+          anchors.topMargin: 30
+          anchors.left: parent.left
+          anchors.leftMargin: 20
+
+          font.pixelSize: 20
+          font.bold: true
+        
+          text: "Max Deflection  \u2264"
+
+          TextField {
+            id: valueMaxDeflect
+            anchors.left: parent.right
+            anchors.leftMargin: 10
+
+            width: 40
+            height: 20
+
+            placeholderText: "mm"
+          }
+        }
       }
       
       //  Requirements Hover Field
       MouseArea {
         anchors.fill: parent
         hoverEnabled: true         //this line will enable mouseArea.containsMouse
+        onClicked: { if (dialogRequirements.inFocus) {dialogRequirements.inFocus = false} else {dialogRequirements.inFocus = true} }
         onEntered: { dialogRequirements.visible = true }
-        onExited:  { dialogRequirements.visible = false }
+        onExited:  { if (dialogRequirements.inFocus == true) {} else {dialogRequirements.visible = false } }
       }
     }
   }
