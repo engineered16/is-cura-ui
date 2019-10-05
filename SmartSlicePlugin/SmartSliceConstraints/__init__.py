@@ -7,7 +7,7 @@
 #   Contains the tool dialog for adding constraints (anchors/loads)
 #
 
-from .SmartSliceSelectTool import SmartSliceSelectTool
+from .SmartSliceConstraints import SmartSliceConstraints
 
 from UM.i18n import i18nCatalog
 i18n_catalog = i18nCatalog("smartslice")
