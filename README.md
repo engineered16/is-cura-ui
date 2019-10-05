@@ -82,9 +82,15 @@ An anchor is a boundary condition where a subcomponent **must** remain static.  
 
 
 
-
-
 #  Patch Notes
+
+**NOTE:**  The constraints dialog works but is currently deactivated as it is integrated into Cura's native left sidebar.
+
+###  Coming Soon
+
+*  Sidebar buttons will be reintegrated to fit natively within Cura's left sidebar.
+*  Sidebar buttons will open dialogs, as they did in 19.0.5.0.
+*  Constraints buttons will be linked to selection handle as appropriate
 
 ### 19.0.5.0
 

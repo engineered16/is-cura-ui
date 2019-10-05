@@ -155,10 +155,6 @@ class SmartSliceStage(CuraStage):
         component_path = os.path.join(base_path, "ui", "SmartSliceMain.qml")
         self.addDisplayComponent("main", component_path)
         
-        # Left center toolbar
-        component_path = os.path.join(base_path, "ui", "SmartSliceSidebar.qml")
-        self.addDisplayComponent("sidebar", component_path)
-        
         # Top menu bar of stage
         component_path = os.path.join(base_path, "ui", "SmartSliceMenu.qml")
         self.addDisplayComponent("menu", component_path)
