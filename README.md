@@ -1,10 +1,12 @@
 # Intelligent Slice Plugin (USER INTERFACE)
 
-**VERSION: 19.0.4.0**
+**VERSION: 19.0.5.0**
 
 This repository contains the **USER INTERFACE** to be used with the Intelligent Slice Plugin.  
 This plugin provides an interface within Ultimaker Cura so that Teton Simulation's proprietary
 smart slicing algorithms can be conveniently used by end-users without leaving the part modeling interface.
+
+
 
 ### Table of Contents
 *  [Getting Started](#getting-started)
@@ -16,6 +18,7 @@ smart slicing algorithms can be conveniently used by end-users without leaving t
 *   [Project Features](#project-features)
     * [Loads](#loads)
     * [Anchors](#anchors)
+*   [Recent Updates](#patch-notes)
 
 
 ## Getting Started 
@@ -76,4 +79,17 @@ A load can be a Pushing or Pulling kinetic force.  Users apply these loads by se
 ####  Anchors
 
 An anchor is a boundary condition where a subcomponent **must** remain static.  If it is not physically possible to do so, because of loads or some other reason, the entire part is reported as invalid.
+
+
+
+
+
+#  Patch Notes
+
+### 19.0.5.0
+
+*  Main Stage UI has been overhauled to better match Cura's native UI
+*  Push/Mount tools are now bordered icons and can be toggled
+    *  Public Domain Cursor images
+    *  Only one can be 'selected' at a time
 

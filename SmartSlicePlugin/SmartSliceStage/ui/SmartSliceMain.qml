@@ -1,7 +1,7 @@
 /*
     SmartSliceMain.qml
     Teton Simulation
-    Last Modified October 3, 2019
+    Last Modified October 5, 2019
 */
 
 /*
@@ -61,18 +61,6 @@ Item {
   }
 
   /*
-      TODO: Migrate components to Action Widgets
-  */
-  Cura.ActionPanelWidget
-  {
-    id: smartSliceWidget
-    anchors.right: parent.right
-    anchors.bottom: parent.bottom
-    anchors.rightMargin: UM.Theme.getSize("thick_margin").width
-    anchors.bottomMargin: UM.Theme.getSize("thick_margin").height
-  }
-
-  /*
       2.) Smart Slice Button Window
   */
   Rectangle {
@@ -82,11 +70,10 @@ Item {
     anchors.rightMargin: UM.Theme.getSize("thick_margin").width
     anchors.bottomMargin: UM.Theme.getSize("thick_margin").height
 
-    border.width: 1
-    border.color: "black"
+    border.color: "grey"
 
-    width: 200 
-    height: 60
+    width: 325 
+    height: 63
     radius: 5
 
 
@@ -138,9 +125,8 @@ Item {
   Rectangle {
     id: smartSliceSidebarButtons
     anchors.left: parent.left
-    anchors.top: parent.verticalCenter
-    anchors.leftMargin: UM.Theme.getSize("thick_margin").width
-    anchors.topMargin: UM.Theme.getSize("thick_margin").height
+    anchors.bottom: parent.verticalCenter
+    anchors.bottomMargin: 100
 
     border.width: 1
     border.color: "black"
@@ -184,6 +170,7 @@ Item {
 
         visible: false
         property bool inFocus: false
+        property string activeTool: ""
 
         //  Header Text
         Text {
@@ -230,19 +217,46 @@ Item {
 
             Rectangle
             {
+              id: mountToolButton
               anchors.left: parent.right
               anchors.leftMargin: 10
 
-              width: 15
-              height: 15
-              color: "red"
-                      
-              MouseArea {
+              width: 17
+              height: 17
+              property bool toolActive: false
+
+              border.width: (toolActive) ? 1 : 0
+              border.color: "blue"
+              
+              //  Icon
+              Image{
+                source: "assets/cursor_white_small.png"
                 anchors.fill: parent
-                hoverEnabled: true         //this line will enable mouseArea.containsMouse
-                onClicked: { smartSliceMain.smartAnchors += 1 }
-                onEntered: { parent.color = "black" }
-                onExited:  { parent.color = "red" }
+                anchors.topMargin: 2
+                anchors.bottomMargin: 2
+                anchors.leftMargin: 2
+                anchors.rightMargin: 2
+                      
+                MouseArea {
+                  anchors.fill: parent
+                  hoverEnabled: true         //this line will enable mouseArea.containsMouse
+                  onClicked: { 
+                    smartSliceMain.smartAnchors += 1
+                    smartSliceButton.isActive = (smartSliceMain.smartLoads > 0 && smartSliceMain.smartAnchors > 0) ? true : false 
+                    smartSliceButton.color = (smartSliceButton.isActive) ? smartSliceButton.blueInactive : smartSliceButton.grayInactive
+                    if (mountToolButton.toolActive) 
+                    {
+                      mountToolButton.toolActive = false 
+                      dialogConstraints.activeTool = ""
+                    } 
+                    else 
+                    {
+                      mountToolButton.toolActive = true
+                      dialogConstraints.activeTool = "mount"
+                    }
+                    if (dialogConstraints.activeTool = "push") {pushToolButton.toolActive = false}
+                  }
+                }
               }
             }
           }     
@@ -279,19 +293,45 @@ Item {
 
             Rectangle
             {
+              id: pushToolButton
               anchors.left: parent.right
               anchors.leftMargin: 10
+              width: 17
+              height: 17
+              property bool toolActive: false
 
-              width: 15
-              height: 15
-              color: "red"
-                      
-              MouseArea {
+              border.width: (toolActive) ? 1 : 0
+              border.color: "blue"
+              
+              //  Icon
+              Image{
+                source: "assets/cursor_white_small.png"
                 anchors.fill: parent
-                hoverEnabled: true         //this line will enable mouseArea.containsMouse
-                onClicked: { smartSliceMain.smartLoads += 1 }
-                onEntered: { parent.color = "black" }
-                onExited:  { parent.color = "red" }
+                anchors.topMargin: 2
+                anchors.bottomMargin: 2
+                anchors.leftMargin: 2
+                anchors.rightMargin: 2
+                      
+                MouseArea {
+                  anchors.fill: parent
+                  hoverEnabled: true         //this line will enable mouseArea.containsMouse
+                  onClicked: { 
+                    smartSliceMain.smartLoads += 1
+                    smartSliceButton.isActive = (smartSliceMain.smartLoads > 0 && smartSliceMain.smartAnchors > 0) ? true : false   
+                    smartSliceButton.color = (smartSliceButton.isActive) ? smartSliceButton.blueInactive : smartSliceButton.grayInactive
+                    if (pushToolButton.toolActive) 
+                    {
+                      pushToolButton.toolActive = false 
+                      dialogConstraints.activeTool = ""
+                    } 
+                    else 
+                    {
+                      pushToolButton.toolActive = true
+                      dialogConstraints.activeTool = "push"
+                    }
+                    if (dialogConstraints.activeTool = "mount") {mountToolButton.toolActive = false}
+                  }
+                }
               }
             }
           }       

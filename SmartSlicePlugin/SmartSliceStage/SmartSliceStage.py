@@ -29,6 +29,12 @@ from UM.Scene.Selection import Selection
 from cura.Stages.CuraStage import CuraStage
 
 
+#  Import Tools for Sidebar
+os.chdir('..')
+from SmartSliceSelectTool.SmartSliceSelectTool import SmartSliceSelectTool
+
+
+
 #  
 #   Stage Class Definition
 #
