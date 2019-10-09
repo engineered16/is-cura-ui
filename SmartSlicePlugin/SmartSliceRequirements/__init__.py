@@ -12,18 +12,19 @@ from .SmartSliceRequirements import SmartSliceRequirements
 from UM.i18n import i18nCatalog
 i18n_catalog = i18nCatalog("smartslice")
 
+
 def getMetaData():
-  return {
-    "tool": {
-      "name": i18n_catalog.i18nc("@label", "Smart Slice Requirements"),
-      "description": i18n_catalog.i18nc("@info:tooltip", "Allows user to set safety factor and maximum deflection"),
-      "icon": "tool_icon.svg",
-      "weight": 20
+    return {
+        "tool": {
+            "name": i18n_catalog.i18nc("@label", "Smart Slice Requirements"),
+            "description": i18n_catalog.i18nc("@info:tooltip", "Allows user to set safety factor and maximum deflection"),
+            "icon": "tool_icon.svg",
+            "weight": 20
+        }
     }
-  }
+
 
 def register(app):
-  return {
-    "tool": SmartSliceRequirements()
-  }
-
+    return {
+        "tool": SmartSliceRequirements()
+    }
