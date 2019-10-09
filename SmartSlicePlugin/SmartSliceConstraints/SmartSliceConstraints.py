@@ -11,11 +11,15 @@
 #     * Anchors
 #
 
+#   Filesystem Control
+import os.path
 
 #  Ultimaker/Cura Imports
 from UM.Scene.ToolHandle import ToolHandle
 from UM.Mesh.MeshBuilder import MeshBuilder
 from UM.Math.Vector import Vector
+from UM.PluginRegistry import PluginRegistry
+from UM.Tool import Tool
 
 
 #
@@ -26,13 +30,22 @@ from UM.Math.Vector import Vector
 class SmartSliceConstraints(Tool):
   #  Class Initialization
   def __init__(self, parent = None):
-    super().__init__(parent)
-        
-    #  Get CWD 
-    base_path = PluginRegistry.getInstance().getPluginPath("SmartSliceConstraints")
+    super().__init__()
+
+    #   Connect Stage to Cura Application
+    Application.getInstance().engineCreatedSignal.connect(self._engineCreated)
+
+    #  Get CWD
+    base_path = None
 
     #  Constraints Tool Dialog
     component_path = os.path.join(base_path, "ui", "dialogConstraints.qml")
     self.addDisplayComponent("_constraints", component_path)
 
+    def _engineCreated(self):
+        """
+        Executed when the Qt/QML engine is up and running.
+        This is at the time when all plugins are loaded, slots registered and basic signals connected.
+        """
 
+        base_path = PluginRegistry.getInstance().getPluginPath("SmartSliceConstraints")
