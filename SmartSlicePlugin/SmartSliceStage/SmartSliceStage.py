@@ -44,6 +44,8 @@ class SmartSliceStage(CuraStage):
         self._was_buildvolume_hidden = None
         self._default_tool_set = None
         self._our_toolset = ["SmartSliceSelectTool",
+                             "SmartSliceConstraints",
+                             "SmartSliceRequirements",
                              ]
         self._our_last_tool = None
         self._were_tools_enabled = None
@@ -62,11 +64,12 @@ class SmartSliceStage(CuraStage):
         if self._our_toolset:
             # Tool: Making a snapshot...
             if not self._default_tool_set:
-                self._default_tool_set = Application.getInstance().getController()._tools
+                self._default_tool_set = Application.getInstance().getController().getAllTools()
             self._was_active_tool = Application.getInstance().getController().getActiveTool()
             self._were_tools_enabled = Application.getInstance().getController().getToolsEnabled()
 
             # Tool: Replacing toolset
+            # TODO: Should be replaced with setAllTools as soon as the PR is merged.
             Application.getInstance().getController()._tools = self.our_toolset
 
             # Tool: Active state
@@ -159,6 +162,8 @@ class SmartSliceStage(CuraStage):
 
         # Remove our tools from the default toolset
         tool_removed = False
+        tools_loaded = Application.getInstance().getController()._tools.keys()
+        Logger.log("d", "The following tools are currently registered: {}".format(tools_loaded))
         for tool in self._our_toolset:
             if tool in Application.getInstance().getController()._tools.keys():
                 Logger.log("d", "Removing <{}> tool from the default toolset!".format(tool))
