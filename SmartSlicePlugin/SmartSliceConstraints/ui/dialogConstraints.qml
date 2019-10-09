@@ -70,7 +70,7 @@ Item {
 
         width: 12
         fillMode: Image.PreserveAspectFit
-        source: "../images/collapse.png"
+        source: "assets/collapse.png"
       }
       
       //  Category Text 

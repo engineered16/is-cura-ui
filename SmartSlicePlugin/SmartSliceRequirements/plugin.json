@@ -1,0 +1,8 @@
+{
+  "name": "Smart Slice Requirements",
+  "author": "Teton Simulation, Inc.",
+  "version": "19.0.5.0",
+  "description": "Provides sub-dialog for setting/editing use-case requirements",
+  "api": "6.0",
+  "i18n-catalog": "smartslice"
+}
