@@ -19,6 +19,7 @@ def getMetaData():
             "name": i18n_catalog.i18nc("@label", "Smart Slice Requirements"),
             "description": i18n_catalog.i18nc("@info:tooltip", "Allows user to set safety factor and maximum deflection"),
             "icon": "tool_icon.svg",
+            "tool_panel": "SmartSliceRequirements.qml",
             "weight": 20
         }
     }
