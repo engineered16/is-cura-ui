@@ -10,7 +10,7 @@
 */
 
 
-//  API Imports
+// API Imports
 import QtQuick 2.4
 import QtQuick.Controls 1.2
 import QtQuick.Layouts 1.1
@@ -21,106 +21,89 @@ import Cura 1.0 as Cura
 import SmartSlice 1.0 as SmartSlice
 
 
-
 /*
-  Requirements
+    Requirements
 */
-Item {
+Item
+{
     width: childrenRect.width
     height: childrenRect.height
     UM.I18nCatalog { id: catalog; name: "smartslice"}
+
+    Grid
+    {
+        id: textfields;
+
+        anchors.top: parent.top;
+
+        columns: 2;
+        flow: Grid.TopToBottom;
+        spacing: Math.round(UM.Theme.getSize("default_margin").width / 2);
+        
+        // Safety Factor Text/Text Field
+        Label {
+            height: UM.Theme.getSize("setting_control").height;
     
-    /*
-      Requirements Requirements Button
-    */
-    Rectangle {
-        id: buttonRequirements
-        anchors.left: parent.left
-        anchors.leftMargin: 3
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 3
-        height: 45
-        width: 45
-
-        border.color: "grey"
-        border.width: 2
-        color: (dialogRequirements.inFocus) ? "#ccccff" : "white"
-
-        //  Requirements Dialog
-        Rectangle
-        {
-            id: dialogRequirements
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.left: parent.right
-            anchors.leftMargin: 25
-            height: 60
-            width: 200
-            radius: 5
-
-            border.width: 1
-            border.color: "#cccccc"
-
-            visible: false
-            property bool inFocus: false
+            font: UM.Theme.getFont("default");
+            renderType: Text.NativeRendering
+    
+            text: "Factor of Safety \u2265"
+    
+        }
         
-            //  Safety Factor Text/Text Field
-            Text {
-                id: textSafetyFactor
-                anchors.top: parent.top
-                anchors.topMargin: 8
-                anchors.left: parent.left
-                anchors.leftMargin: 20
+        Label {
+            height: UM.Theme.getSize("setting_control").height;
+    
+            font: UM.Theme.getFont("default");
+            renderType: Text.NativeRendering
+    
+            text: "Max Deflection  \u2264"
+    
+        }
         
-                font.pixelSize: 20
-                font.bold: true
-                
-                text: "Factor of Safety  \u2265"
-
-                TextField {
-                    id: valueSafetyFactor
-                    anchors.left: parent.right
-                    anchors.leftMargin: 10
-        
-                    width: 40
-                    height: 20
-        
-                    placeholderText: ""
-                }
+        TextField {
+            id: valueSafetyFactor
+            width: UM.Theme.getSize("setting_control").width;
+            height: UM.Theme.getSize("setting_control").height;
+            style: UM.Theme.styles.text_field;
+            validator: DoubleValidator
+            {
+                bottom: 1.0
+                decimals: 4
+                locale: "en_US"
+            }
+            onEditingFinished:
+            {
+                var modified_text = text.replace(",", ".") // User convenience. We use dots for decimal values
+                //UM.ActiveTool.setProperty("ObjectWidth", modified_text);
             }
 
-            //  Max Deflection Text/Text Field
-            Text {
-                id: textMaxDeflect
-                anchors.top: parent.top
-                anchors.topMargin: 30
-                anchors.left: parent.left
-                anchors.leftMargin: 20
-
-                font.pixelSize: 20
-                font.bold: true
+            placeholderText: "\u2265 1"
+            
+            property string unit: "[1]";
+        }
         
-                text: "Max Deflection  \u2264"
-
-                TextField {
-                    id: valueMaxDeflect
-                    anchors.left: parent.right
-                    anchors.leftMargin: 10
-        
-                    width: 40
-                    height: 20
-        
-                    placeholderText: "mm"
-                }
+        TextField {
+            id: valueMaxDeflect
+            width: UM.Theme.getSize("setting_control").width;
+            height: UM.Theme.getSize("setting_control").height;
+            style: UM.Theme.styles.text_field;
+            validator: DoubleValidator
+            {
+                bottom: 0.1  // Setting lowest value here
+                decimals: 4
+                locale: "en_US"
             }
+            onEditingFinished:
+            {
+                var modified_text = text.replace(",", ".") // User convenience. We use dots for decimal values
+                //UM.ActiveTool.setProperty("ObjectWidth", modified_text);
+            }
+
+            placeholderText: ""
+            
+            property string unit: "[mm]";
         }
-      
-        //  Requirements Hover Field
-        MouseArea {
-            anchors.fill: parent
-            hoverEnabled: true         //this line will enable mouseArea.containsMouse
-            onClicked: { if (dialogRequirements.inFocus) {dialogRequirements.inFocus = false} else {dialogRequirements.inFocus = true} }
-            onEntered: { dialogRequirements.visible = true }
-            onExited:  { if (dialogRequirements.inFocus == true) {} else {dialogRequirements.visible = false } }
-        }
+
     }
 }
