@@ -18,7 +18,6 @@ import QtQuick.Controls.Styles 1.1
 
 import UM 1.2 as UM
 import Cura 1.0 as Cura
-import SmartSlice 1.0 as SmartSlice
 
 
 /*
@@ -39,28 +38,28 @@ Item
         columns: 2;
         flow: Grid.TopToBottom;
         spacing: Math.round(UM.Theme.getSize("default_margin").width / 2);
-        
+
         // Safety Factor Text/Text Field
         Label {
             height: UM.Theme.getSize("setting_control").height;
-    
+
             font: UM.Theme.getFont("default");
             renderType: Text.NativeRendering
-    
+
             text: "Factor of Safety \u2265"
-    
+
         }
-        
+
         Label {
             height: UM.Theme.getSize("setting_control").height;
-    
+
             font: UM.Theme.getFont("default");
             renderType: Text.NativeRendering
-    
+
             text: "Max Deflection  \u2264"
-    
+
         }
-        
+
         TextField {
             id: valueSafetyFactor
             width: UM.Theme.getSize("setting_control").width;
@@ -75,14 +74,14 @@ Item
             onEditingFinished:
             {
                 var modified_text = text.replace(",", ".") // User convenience. We use dots for decimal values
-                //UM.ActiveTool.setProperty("ObjectWidth", modified_text);
+                UM.ActiveTool.setProperty("SafetyFactor", modified_text);
             }
 
-            placeholderText: "\u2265 1"
-            
+            text: UM.ActiveTool.properties.getValue("SafetyFactor")
+            placeholderText: "Most be above 1"
             property string unit: "[1]";
         }
-        
+
         TextField {
             id: valueMaxDeflect
             width: UM.Theme.getSize("setting_control").width;
@@ -97,11 +96,11 @@ Item
             onEditingFinished:
             {
                 var modified_text = text.replace(",", ".") // User convenience. We use dots for decimal values
-                //UM.ActiveTool.setProperty("ObjectWidth", modified_text);
+                UM.ActiveTool.setProperty("MaxDeflect", modified_text);
             }
 
+            text: UM.ActiveTool.properties.getValue("MaxDeflect")
             placeholderText: ""
-            
             property string unit: "[mm]";
         }
 

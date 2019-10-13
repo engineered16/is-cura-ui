@@ -13,7 +13,8 @@
    version="1.1"
    id="svg11"
    sodipodi:docname="tool_icon.svg"
-   inkscape:version="0.92.4 (5da689c313, 2019-01-14)">
+   inkscape:version="0.92.4 (5da689c313, 2019-01-14)"
+   enable-background="new">
   <metadata
      id="metadata17">
     <rdf:RDF>
@@ -37,30 +38,56 @@
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
      inkscape:window-width="1920"
-     inkscape:window-height="993"
+     inkscape:window-height="995"
      id="namedview13"
-     showgrid="false"
-     inkscape:zoom="5.5625733"
-     inkscape:cx="-2.0841402"
-     inkscape:cy="9.8785862"
-     inkscape:window-x="0"
+     showgrid="true"
+     inkscape:zoom="16"
+     inkscape:cx="5.5587086"
+     inkscape:cy="14.768467"
+     inkscape:window-x="1920"
      inkscape:window-y="58"
      inkscape:window-maximized="1"
-     inkscape:current-layer="svg11" />
+     inkscape:current-layer="svg11">
+    <inkscape:grid
+       type="xygrid"
+       id="grid5869" />
+  </sodipodi:namedview>
   <!-- Generator: Sketch 57.1 (83088) - https://sketch.com -->
   <title
      id="title2">support_blocker</title>
   <desc
      id="desc4">Created with Sketch.</desc>
-  <text
-     xml:space="preserve"
-     style="font-style:normal;font-weight:normal;font-size:37.33333206px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.93333334px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-     x="1.1463276"
-     y="19.226725"
-     id="text4758"><tspan
-       sodipodi:role="line"
-       id="tspan4756"
-       x="1.1463276"
-       y="19.226725"
-       style="font-size:12.44444466px;stroke-width:0.93333334px">POC</tspan></text>
+  <g
+     id="Layer_2"
+     data-name="Layer 2"
+     transform="scale(0.46666667)">
+    <g
+       id="Layer_1-2"
+       data-name="Layer 1">
+      <path
+         d="M 29,21.56 V 16.05 A 14,14 0 0 0 16,29 h 5.55 A 8.52,8.52 0 0 1 29,21.56 Z"
+         id="path4"
+         inkscape:connector-curvature="0" />
+      <path
+         d="m 35.57,29 h 0.84 A 6.49,6.49 0 0 0 31,23.59 v 0.92 a 1,1 0 1 1 -2,0 V 23.59 A 6.49,6.49 0 0 0 23.59,29 h 0.87 a 1,1 0 0 1 0,2 H 23.59 A 6.52,6.52 0 0 0 29,36.42 v -0.68 a 1,1 0 0 1 2,0 v 0.68 A 6.52,6.52 0 0 0 36.41,31 h -0.84 a 1,1 0 1 1 0,-2 z M 30,32.5 A 2.5,2.5 0 1 1 32.5,30 2.5,2.5 0 0 1 30,32.5 Z"
+         id="path6"
+         inkscape:connector-curvature="0" />
+      <path
+         d="M 21.56,31 H 16 A 14,14 0 0 0 29,44 V 38.44 A 8.52,8.52 0 0 1 21.56,31 Z"
+         id="path8"
+         inkscape:connector-curvature="0" />
+      <path
+         d="M 31,38.44 V 44 A 14,14 0 0 0 43.91,31 H 38.44 A 8.52,8.52 0 0 1 31,38.44 Z"
+         id="path10"
+         inkscape:connector-curvature="0" />
+      <path
+         d="M 30,0 A 30,30 0 1 0 60,30 30,30 0 0 0 30,0 Z M 48.34,31 H 45.91 A 16,16 0 0 1 31,46 v 3.34 a 1,1 0 0 1 -2,0 V 46 A 16,16 0 0 1 14,31 h -2.3 a 1,1 0 0 1 0,-2 H 14 A 16,16 0 0 1 29,14.05 V 11 a 1,1 0 0 1 2,0 v 3.09 A 16,16 0 0 1 45.91,29 h 2.43 a 1,1 0 0 1 0,2 z"
+         id="path12"
+         inkscape:connector-curvature="0" />
+      <path
+         d="m 38.44,29 h 5.47 A 14,14 0 0 0 31,16.05 v 5.51 A 8.52,8.52 0 0 1 38.44,29 Z"
+         id="path14"
+         inkscape:connector-curvature="0" />
+    </g>
+  </g>
 </svg>

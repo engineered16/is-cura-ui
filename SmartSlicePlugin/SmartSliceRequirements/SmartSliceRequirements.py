@@ -11,16 +11,10 @@
 #     * Maximum Deflection
 #
 
-#   Filesystem Control
-import os.path
-
 #   Ultimaker/Cura Imports
 from UM.Application import Application
 from UM.Tool import Tool
-from UM.Scene.ToolHandle import ToolHandle
-from UM.Mesh.MeshBuilder import MeshBuilder     #  Deprecated
-from UM.PluginRegistry import PluginRegistry
-from UM.Math.Vector import Vector           #  Deprecated
+from UM.Signal import Signal
 
 
 #   Smart Slice Requirements Tool:
@@ -31,20 +25,36 @@ class SmartSliceRequirements(Tool):
     def __init__(self):
         super().__init__()
 
-        #   Connect Stage to Cura Application
-        Application.getInstance().engineCreatedSignal.connect(self._engineCreated)
+        # Internals
+        self._savetyFactor = 1.0
+        self._maxDeflect = 2
 
-    def _engineCreated(self):
-        """
-        Executed when the Qt/QML engine is up and running.
-        This is at the time when all plugins are loaded, slots registered and basic signals connected.
-        """
+        # Signals to deliever values to our engine
+        self.signalSafetyFactorChanged = Signal()
+        self.signalMaxDeflectChanged = Signal()
 
-        #  Get CWD
-        base_path = PluginRegistry.getInstance().getPluginPath("SmartSliceRequirements")
+        # Register our properties and passively tell Cura that the get* and set* functions below exist
+        self.setExposedProperties("SafetyFactor", "MaxDeflect")
 
-        #  Constraints Tool Dialog
-        component_path = os.path.join(base_path, "ui", "dialogRequirements.qml")
-        # We are a Tool here and no Stage or something similar..
-        # The following line won't work.
-        #self.addDisplayComponent("_requirements", component_path)
+        Application.getInstance().engineCreatedSignal.connect(self._onEngineCreated)
+
+    def getSafetyFactor(self):
+        return self._savetyFactor
+
+    def setSafetyFactor(self, factor):
+        if self._savetyFactor is not factor:
+            self._savetyFactor = factor
+            self.signalSafetyFactorChanged.emit(factor)
+
+    def getMaxDeflect(self):
+        return self._maxDeflect
+
+    def setMaxDeflect(self, length):
+        if self._maxDeflect is not length:
+            self._maxDeflect = length
+            self.signalMaxDeflectChanged.emit(length)
+
+    def _onEngineCreated(self):
+        # Letting our general extension know which defaults we have here.
+        self.signalMaxDeflectChanged.emit(self._savetyFactor)
+        self.signalMaxDeflectChanged.emit(self._maxDeflect)
