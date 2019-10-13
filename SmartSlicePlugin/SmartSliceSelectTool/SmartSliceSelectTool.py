@@ -20,6 +20,12 @@ from UM.i18n import i18nCatalog
 i18n_catalog = i18nCatalog("smartslice")
 
 
+# Provides enums
+class SelectionMode:
+    AnchorMode = 1
+    LoadMode = 2
+
+
 ##  Provides the tool to rotate meshes and groups
 #
 #   The tool exposes a ToolHint to show the rotation angle of the current operation
@@ -28,14 +34,13 @@ class SmartSliceSelectTool(Tool):
         super().__init__()
         #self._handle = SmartSliceSelectHandle()
 
-        self._shortcut_key = Qt.Key_S
+        #self._shortcut_key = Qt.Key_S
 
-        self._progress_message = None
-        self._iterations = 0
-        self._total_iterations = 0
-        self._rotating = False
-        self.setExposedProperties("SelectFaceSupported")
-        self._saved_node_positions = []
+        self._selection_mode = SelectionMode.AnchorMode
+        self.setExposedProperties("AnchorSelectionActive",
+                                  "LoadSelectionActive",
+                                  "SelectionMode",
+                                  )
 
         Selection.selectedFaceChanged.connect(self._onSelectedFaceChanged)
         self.selected_face = None
@@ -137,3 +142,26 @@ class SmartSliceSelectTool(Tool):
     def getSelectFaceSupported(self) -> bool:
         # Use a dummy postfix, since an equal version with a postfix is considered smaller normally.
         return Version(OpenGL.getInstance().getOpenGLVersion()) >= Version("4.1 dummy-postfix")
+    
+    def setSelectionMode(self, mode):
+        if self._selection_mode is not mode:
+            self._selection_mode = mode
+            
+            Logger.log("d", "Changed selection mode to enum: {}".format(mode))
+
+    def getSelectionMode(self):
+        return self._selection_mode
+
+    def setAnchorSelection(self):
+        self.setSelectionMode(SelectionMode.AnchorMode)
+
+    def getAnchorSelectionActive(self):
+        return self._selection_mode is SelectionMode.AnchorMode
+
+    def setLoadSelection(self):
+        self.setSelectionMode(SelectionMode.LoadMode)
+
+    def getLoadSelectionActive(self):
+        return self._selection_mode is SelectionMode.LoadMode
+
+    

@@ -44,7 +44,6 @@ class SmartSliceStage(CuraStage):
         self._was_buildvolume_hidden = None
         self._default_tool_set = None
         self._our_toolset = ["SmartSliceSelectTool",
-                             "SmartSliceConstraints",
                              "SmartSliceRequirements",
                              ]
         self._our_last_tool = None

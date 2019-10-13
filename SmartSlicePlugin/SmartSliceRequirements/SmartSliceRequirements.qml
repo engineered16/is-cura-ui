@@ -46,7 +46,7 @@ Item
             font: UM.Theme.getFont("default");
             renderType: Text.NativeRendering
 
-            text: "Factor of Safety \u2265"
+            text: catalog.i18nc("@action:button", "Factor of Safety \u2265")
 
         }
 
@@ -56,7 +56,7 @@ Item
             font: UM.Theme.getFont("default");
             renderType: Text.NativeRendering
 
-            text: "Max Deflection  \u2264"
+            text: catalog.i18nc("@action:button", "Max Deflection  \u2264")
 
         }
 
@@ -67,7 +67,7 @@ Item
             style: UM.Theme.styles.text_field;
             validator: DoubleValidator
             {
-                bottom: 1.0
+                bottom: 1.0  // Every value below this makes scientifically no sense
                 decimals: 4
                 locale: "en_US"
             }
@@ -78,7 +78,7 @@ Item
             }
 
             text: UM.ActiveTool.properties.getValue("SafetyFactor")
-            placeholderText: "Most be above 1"
+            placeholderText: catalog.i18nc("@action:button", "Most be above 1")
             property string unit: "[1]";
         }
 

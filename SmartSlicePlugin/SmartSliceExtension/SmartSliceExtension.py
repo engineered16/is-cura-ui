@@ -3,7 +3,7 @@ import tempfile
 import json
 import zipfile
 
-from PyQt5.QtCore import pyqtSlot, QObject
+from PyQt5.QtCore import pyqtSlot, pyqtSignal, pyqtProperty, QObject, QVariant
 from PyQt5.QtQml import qmlRegisterSingletonType
 
 from UM.Application import Application
@@ -15,12 +15,31 @@ from UM.Scene.Iterator.DepthFirstIterator import DepthFirstIterator
 
 
 class SmartSliceProxy(QObject):
-    def __init__(self, parent=None) -> None:
+    def __init__(self, extension, parent=None) -> None:
         super().__init__(parent)
+        self.extension = extension
+        
+        self._multi_build_plate_model = Application.getInstance().activityChanged.connect(self._onSliceableNodesChanged)
+        self._hasSliceableNodes = False
+        
+        self.sendJobSignal.connect(self.extension.sendJob)
 
-    @pyqtSlot(int, result=bool)
-    def selectedTool(self):
-        return True
+    sliceableNodesChanged = pyqtSignal()
+
+    @pyqtProperty(bool, notify=sliceableNodesChanged)
+    def hasSliceableNodes(self):
+        return self._hasSliceableNodes
+    
+    @hasSliceableNodes.setter
+    def hasSliceableNodes(self, value):
+        self._hasSliceableNodes = value
+        self.sliceableNodesChanged.emit()
+
+    sendJobSignal = pyqtSignal()
+
+    def _onSliceableNodesChanged(self):
+        self.hasSliceableNodes = len(self.extension.getSliceableNodes()) == 1
+        
 
 
 class SmartSliceAwsConnector():
@@ -93,6 +112,7 @@ class SmartSliceAwsConnector():
         return filename
 
     def sendJob(self):
+        Logger.log("d", "Sending slice job!")
         filename = self.prepareInitial3mf()
 
         if not filename:
@@ -112,7 +132,7 @@ class SmartSliceExtension(Extension, SmartSliceAwsConnector):
         Extension.__init__(self)
         SmartSliceAwsConnector.__init__(self)
 
-        self._proxy = SmartSliceProxy()
+        self._proxy = SmartSliceProxy(self)
 
         Application.getInstance().engineCreatedSignal.connect(self._onEngineCreated)
 
