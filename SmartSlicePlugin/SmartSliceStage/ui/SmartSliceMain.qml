@@ -99,8 +99,21 @@ Item {
       MouseArea {
         anchors.fill: parent
         hoverEnabled: true         //this line will enable mouseArea.containsMouse
-        onEntered: { if (parent.isActive) {parent.color = parent.blueActive} else {parent.color = parent.grayActive} }
-        onExited:  { if (parent.isActive) {parent.color = parent.blueInactive} else {parent.color = parent.grayInactive} }
+        onEntered: {
+            if (parent.isActive) {
+                parent.color = parent.blueActive
+            } else {
+                parent.color = parent.grayActive
+            }
+        }
+        
+        onExited: {
+            if (parent.isActive) {
+                parent.color = parent.blueInactive
+            } else {
+                parent.color = parent.grayInactive
+            }
+        }
       }
     }
   }
