@@ -58,3 +58,4 @@ class SmartSliceRequirements(Tool):
         # Letting our general extension know which defaults we have here.
         self.signalMaxDeflectChanged.emit(self._savetyFactor)
         self.signalMaxDeflectChanged.emit(self._maxDeflect)
+        Application.getInstance().getController().addTool(self) #  TESTING

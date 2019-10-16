@@ -1,7 +1,7 @@
 /*
     SmartSliceMain.qml
     Teton Simulation
-    Last Modified October 5, 2019
+    Last Modified October 16, 2019
 */
 
 /*
@@ -22,6 +22,8 @@ import QtQuick.Controls.Styles 1.1
 import UM 1.2 as UM
 import Cura 1.0 as Cura
 import SmartSlice 1.0 as SmartSlice
+
+import "bridge.js" as Data
 
 
 //  Main UI Stage Components
@@ -377,7 +379,7 @@ Item {
 
                 Label {
                     id: labelSafetyComp
-                    text: "2.5" 
+                    text: Data.SafetyFactorComputed()
 
                     anchors.left: parent.left; anchors.top: parent.bottom
 
@@ -386,7 +388,7 @@ Item {
 
                 Label {
                     id: labelDisplaceComp
-                    text: "5 mm" 
+                    text: Data.MaxDeflectionComputed()
 
                     anchors.left: parent.left; anchors.top: labelSafetyComp.bottom
 
@@ -408,7 +410,7 @@ Item {
 
                 Label {
                     id: labelSafetyTar
-                    text: "> 4" 
+                    text: Data.SafetyFactorTarget()
 
                     anchors.left: parent.left; anchors.top: parent.bottom
 
@@ -417,7 +419,7 @@ Item {
 
                 Label {
                     id: labelDisplaceTar
-                    text: "> 2mm" 
+                    text: Data.MaxDeflectionTarget()
 
                     anchors.left: parent.left; anchors.top: labelSafetyTar.bottom
 
@@ -518,7 +520,7 @@ Item {
                 //  Infill
                 Label {
                     id: labelInfillsComp
-                    text: "04:55"
+                    text: Data.InfillsComputed()
 
                     anchors.left: parent.left; anchors.top: parent.top
 
@@ -527,7 +529,7 @@ Item {
                 //  Inner Walls
                 Label {
                     id: labelIWallsComp
-                    text: "06:16"
+                    text: Data.InnerWallsComputed()
 
                     anchors.left: parent.left; anchors.top: labelInfillsComp.bottom
 
@@ -536,7 +538,7 @@ Item {
                 //  Outer Walls
                 Label {
                     id: labelOWallsComp
-                    text: "01:39"
+                    text: Data.OuterWallsComputed()
 
                     anchors.left: parent.left; anchors.top: labelIWallsComp.bottom
 
@@ -545,7 +547,7 @@ Item {
                 //  Retractions
                 Label {
                     id: labelRetractComp
-                    text: "00:00"
+                    text: Data.RetractionsComputed()
 
                     anchors.left: parent.left; anchors.top: labelOWallsComp.bottom
 
@@ -554,7 +556,7 @@ Item {
                 //  Skin
                 Label {
                     id: labelSkinComp
-                    text: "03:21"
+                    text: Data.SkinComputed()
 
                     anchors.left: parent.left; anchors.top: labelRetractComp.bottom
 
@@ -563,7 +565,7 @@ Item {
                 //  Skirt
                 Label {
                     id: labelSkirtComp
-                    text: "00:07"
+                    text: Data.SkirtComputed()
 
                     anchors.left: parent.left; anchors.top: labelSkinComp.bottom
 
@@ -572,7 +574,7 @@ Item {
                 //  Travel
                 Label {
                     id: labelTravelComp
-                    text: "00:21"
+                    text: Data.TravelComputed()
 
                     anchors.left: parent.left; anchors.top: labelSkirtComp.bottom
 
@@ -589,7 +591,7 @@ Item {
                 //  Infill
                 Label {
                     id: labelInfillsTgt
-                    text: "29%"
+                    text: Data.InfillsTarget()
 
                     anchors.left: parent.left; anchors.top: parent.top
 
@@ -598,7 +600,7 @@ Item {
                 //  Inner Walls
                 Label {
                     id: labelIWallsTgt
-                    text: "38%"
+                    text: Data.InnerWallsTarget()
 
                     anchors.left: parent.left; anchors.top: labelInfillsTgt.bottom
 
@@ -607,7 +609,7 @@ Item {
                 //  Outer Walls
                 Label {
                     id: labelOWallsTgt
-                    text: "10%"
+                    text: Data.OuterWallsTarget()
 
                     anchors.left: parent.left; anchors.top: labelIWallsTgt.bottom
 
@@ -616,7 +618,7 @@ Item {
                 //  Retractions
                 Label {
                     id: labelRetractTgt
-                    text: "0%"
+                    text: Data.RetractionsTarget()
 
                     anchors.left: parent.left; anchors.top: labelOWallsTgt.bottom
 
@@ -625,7 +627,7 @@ Item {
                 //  Skin
                 Label {
                     id: labelSkinTgt
-                    text: "20%"
+                    text: Data.SkinTarget()
 
                     anchors.left: parent.left; anchors.top: labelRetractTgt.bottom
 
@@ -634,7 +636,7 @@ Item {
                 //  Skirt
                 Label {
                     id: labelSkirtTgt
-                    text: "Skin:"
+                    text: Data.SkirtTarget()
 
                     anchors.left: parent.left; anchors.top: labelSkinTgt.bottom
 
@@ -643,7 +645,7 @@ Item {
                 //  Travel
                 Label {
                     id: labelTravelTgt
-                    text: "2%"
+                    text: Data.TravelTarget()
 
                     anchors.left: parent.left; anchors.top: labelSkirtTgt.bottom
 
@@ -652,7 +654,7 @@ Item {
             }
             
 
-            /* TIME ESTIMATION HEADER */
+            /* Material ESTIMATION HEADER */
             Label {
                 id: labelMatEst
                 text: "MATERIAL ESTIMATION"
@@ -667,7 +669,7 @@ Item {
 
                 Label {
                     id: labelMatEstMat
-                    text: "Blue ABS"
+                    text: Data.Material()
 
                     anchors.left: parent.left; anchors.top: parent.bottom
 
@@ -676,7 +678,7 @@ Item {
 
                 Label {
                     id: labelMatEstLength
-                    text: "18.05m"
+                    text: Data.Length()
 
                     anchors.left: labelMatEstMat.right; anchors.top: parent.bottom
 
@@ -685,7 +687,7 @@ Item {
 
                 Label {
                     id: labelMatEstWeight
-                    text: "127g"
+                    text: Data.Weight()
 
                     anchors.left: labelMatEstLength.right; anchors.top: parent.bottom
 
@@ -694,7 +696,7 @@ Item {
 
                 Label {
                     id: labelMatEstCost
-                    text: "$32.77"
+                    text: Data.Cost()
 
                     anchors.left: labelMatEstWeight.right; anchors.top: parent.bottom
 
