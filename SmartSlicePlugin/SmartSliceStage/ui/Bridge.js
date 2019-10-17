@@ -36,7 +36,7 @@
 */
 function SafetyFactorComputed()
 {
-    return 2.5
+    return _bridge._SafetyFactorComputed()
 }
 
 function SafetyFactorTarget()

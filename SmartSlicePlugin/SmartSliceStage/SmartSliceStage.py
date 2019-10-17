@@ -1,7 +1,7 @@
 #######################################
 #   SmartSliceStage.py
 #   Teton Simulation, Inc; Ultimaker
-#   Last Modified October 2, 2019
+#   Last Modified October 17, 2019
 #######################################
 
 #
@@ -29,6 +29,12 @@ from UM.Scene.Selection import Selection
 from cura.Stages.CuraStage import CuraStage
 
 
+from .ui.Bridge import SmartSliceBridge
+from .ui.Compat import ApplicationCompat
+from PyQt5.QtQml import QQmlComponent, QQmlContext # @UnresolvedImport
+
+from UM.Qt.QtApplication import QtApplication
+
 #
 #   Stage Class Definition
 #
@@ -49,6 +55,12 @@ class SmartSliceStage(CuraStage):
         self._our_last_tool = None
         self._were_tools_enabled = None
         self._was_selection_face = None
+
+        #  Create QML/Python Interface Bridge
+        _bridge = SmartSliceBridge()
+
+        #_context = QQmlContext(ApplicationCompat().qml_engine.rootContext())
+        #_context.setContextProperty("_bridge", _bridge)
 
     #   onStageSelected:
     #       This transitions the userspace/working environment from

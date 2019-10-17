@@ -23,7 +23,7 @@ import UM 1.2 as UM
 import Cura 1.0 as Cura
 import SmartSlice 1.0 as SmartSlice
 
-import "bridge.js" as Data
+import "Bridge.js" as Data
 
 
 //  Main UI Stage Components

@@ -78,7 +78,7 @@ Item
             }
 
             text: UM.ActiveTool.properties.getValue("SafetyFactor")
-            placeholderText: catalog.i18nc("@action:button", "Most be above 1")
+            placeholderText: catalog.i18nc("@action:button", "Must be above 1")
             property string unit: "[1]";
         }
 
