@@ -8,30 +8,43 @@
 #   Contains python-side interface for bridge between Smart Slice API/Engine to Javascript
 #
 
-from UM.Application import Application
 
+from PyQt5.QtCore import *
 
+from .Compat import ApplicationCompat
+from PyQt5.QtQml import QQmlContext # @UnresolvedImport
 
-class SmartSliceBridge(object):
-    def __init__(self, parent=None): 
-        self._x = 1 + 1
+class SmartSliceBridge(QObject):
+    def __init__(self): 
+        QObject.__init__(self)
+
+        #print ("\n\n\n")   # For Testing
+
+        _context = QQmlContext(ApplicationCompat().qml_engine.rootContext())
+
+        _context.setContextProperty('PyConsole', self)
+        _context.setContextProperty("_bridge", self)
+
+        #print ("\n\n\n")
 
     #    
     #  ACCESSORS
     #
 
     #  SAFETY FACTOR
-    def _SafetyFactorComputed():
-        return 2.5
+    @pyqtSlot()
+    def _SafetyFactorComputed(self):
+        return "2.5"
 
-    def _SafetyFactorTarget():
+    @pyqtSlot()
+    def _SafetyFactorTarget(self):
         return "> 4"
 
     #  MAXIMUM DISPLACEMENT
-    def _MaxDeflectionComputed():
+    def _MaxDeflectionComputed(self):
         return "5  mm"
 
-    def _MaxDeflectionTarget():
+    def _MaxDeflectionTarget(self):
         return "> 2mm"
 
 

@@ -36,7 +36,9 @@
 */
 function SafetyFactorComputed()
 {
-    return _bridge._SafetyFactorComputed()
+    var sfc = _bridge._SafetyFactorComputed();
+
+    return sfc
 }
 
 function SafetyFactorTarget()

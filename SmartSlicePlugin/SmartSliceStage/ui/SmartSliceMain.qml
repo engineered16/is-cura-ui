@@ -294,7 +294,6 @@ Item {
                     font: UM.Theme.getFont("default"); color: smartSliceValidation.validationBlue
                 }
             }
-
         }
 
         
@@ -379,7 +378,7 @@ Item {
 
                 Label {
                     id: labelSafetyComp
-                    text: Data.SafetyFactorComputed()
+                    text: "50"
 
                     anchors.left: parent.left; anchors.top: parent.bottom
 
@@ -520,7 +519,7 @@ Item {
                 //  Infill
                 Label {
                     id: labelInfillsComp
-                    text: Data.InfillsComputed()
+                    text: "2.5"
 
                     anchors.left: parent.left; anchors.top: parent.top
 
@@ -709,18 +708,23 @@ Item {
         Timer {
             id: validationSimulator
             interval: 5000; running: false; repeat: false
-            onTriggered: parent.updateResults()
+            onTriggered: { parent.updateResultsUI(); parent.updateResults() }
         }
 
-        function updateResults() 
-        {
+        function updateResultsUI() {
             validationProgress.visible = false
             validationResultsBad.visible = true
             validationResultsDialog.visible = true
         }
 
-        function reset()
-        {
+        function updateResults() {
+            print("\n\n\n")
+            labelSafetyComp.text = Data.SafetyFactorComputed()
+            //labelInfillsComp.text = Data.InfillsComp()
+            print("\n\n\n")
+        }
+
+        function reset() {
             validationResultsDialog.visible = false
             validationResultsBad.visible = false
             validationProgress.visible = true
