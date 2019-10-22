@@ -19,6 +19,7 @@ import QtQuick.Controls.Styles 1.1
 import UM 1.2 as UM
 import Cura 1.0 as Cura
 
+import SmartSlice 1.0 as SmartSlice
 
 /*
     Requirements
@@ -74,10 +75,10 @@ Item
             onEditingFinished:
             {
                 var modified_text = text.replace(",", ".") // User convenience. We use dots for decimal values
-                UM.ActiveTool.setProperty("SafetyFactor", modified_text);
+                SmartSlice.Variables.safetyFactor = modified_text; // Will be converted from string to the target data type via SmartSliceVariables
             }
 
-            text: UM.ActiveTool.properties.getValue("SafetyFactor")
+            text: SmartSlice.Variables.safetyFactor
             placeholderText: catalog.i18nc("@action:button", "Must be above 1")
             property string unit: "[1]";
         }
@@ -96,10 +97,10 @@ Item
             onEditingFinished:
             {
                 var modified_text = text.replace(",", ".") // User convenience. We use dots for decimal values
-                UM.ActiveTool.setProperty("MaxDeflect", modified_text);
+                SmartSlice.Variables.maxDeflect = modified_text; // Will be converted from string to the target data type via SmartSliceVariables
             }
 
-            text: UM.ActiveTool.properties.getValue("MaxDeflect")
+            text: SmartSlice.Variables.maxDeflect
             placeholderText: ""
             property string unit: "[mm]";
         }
