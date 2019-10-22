@@ -48,6 +48,7 @@ class SmartSliceStage(CuraStage):
         self._our_toolset = ["SmartSliceSelectTool",
                              "SmartSliceRequirements",
                              ]
+        self._tool_blacklist = ("SelectionTool", "CameraTool")
         self._our_last_tool = None
         self._were_tools_enabled = None
         self._was_selection_face = None
@@ -63,27 +64,33 @@ class SmartSliceStage(CuraStage):
             self._was_buildvolume_hidden = True
 
         # Ensure we have tools defined and apply them here
-        if self._our_toolset:
+        for tool_id in Application.getInstance().getController().getAllTools().keys():
+            if tool_id not in self._tool_blacklist:
+                visible = tool_id in self._our_toolset
+                PluginRegistry.getInstance().getMetaData(tool_id).get("tool", {})["visible"] = visible
+                Logger.log("d", "Setting tool <{}> visible = {}".format(tool_id, visible))
+                Application.getInstance().getController().toolsChanged.emit()
+        #if self._our_toolset:
             # Tool: Making a snapshot...
-            if not self._default_tool_set:
-                self._default_tool_set = Application.getInstance().getController().getAllTools()
-            self._was_active_tool = Application.getInstance().getController().getActiveTool()
-            self._were_tools_enabled = Application.getInstance().getController().getToolsEnabled()
+            #if not self._default_tool_set:
+            #    self._default_tool_set = Application.getInstance().getController().getAllTools()
+            #self._was_active_tool = Application.getInstance().getController().getActiveTool()
+            #self._were_tools_enabled = Application.getInstance().getController().getToolsEnabled()
 
             # Tool: Replacing toolset
             # TODO: Should be replaced with setAllTools as soon as the PR is merged.
-            Application.getInstance().getController()._tools = self.our_toolset
+            #Application.getInstance().getController()._tools = self.our_toolset
 
             # Tool: Active state
-            if not self._our_last_tool:
-                self._our_last_tool = self.our_first_tool
-            Application.getInstance().getController().setActiveTool(self._our_last_tool)
+            #if not self._our_last_tool:
+            #    self._our_last_tool = self.our_first_tool
+            #Application.getInstance().getController().setActiveTool(self._our_last_tool)
 
             # Tool: Enabled state
             #Application.getInstance().getController().setToolsEnabled(False)
 
             # Tool: Emitting signal to announce our changes
-            Application.getInstance().getController().toolsChanged.emit()
+            #Application.getInstance().getController().toolsChanged.emit()
 
         # Reset selection
         self._was_selection_face = Selection.getFaceSelectMode()
@@ -108,6 +115,14 @@ class SmartSliceStage(CuraStage):
             self._is_buildvolume_hidden = None
 
         # Recover if we have tools defined
+        for tool_id in Application.getInstance().getController().getAllTools().keys():
+            if tool_id not in self._tool_blacklist:
+                visible = not tool_id in self._our_toolset
+                PluginRegistry.getInstance().getMetaData(tool_id).get("tool", {})["visible"] = visible
+                Logger.log("d", "Setting tool <{}> visible = {}".format(tool_id, visible))
+                Application.getInstance().getController().toolsChanged.emit()
+            
+        """
         if self._our_toolset:
             Application.getInstance().getController()._tools = self._default_tool_set
             Application.getInstance().getController().toolsChanged.emit()
@@ -119,6 +134,7 @@ class SmartSliceStage(CuraStage):
             if self._were_tools_enabled is not None:
                 if self._were_tools_enabled is not Application.getInstance().getController().getToolsEnabled():
                     Application.getInstance().getController().setToolsEnabled(self._were_tools_enabled)
+        """
 
         if self._was_selection_face is not None and self._was_selection_face is not Selection.getFaceSelectMode():
             Selection.setFaceSelectMode(self._was_selection_face)
@@ -175,7 +191,13 @@ class SmartSliceStage(CuraStage):
         for tool in self._our_toolset:
             if tool in Application.getInstance().getController()._tools.keys():
                 Logger.log("d", "Removing <{}> tool from the default toolset!".format(tool))
-                del Application.getInstance().getController()._tools[tool]
+                #tool_object = Application.getInstance().getController().getAllTools()[tool]
+                #print(tool_object.getExposedProperties())
+                #print(dir(tool_object.getExposedProperties()))
+                #tool_object._enabled = False
+                #tool_object._onToolEnabledChanged.emit()
+                PluginRegistry.getInstance().getMetaData(tool).get("tool", {})["visible"] = False
+                #del Application.getInstance().getController()._tools[tool]
                 tool_removed = True
         if tool_removed:
             Application.getInstance().getController().toolsChanged.emit()
