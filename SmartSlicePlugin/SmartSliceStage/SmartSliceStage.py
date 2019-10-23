@@ -149,19 +149,10 @@ class SmartSliceStage(CuraStage):
         self._was_buildvolume_hidden = not Application.getInstance().getBuildVolume().isVisible()
 
         # Remove our tools from the default toolset
-        tool_removed = False
         tools_loaded = Application.getInstance().getController()._tools.keys()
         Logger.log("d", "The following tools are currently registered: {}".format(tools_loaded))
         for tool in self._our_toolset:
             if tool in Application.getInstance().getController()._tools.keys():
                 Logger.log("d", "Removing <{}> tool from the default toolset!".format(tool))
-                #tool_object = Application.getInstance().getController().getAllTools()[tool]
-                #print(tool_object.getExposedProperties())
-                #print(dir(tool_object.getExposedProperties()))
-                #tool_object._enabled = False
-                #tool_object._onToolEnabledChanged.emit()
                 PluginRegistry.getInstance().getMetaData(tool).get("tool", {})["visible"] = False
-                #del Application.getInstance().getController()._tools[tool]
-                tool_removed = True
-        if tool_removed:
-            Application.getInstance().getController().toolsChanged.emit()
+        Application.getInstance().getController().toolsChanged.emit()
