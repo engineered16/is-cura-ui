@@ -44,11 +44,11 @@ class SmartSliceStage(CuraStage):
         #   Set Default Attributes
         self._stage_open = False
         self._was_buildvolume_hidden = None
-        self._default_tool_set = None
-        self._our_toolset = ["SmartSliceSelectTool",
+        self._default_toolset = None
+        self._our_toolset = ("SmartSliceSelectTool",
                              "SmartSliceRequirements",
-                             ]
-        self._tool_blacklist = ("SelectionTool", "CameraTool")
+                             )
+        #self._tool_blacklist = ("SelectionTool", "CameraTool")
         self._our_last_tool = None
         self._were_tools_enabled = None
         self._was_selection_face = None
@@ -64,19 +64,13 @@ class SmartSliceStage(CuraStage):
             self._was_buildvolume_hidden = True
 
         # Ensure we have tools defined and apply them here
-        for tool_id in Application.getInstance().getController().getAllTools().keys():
-            if tool_id not in self._tool_blacklist:
-                visible = tool_id in self._our_toolset
-                PluginRegistry.getInstance().getMetaData(tool_id).get("tool", {})["visible"] = visible
-                Logger.log("d", "Setting tool <{}> visible = {}".format(tool_id, visible))
-                Application.getInstance().getController().toolsChanged.emit()
+        self.toggleToolVisibility(True)
 
         # Reset selection
         self._was_selection_face = Selection.getFaceSelectMode()
         Selection.setFaceSelectMode(False)
         Selection.clear()
         Selection.clearFace()
-
 
         if (self._first_open):
             #  Create QML/Python Interface Bridge
@@ -94,21 +88,42 @@ class SmartSliceStage(CuraStage):
             self._is_buildvolume_hidden = None
 
         # Recover if we have tools defined
-        for tool_id in Application.getInstance().getController().getAllTools().keys():
-            if tool_id not in self._tool_blacklist:
-                visible = not tool_id in self._our_toolset
-                PluginRegistry.getInstance().getMetaData(tool_id).get("tool", {})["visible"] = visible
-                Logger.log("d", "Setting tool <{}> visible = {}".format(tool_id, visible))
-                Application.getInstance().getController().toolsChanged.emit()
-
-        if self._was_selection_face is not None and self._was_selection_face is not Selection.getFaceSelectMode():
-            Selection.setFaceSelectMode(self._was_selection_face)
+        self.toggleToolVisibility(False)
 
         # Reset selection
         if self._was_selection_face is not None and self._was_selection_face is not Selection.getFaceSelectMode():
             Selection.setFaceSelectMode(self._was_selection_face)
         Selection.clear()
         Selection.clearFace()
+
+    def getVisibleTools(self):
+        visible_tools = []
+        tools = Application.getInstance().getController().getAllTools().keys()
+        for tool in tools:
+            visible = True
+            tool_metainfo = PluginRegistry.getInstance().getMetaData(tool).get("tool", {})
+            keys = tool_metainfo.keys()
+            if "visible" in keys:
+                visible = tool_metainfo["visible"]
+
+            if visible:
+                visible_tools.append(tool)
+        return visible_tools
+
+    def toggleToolVisibility(self, our_tools_visible):
+        plugin_registry = PluginRegistry.getInstance()
+        for tool_id in Application.getInstance().getController().getAllTools().keys():
+            tool_metadata = plugin_registry.getMetaData(tool_id)
+            if tool_id in self._our_toolset:
+                tool_metadata.get("tool", {})["visible"] = our_tools_visible
+            elif tool_id in self._default_toolset:
+                tool_metadata.get("tool", {})["visible"] = not our_tools_visible
+
+            if "visible" in tool_metadata.get("tool", {}).keys():
+                state = tool_metadata.get("tool", {})["visible"]
+                Logger.log("d", "Visibility of <{}>: {}".format(tool_id, state))
+
+        Application.getInstance().getController().toolsChanged.emit()
 
     @property
     def our_toolset(self):
@@ -144,15 +159,16 @@ class SmartSliceStage(CuraStage):
         component_path = os.path.join(base_path, "ui", "SmartSliceMenu.qml")
         self.addDisplayComponent("menu", component_path)
 
-
         # Setting state after all plugins are loaded
         self._was_buildvolume_hidden = not Application.getInstance().getBuildVolume().isVisible()
 
-        # Remove our tools from the default toolset
-        tools_loaded = Application.getInstance().getController()._tools.keys()
-        Logger.log("d", "The following tools are currently registered: {}".format(tools_loaded))
-        for tool in self._our_toolset:
-            if tool in Application.getInstance().getController()._tools.keys():
-                Logger.log("d", "Removing <{}> tool from the default toolset!".format(tool))
-                PluginRegistry.getInstance().getMetaData(tool).get("tool", {})["visible"] = False
-        Application.getInstance().getController().toolsChanged.emit()
+        # Get all visible tools and exclude our tools from the list
+        self._default_toolset = self.getVisibleTools()
+        for tool in self._default_toolset:
+            if tool in self._our_toolset:
+                self._default_toolset.remove(tool)
+        Logger.log("d", "self._default_toolset: {}".format(self._default_toolset))
+        Logger.log("d", "self._our_toolset: {}".format(self._our_toolset))
+
+        # Undisplay our tools!
+        self.toggleToolVisibility(False)
