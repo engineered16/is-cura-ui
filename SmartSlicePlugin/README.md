@@ -5,7 +5,6 @@
 *  **SmartSliceStage:**  Staging Operations
 *  **SmartSliceSelection:**  Selection Tool Operations
 *  **SmartSliceConstraints:**  Load/Anchor Operations
-*  **SmartSliceJobs:**  AWS Job Integration
 
 
 ####  Sub-Plugin Load Order
