@@ -10,19 +10,20 @@ from PyQt5.QtCore import QObject
 
 from UM.Logger import Logger
 
+
 class SmartSliceVariables(QObject):
     def __init__(self) -> None:
         super().__init__()
-        
+
         self._safetyFactor = 1.0
         self._maxDeflect = 2
-    
+
     maxDeflectChanged = pyqtSignal()
 
     @pyqtProperty(int, notify=maxDeflectChanged)
     def maxDeflect(self):
         return self._maxDeflect
-    
+
     @maxDeflect.setter
     def maxDeflect(self, value):
         if self._maxDeflect is not value:
@@ -35,12 +36,10 @@ class SmartSliceVariables(QObject):
     @pyqtProperty(float, notify=safetyFactorChanged)
     def safetyFactor(self):
         return self._safetyFactor
-    
+
     @safetyFactor.setter
     def safetyFactor(self, value):
         if self._safetyFactor is not value:
             Logger.log("d", "Changing safety factor: {}->{}".format(self._safetyFactor, value))
             self._safetyFactor = value
             self.safetyFactorChanged.emit()
-
-    

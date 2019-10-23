@@ -16,15 +16,16 @@ from UM.Preferences import Preferences
 from UM.Scene.Iterator.DepthFirstIterator import DepthFirstIterator
 
 from .SmartSliceCloudProxy import SmartSliceCloudStatus
-from .SmartSliceCloudProxy import SmartSliceCloudProxy 
+from .SmartSliceCloudProxy import SmartSliceCloudProxy
 
-class SmartSliceAwsConnector():
+
+class SmartSliceCloudConnector():
     def __init__(self, extension):
         self.extension = extension
-        
+
         self.token = Preferences.getInstance().getValue("SmartSlice/CloudToken")
         self._proxy = SmartSliceCloudProxy()
-        
+
     @property
     def variables(self):
         return self.extension.getVariables(None, None)
@@ -42,7 +43,7 @@ class SmartSliceAwsConnector():
 
         return sliceable_nodes
 
-    def prepareInitial3mf(self, location = None):
+    def prepareInitial3mf(self, location=None):
         # Using tempfile module to probe for a temporary file path
         # TODO: We can do this more elegant of course, too.
         if not location:

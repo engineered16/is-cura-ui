@@ -5,8 +5,9 @@ from UM.Extension import Extension
 from UM.Logger import Logger
 
 from .SmartSliceProxy import SmartSliceProxy
-from .SmartSliceCloudConnector import SmartSliceAwsConnector
+from .SmartSliceCloudConnector import SmartSliceCloudConnector
 from .SmartSliceVariables import SmartSliceVariables
+
 
 class SmartSliceExtension(Extension):
     def __init__(self):
@@ -16,8 +17,8 @@ class SmartSliceExtension(Extension):
         self._variables = SmartSliceVariables()
 
         # Separate module for cloud connection
-        self.cloud = SmartSliceAwsConnector(self)
-        
+        self.cloud = SmartSliceCloudConnector(self)
+
         # General proxy for everything that is not specific
         self._proxy = SmartSliceProxy(self)
 
@@ -25,7 +26,8 @@ class SmartSliceExtension(Extension):
 
     def _onEngineCreated(self):
         self.cloud._onEngineCreated()
-        # Registering our type in QML for direct interaction. Needed for separate windows for example.
+        # Registering our type in QML for direct interaction.
+        # Needed for separate windows for example.
         # NOTE: Unused at the moment!
         qmlRegisterSingletonType(SmartSliceProxy,
                                  "SmartSlice",
