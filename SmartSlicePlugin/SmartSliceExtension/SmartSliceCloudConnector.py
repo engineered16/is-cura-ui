@@ -4,34 +4,203 @@ Created on 22.10.2019
 @author: thopiekar
 '''
 
+import time
 import os
 import tempfile
 import json
 import zipfile
 
+from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import QObject
+from PyQt5.QtCore import QUrl
+from PyQt5.QtNetwork import QNetworkReply
+from PyQt5.QtNetwork import QNetworkRequest
+from PyQt5.QtNetwork import QNetworkAccessManager
+from PyQt5.QtQml import qmlRegisterSingletonType
+
 from UM.Application import Application
+from UM.Job import Job
 from UM.Logger import Logger
 from UM.PluginRegistry import PluginRegistry
-from UM.Preferences import Preferences
 from UM.Scene.Iterator.DepthFirstIterator import DepthFirstIterator
 
 from .SmartSliceCloudProxy import SmartSliceCloudStatus
 from .SmartSliceCloudProxy import SmartSliceCloudProxy
 
+## Draft of an connection check
+class ConnectivityChecker(QObject):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        url = QUrl("https://amazonaws.com/")
+        req = QNetworkRequest(url)
+        self.net_manager = QNetworkAccessManager()
+        self.res = self.net_manager.get(req)
+        self.res.finished.connect(self.processRes)
+        self.res.error.connect(self.processErr)
 
-class SmartSliceCloudConnector():
+    @pyqtSlot()
+    def processRes(self):
+        if self.res.bytesAvailable():
+            # Success
+            pass
+        self.res.deleteLater()
+
+    @pyqtSlot(QNetworkReply.NetworkError)
+    def processErr(self, code):
+        print(code)
+
+class SmartSliceCloudVerificationJob(Job):
+    # This job is responsible for uploading the backup file to cloud storage.
+    # As it can take longer than some other tasks, we schedule this using a Cura Job.
+    def __init__(self, connector) -> None:
+        super().__init__()
+        self.connector = connector
+
+    def run(self) -> None:
+        # TODO: Add instructions how to send a verification job here
+        time.sleep(5)
+        if not self.connector._demo_was_underdimensioned_before:
+            self.connector.status = SmartSliceCloudStatus.Underdimensioned
+            self.connector._demo_was_underdimensioned_before = True
+        elif not self.connector._demo_was_overdimensioned_before:
+            self.connector.status = SmartSliceCloudStatus.Overdimensioned
+            self.connector._demo_was_overdimensioned_before = True
+        else:
+            self.connector.status = SmartSliceCloudStatus.Optimized
+
+SmartSliceCloudOptimizeJob = SmartSliceCloudVerificationJob
+
+class SmartSliceCloudConnector(QObject):
+    token_preference = "smartslice/token"
+    
     def __init__(self, extension):
+        super().__init__()
         self.extension = extension
+        
+        # DEMO variables
+        self._demo_was_underdimensioned_before = False
+        self._demo_was_overdimensioned_before = False
+        
+        # Variables 
+        self._status = None
+        self._job = None
+        
+        # Proxy
+        self._proxy = SmartSliceCloudProxy(self)
+        self._proxy.sliceButtonClicked.connect(self.onSliceButtonClicked)
+        
+        # Connecting signals
+        self.doVerification.connect(self._doVerfication)
+        self.doOptimization.connect(self._doOptimization)
+        
+        # Application stuff
+        Application.getInstance().getPreferences().addPreference(self.token_preference, "")
+        Application.getInstance().activityChanged.connect(self._onApplicationActivityChanged)
 
-        self.token = Preferences.getInstance().getValue("SmartSlice/CloudToken")
-        self._proxy = SmartSliceCloudProxy()
-
-    @property
-    def variables(self):
-        return self.extension.getVariables(None, None)
+    def getProxy(self, engine, script_engine):
+        return self._proxy
 
     def _onEngineCreated(self):
-        self._proxy.status = SmartSliceCloudStatus.Ready
+        qmlRegisterSingletonType(SmartSliceCloudProxy,
+                                 "SmartSlice",
+                                 1, 0,
+                                 "Cloud",
+                                 self.getProxy
+                                 )
+        
+        self.status = SmartSliceCloudStatus.InvalidInput
+
+    def updateSliceWidget(self):
+        if self.status is SmartSliceCloudStatus.InvalidInput:
+            self._proxy.sliceStatus = "Amount of loaded models is incorrect"
+            self._proxy.sliceHint = "Make sure only one model is loaded!"
+            self._proxy.sliceButtonText = "Waiting for model"
+            self._proxy.sliceButtonEnabled = False
+        elif self.status is SmartSliceCloudStatus.ReadyToVerify:
+            self._proxy.sliceStatus = "Ready to verify"
+            self._proxy.sliceHint = "Press on the button below to verify your part."
+            self._proxy.sliceButtonText = "Verify"
+            self._proxy.sliceButtonEnabled = True
+        elif self.status is SmartSliceCloudStatus.BusyValidating:
+            self._proxy.sliceStatus = "Verifying your part"
+            self._proxy.sliceHint = "Please wait until the verification is done."
+            self._proxy.sliceButtonText = "Busy..."
+            self._proxy.sliceButtonEnabled = False
+        elif self.status is SmartSliceCloudStatus.Underdimensioned:
+            self._proxy.sliceStatus = "Your part is underdimensioned!"
+            self._proxy.sliceHint = "Press the button below to strengthen your part."
+            self._proxy.sliceButtonText = "Optimize"
+            self._proxy.sliceButtonEnabled = True
+        elif self.status is SmartSliceCloudStatus.Overdimensioned:
+            self._proxy.sliceStatus = "Your part is overdimensioned!"
+            self._proxy.sliceHint = "Press the button to reduce needed material."
+            self._proxy.sliceButtonText = "Optimize"
+            self._proxy.sliceButtonEnabled = True
+        elif self.status is SmartSliceCloudStatus.BusyOptimizing:
+            self._proxy.sliceStatus = "Optimizing your part"
+            self._proxy.sliceHint = "Please wait until the optimization is done."
+            self._proxy.sliceButtonText = "Busy..."
+            self._proxy.sliceButtonEnabled = False
+        elif self.status is SmartSliceCloudStatus.Optimized:
+            self._proxy.sliceStatus = "Part optimized"
+            self._proxy.sliceHint = "Well done! Now your part suites your needs!"
+            self._proxy.sliceButtonText = "Done"
+            self._proxy.sliceButtonEnabled = False
+        else:
+            self._proxy.sliceStatus = "! INTERNAL ERRROR!"
+            self._proxy.sliceHint = "! UNKNOWN STATUS ENUM SET!"
+            self._proxy.sliceButtonText = "! FOOO !"
+            self._proxy.sliceButtonEnabled = False
+    
+        # Setting icon path
+        stage_path = PluginRegistry.getInstance().getPluginPath("SmartSliceStage")
+        stage_images_path = os.path.join(stage_path, "images")
+        icon_done_green = os.path.join(stage_images_path, "done_green.svg")
+        icon_error_red = os.path.join(stage_images_path, "error_red.svg")
+        icon_warning_yellow = os.path.join(stage_images_path, "warning_yellow.svg")
+        current_icon = icon_done_green
+        if self.status is SmartSliceCloudStatus.Overdimensioned:
+            current_icon = icon_warning_yellow
+        elif self.status is SmartSliceCloudStatus.Underdimensioned:
+            current_icon = icon_error_red
+        self._proxy.sliceIconImage = current_icon
+        
+        # Setting icon visibiltiy
+        if self.status is SmartSliceCloudStatus.Optimized or self.status in SmartSliceCloudStatus.Optimizable:
+            self._proxy.sliceIconVisible = True
+        else:
+            self._proxy.sliceIconVisible = False
+
+    @property
+    def status(self):
+        return self._status
+    
+    @status.setter
+    def status(self, value):
+        if self._status is not value:
+            self._status = value
+            
+            self.updateSliceWidget()
+    
+    @property
+    def token(self):
+        return Application.getInstance().getPreferences().getValue(self.token_preference)
+    
+    @token.setter
+    def token(self, value):
+        Application.getInstance().getPreferences().setValue(self.token_preference, value)
+    
+    def login(self):
+        #username = self._proxy.loginName()
+        #password = self._proxy.loginPassword()
+        
+        if True:
+            self.token = "123456789qwertz"
+            return True
+        else:
+            self.token = ""
+            return False
 
     def getSliceableNodes(self):
         scene_node = Application.getInstance().getController().getScene().getRoot()
@@ -42,6 +211,45 @@ class SmartSliceCloudConnector():
                 sliceable_nodes.append(node)
 
         return sliceable_nodes
+
+    def _onApplicationActivityChanged(self):
+        slicable_nodes_count = len(self.getSliceableNodes())
+        
+        # TODO: Add check for anchors and loads here!
+        
+        if slicable_nodes_count == 1:
+            self.status = SmartSliceCloudStatus.ReadyToVerify
+        else:
+            self.status = SmartSliceCloudStatus.InvalidInput
+    
+    def _onJobFinished(self, job):
+        self._job = None
+    
+    doVerification = pyqtSignal()
+    
+    def _doVerfication(self):
+        self._job = SmartSliceCloudVerificationJob(self)
+        self._job.finished.connect(self._onJobFinished)
+        self._job.start()
+    
+    doOptimization = pyqtSignal()
+    
+    def _doOptimization(self):
+        self._job = SmartSliceCloudOptimizeJob(self)
+        self._job.finished.connect(self._onJobFinished)
+        self._job.start()
+    
+    def onSliceButtonClicked(self):
+        if self.status is SmartSliceCloudStatus.ReadyToVerify:
+            self.status = SmartSliceCloudStatus.BusyValidating
+            self.doVerification.emit()
+        elif self.status in SmartSliceCloudStatus.Optimizable:
+            self.status = SmartSliceCloudStatus.BusyOptimizing
+            self.doOptimization.emit()
+
+    @property
+    def variables(self):
+        return self.extension.getVariables(None, None)
 
     def prepareInitial3mf(self, location=None):
         # Using tempfile module to probe for a temporary file path

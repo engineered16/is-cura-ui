@@ -89,7 +89,7 @@ Item {
                         font: UM.Theme.getFont("default");
                         renderType: Text.NativeRendering
 
-                        text: catalog.i18nc("@action:button", "<Status name>")
+                        text: SmartSlice.Cloud.sliceStatus
 
                     }
 
@@ -100,28 +100,46 @@ Item {
                         font: UM.Theme.getFont("default")
                         renderType: Text.NativeRendering
 
-                        text: catalog.i18nc("@action:button", "<Status hint>")
+                        text: SmartSlice.Cloud.sliceHint
 
                     }
                 }
 
                 // Status indicator
-                UM.RecolorImage {
+                Row{
+                Layout.alignment: Qt.AlignTop
+                
+                Image {
                     id: smartSliceInfoIcon
-                    source: UM.Theme.getIcon("info")
-
-                    Layout.alignment: Qt.AlignTop
 
                     width: UM.Theme.getSize("section_icon").width
                     height: UM.Theme.getSize("section_icon").height
+                    
+                    fillMode: Image.PreserveAspectFit
+                    mipmap: true
 
-                    color: UM.Theme.getColor("icon")
+                    source: SmartSlice.Cloud.sliceIconImage
+                    visible: SmartSlice.Cloud.sliceIconVisible
+
+                    Connections {
+                        target: SmartSlice.Cloud
+                        onSliceIconImageChanged: {
+                            smartSliceInfoIcon.source = SmartSlice.Cloud.sliceIconImage
+                        }
+                        onSliceIconVisibleChanged: {
+                            smartSliceInfoIcon.visible = SmartSlice.Cloud.sliceIconVisible
+                        }
+                    }
 
                     MouseArea
                     {
                         anchors.fill: parent
                         hoverEnabled: true
-                        onEntered: smartSlicePopup.open()
+                        onEntered: {
+                            if (visible) {
+                                smartSlicePopup.open();
+                            }
+                        }
                         onExited: smartSlicePopup.close()
                     }
 
@@ -484,6 +502,7 @@ Item {
                         }
                     }
                 }
+                }
             }
             Cura.PrimaryButton
             {
@@ -493,14 +512,14 @@ Item {
 
                 height: UM.Theme.getSize("action_button").height
 
-                text: "Smart Slice"
+                text: SmartSlice.Cloud.sliceButtonText
 
-                enabled: SmartSlice.Proxy.hasSliceableNodes
+                enabled: SmartSlice.Cloud.sliceButtonEnabled
 
                 Connections {
-                    target: SmartSlice.Proxy
-                    onSliceableNodesChanged: {
-                        smartSliceButton.enabled = SmartSlice.Proxy.hasSliceableNodes
+                    target: SmartSlice.Cloud
+                    onSliceButtonEnabledChanged: {
+                        smartSliceButton.enabled = SmartSlice.Cloud.sliceButtonEnabled
                     }
                 }
 
@@ -510,8 +529,7 @@ Item {
                 */
                 onClicked: {
                     //  Show Validation Dialog
-                    SmartSlice.Proxy.sendJobSignal()
-                    validationSimulator.start()
+                    SmartSlice.Cloud.sliceButtonClicked()
                 }
             }
         }
