@@ -173,7 +173,10 @@ Item {
                             property var description_color: UM.Theme.getColor("text")
                             property var value_font: UM.Theme.getFont("default")
                             property var value_color: UM.Theme.getColor("text")
-
+                            
+                            property color warningColor: "#F3BA1A"
+                            property color errorColor: "#F15F63"
+                            property color successColor: "#5DBA47"
 
                             /* REQUIREMENTS HEADER */
                             Label {
@@ -184,8 +187,41 @@ Item {
                             }
 
                             RowLayout {
+                                id: layoutRequirements
                                 Layout.fillWidth: true
                                 spacing: UM.Theme.getSize("default_margin").width
+                                
+                                function updateSafetyFactorColor() {
+                                    if (SmartSlice.Cloud.resultSafetyFactor > SmartSlice.Variables.safetyFactor) {
+                                        labelDescriptionSafetyFactor.color = smartSlicePopupContents.warningColor
+                                        labelResultSafetyFactor.color = smartSlicePopupContents.warningColor
+                                        labelTargetSafetyFactor.color = smartSlicePopupContents.warningColor
+                                    } else if (SmartSlice.Cloud.resultSafetyFactor < SmartSlice.Variables.safetyFactor) {
+                                        labelDescriptionSafetyFactor.color = smartSlicePopupContents.errorColor
+                                        labelResultSafetyFactor.color = smartSlicePopupContents.errorColor
+                                        labelTargetSafetyFactor.color = smartSlicePopupContents.errorColor
+                                    } else {
+                                        labelDescriptionSafetyFactor.color = smartSlicePopupContents.successColor
+                                        labelResultSafetyFactor.color = smartSlicePopupContents.successColor
+                                        labelTargetSafetyFactor.color = smartSlicePopupContents.successColor
+                                    }
+                                }
+                                
+                                function updateMaximalDisplacementColor() {
+                                    if (SmartSlice.Cloud.resultSafetyFactor > SmartSlice.Variables.safetyFactor) {
+                                        labelDescriptionMaximumDisplacement.color = smartSlicePopupContents.warningColor
+                                        labelResultMaximalDisplacement.color = smartSlicePopupContents.warningColor
+                                        labelTargetMaximalDisplacement.color = smartSlicePopupContents.warningColor
+                                    } else if (SmartSlice.Cloud.resultSafetyFactor < SmartSlice.Variables.safetyFactor) {
+                                        labelDescriptionMaximumDisplacement.color = smartSlicePopupContents.errorColor
+                                        labelResultMaximalDisplacement.color = smartSlicePopupContents.errorColor
+                                        labelTargetMaximalDisplacement.color = smartSlicePopupContents.errorColor
+                                    } else {
+                                        labelDescriptionMaximumDisplacement.color = smartSlicePopupContents.successColor
+                                        labelResultMaximalDisplacement.color = smartSlicePopupContents.successColor
+                                        labelTargetMaximalDisplacement.color = smartSlicePopupContents.successColor
+                                    }
+                                }
 
                                 ColumnLayout {
                                     Layout.fillWidth: true
@@ -194,22 +230,21 @@ Item {
                                     Label {
                                         Layout.fillWidth: true
 
-                                        id: labelObj
                                         text: "Objective"
 
                                         font: smartSlicePopupContents.subheader_font
                                         color: smartSlicePopupContents.subheader_color
                                     }
                                     Label {
-                                        id: labelSafety
+                                        id: labelDescriptionSafetyFactor
                                         text: "Factor of Safety:"
 
                                         font: smartSlicePopupContents.description_font
                                         color: smartSlicePopupContents.description_color
                                     }
                                     Label {
-                                        id: labelDisplace
-                                        text: "Max Displacement:"
+                                        id: labelDescriptionMaximumDisplacement
+                                        text: "Maximal Displacement:"
 
                                         font: smartSlicePopupContents.description_font
                                         color: smartSlicePopupContents.description_color
@@ -227,18 +262,24 @@ Item {
                                         text: "Computed"
                                     }
                                     Label {
+                                        id: labelResultSafetyFactor
+                                        
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
-                                        text: SmartSlice.Variables.safetyFactor
+                                        text: SmartSlice.Cloud.resultSafetyFactor
+                                        onTextChanged: layoutRequirements.updateSafetyFactorColor()
                                     }
                                     Label {
+                                        id: labelResultMaximalDisplacement
+
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
-                                        color: smartSlicePopupContents.value_color
+                                        color: updateTextColor()
 
-                                        text: Data.MaxDeflectionComputed()
+                                        text: SmartSlice.Cloud.resultMaximalDisplacement
+                                        onTextChanged: layoutRequirements.updateMaximalDisplacementColor()
                                     }
                                 }
                                 ColumnLayout {
@@ -247,24 +288,32 @@ Item {
                                     spacing: UM.Theme.getSize("default_margin").height
 
                                     Label {
+                                        
+                                        
                                         font: smartSlicePopupContents.subheader_font
                                         color: smartSlicePopupContents.subheader_color
 
                                         text: "Target"
                                     }
                                     Label {
+                                        id: labelTargetSafetyFactor
+                                        
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
-                                        text: "50"
+                                        text: SmartSlice.Variables.safetyFactor
+                                        onTextChanged: layoutRequirements.updateSafetyFactorColor()
                                     }
                                     Label {
+                                        id: labelTargetMaximalDisplacement
+                                        
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
                                         text: SmartSlice.Variables.maxDeflect
+                                        onTextChanged: layoutRequirements.updateMaximalDisplacementColor()
                                     }
                                 }
 
@@ -341,49 +390,49 @@ Item {
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
-                                        text: "2.5"
+                                        text: Qt.formatTime(SmartSlice.Cloud.resultTimeInfill, "hh:mm")
                                     }
                                     Label {
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
-                                        text: Data.InnerWallsComputed()
+                                        text: Qt.formatTime(SmartSlice.Cloud.resultTimeInnerWalls, "hh:mm")
                                     }
                                     Label {
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
-                                        text: Data.OuterWallsComputed()
+                                        text: Qt.formatTime(SmartSlice.Cloud.resultTimeOuterWalls, "hh:mm")
                                     }
                                     Label {
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
-                                        text: Data.RetractionsComputed()
+                                        text: Qt.formatTime(SmartSlice.Cloud.resultTimeRetractions, "hh:mm")
                                     }
                                     Label {
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
-                                        text: Data.SkinComputed()
+                                        text: Qt.formatTime(SmartSlice.Cloud.resultTimeSkin, "hh:mm")
                                     }
                                     Label {
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
-                                        text: Data.SkirtComputed()
+                                        text: Qt.formatTime(SmartSlice.Cloud.resultTimeSkirt, "hh:mm")
                                     }
                                     Label {
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
-                                        text: Data.TravelComputed()
+                                        text: Qt.formatTime(SmartSlice.Cloud.resultTimeTravel, "hh:mm")
                                     }
                                 }
 
@@ -397,49 +446,49 @@ Item {
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
-                                        text: Data.InfillsTarget()
+                                        text: SmartSlice.Cloud.percentageTimeInfill.toFixed(2) + " %"
                                     }
                                     Label {
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
-                                        text: Data.InnerWallsTarget()
+                                        text: SmartSlice.Cloud.percentageTimeInnerWalls.toFixed(2) + " %"
                                     }
                                     Label {
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
-                                        text: Data.OuterWallsTarget()
+                                        text: SmartSlice.Cloud.percentageTimeOuterWalls.toFixed(2) + " %"
                                     }
                                     Label {
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
-                                        text: Data.RetractionsTarget()
+                                        text: SmartSlice.Cloud.percentageTimeRetractions.toFixed(2) + " %"
                                     }
                                     Label {
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
-                                        text: Data.SkinTarget()
+                                        text: SmartSlice.Cloud.percentageTimeSkin.toFixed(2) + " %"
                                     }
                                     Label {
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
-                                        text: Data.SkirtTarget()
+                                        text: SmartSlice.Cloud.percentageTimeSkirt.toFixed(2) + " %"
                                     }
                                     Label {
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
-                                        text: Data.TravelTarget()
+                                        text: SmartSlice.Cloud.percentageTimeTravel.toFixed(2) + " %"
                                     }
                                 }
                             }

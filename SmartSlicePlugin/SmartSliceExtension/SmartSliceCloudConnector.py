@@ -13,6 +13,7 @@ import zipfile
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtCore import QObject
+from PyQt5.QtCore import QTime
 from PyQt5.QtCore import QUrl
 from PyQt5.QtNetwork import QNetworkReply
 from PyQt5.QtNetwork import QNetworkRequest
@@ -63,11 +64,45 @@ class SmartSliceCloudVerificationJob(Job):
         if not self.connector._demo_was_underdimensioned_before:
             self.connector.status = SmartSliceCloudStatus.Underdimensioned
             self.connector._demo_was_underdimensioned_before = True
+            
+            self.connector._proxy.resultSafetyFactor = 0.5
+            self.connector._proxy.resultMaximalDisplacement = 5
+            
+            self.connector._proxy.resultTimeInfill = QTime(1, 0, 0, 0)
+            self.connector._proxy.resultTimeInnerWalls = QTime(0, 20, 0, 0)
+            self.connector._proxy.resultTimeOuterWalls = QTime(0, 15, 0, 0)
+            self.connector._proxy.resultTimeRetractions = QTime(0, 5, 0, 0)
+            self.connector._proxy.resultTimeSkin = QTime(0, 10, 0, 0)
+            self.connector._proxy.resultTimeSkirt = QTime(0, 1, 0, 0)
+            self.connector._proxy.resultTimeTravel = QTime(0, 30, 0, 0)
+        
         elif not self.connector._demo_was_overdimensioned_before:
             self.connector.status = SmartSliceCloudStatus.Overdimensioned
             self.connector._demo_was_overdimensioned_before = True
+            
+            self.connector._proxy.resultSafetyFactor = 2
+            self.connector._proxy.resultMaximalDisplacement = 1
+            
+            self.connector._proxy.resultTimeInfill = QTime(2, 0, 0, 0)
+            self.connector._proxy.resultTimeInnerWalls = QTime(0, 10, 0, 0)
+            self.connector._proxy.resultTimeOuterWalls = QTime(0, 20, 0, 0)
+            self.connector._proxy.resultTimeRetractions = QTime(0, 3, 0, 0)
+            self.connector._proxy.resultTimeSkin = QTime(0, 15, 0, 0)
+            self.connector._proxy.resultTimeSkirt = QTime(0, 2, 0, 0)
+            self.connector._proxy.resultTimeTravel = QTime(0, 45, 0, 0)
         else:
             self.connector.status = SmartSliceCloudStatus.Optimized
+            
+            self.connector._proxy.resultSafetyFactor = 1
+            self.connector._proxy.resultMaximalDisplacement = 2
+            
+            self.connector._proxy.resultTimeInfill = QTime(3, 0, 0, 0)
+            self.connector._proxy.resultTimeInnerWalls = QTime(0, 10, 0, 0)
+            self.connector._proxy.resultTimeOuterWalls = QTime(0, 20, 0, 0)
+            self.connector._proxy.resultTimeRetractions = QTime(0, 3, 0, 0)
+            self.connector._proxy.resultTimeSkin = QTime(0, 15, 0, 0)
+            self.connector._proxy.resultTimeSkirt = QTime(0, 2, 0, 0)
+            self.connector._proxy.resultTimeTravel = QTime(0, 45, 0, 0)
 
 SmartSliceCloudOptimizeJob = SmartSliceCloudVerificationJob
 
