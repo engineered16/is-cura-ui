@@ -23,6 +23,7 @@ import Cura 1.0 as Cura
   Constraints
 */
 Item {
+    id: constraintsTooltip
     width: childrenRect.width
     height: childrenRect.height
     
@@ -31,13 +32,9 @@ Item {
         name: "smartslice"
     }
     
-    function updateCheckedStatus() {
+    Component.onCompleted: {
         selectAnchorButton.checked = UM.ActiveTool.properties.getValue("AnchorSelectionActive")
         selectLoadButton.checked = UM.ActiveTool.properties.getValue("LoadSelectionActive")
-    }
-    
-    Component.onCompleted: {
-        updateCheckedStatus()
     }
       
     Button
@@ -54,8 +51,9 @@ Item {
         style: UM.Theme.styles.tool_button;
 
         onClicked: {
-            UM.ActiveTool.triggerAction("setAnchorSelection")
-            updateCheckedStatus()
+            UM.ActiveTool.triggerAction("setAnchorSelection");
+            selectAnchorButton.checked = true;
+            selectLoadButton.checked = false;
         }
         //checked: constraintsRoot.anchorActive
     }
@@ -74,8 +72,9 @@ Item {
         style: UM.Theme.styles.tool_button;
 
         onClicked: {
-            UM.ActiveTool.triggerAction("setLoadSelection")
-            updateCheckedStatus()
+            UM.ActiveTool.triggerAction("setLoadSelection");
+            selectAnchorButton.checked = false;
+            selectLoadButton.checked = true;
         }
         //checked: constraintsRoot.loadActive
     }
