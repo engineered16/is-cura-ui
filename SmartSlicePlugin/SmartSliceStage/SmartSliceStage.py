@@ -42,9 +42,9 @@ class SmartSliceStage(CuraStage):
         Application.getInstance().engineCreatedSignal.connect(self._engineCreated)
 
         #   Set Default Attributes
-        self._stage_open = False
         self._was_buildvolume_hidden = None
         self._default_toolset = None
+        self._default_fallback_tool = None
         self._our_toolset = ("SmartSliceSelectTool",
                              "SmartSliceRequirements",
                              )
@@ -52,7 +52,6 @@ class SmartSliceStage(CuraStage):
         self._our_last_tool = None
         self._were_tools_enabled = None
         self._was_selection_face = None
-        self._first_open = True
 
     #   onStageSelected:
     #       This transitions the userspace/working environment from
@@ -64,19 +63,15 @@ class SmartSliceStage(CuraStage):
             self._was_buildvolume_hidden = True
 
         # Ensure we have tools defined and apply them here
-        self.toggleToolVisibility(True)
+        self.setToolVisibility(True)
+        Application.getInstance().getController().setFallbackTool(self._our_toolset[0])
+        Application.getInstance().getController().setActiveTool(None)
 
         # Reset selection
         self._was_selection_face = Selection.getFaceSelectMode()
         Selection.setFaceSelectMode(False)
         Selection.clear()
         Selection.clearFace()
-
-        if (self._first_open):
-            #  Create QML/Python Interface Bridge
-            bridge = SmartSliceBridge()
-            self._first_open = False
-
 
     #   onStageDeselected:
     #       Sets attributes that allow the Smart Slice Stage to properly deactivate
@@ -88,7 +83,9 @@ class SmartSliceStage(CuraStage):
             self._is_buildvolume_hidden = None
 
         # Recover if we have tools defined
-        self.toggleToolVisibility(False)
+        self.setToolVisibility(False)
+        Application.getInstance().getController().setFallbackTool(self._default_fallback_tool)
+        Application.getInstance().getController().setActiveTool(None)
 
         # Reset selection
         if self._was_selection_face is not None and self._was_selection_face is not Selection.getFaceSelectMode():
@@ -110,7 +107,7 @@ class SmartSliceStage(CuraStage):
                 visible_tools.append(tool)
         return visible_tools
 
-    def toggleToolVisibility(self, our_tools_visible):
+    def setToolVisibility(self, our_tools_visible):
         plugin_registry = PluginRegistry.getInstance()
         for tool_id in Application.getInstance().getController().getAllTools().keys():
             tool_metadata = plugin_registry.getMetaData(tool_id)
@@ -167,8 +164,8 @@ class SmartSliceStage(CuraStage):
         for tool in self._default_toolset:
             if tool in self._our_toolset:
                 self._default_toolset.remove(tool)
-        Logger.log("d", "self._default_toolset: {}".format(self._default_toolset))
-        Logger.log("d", "self._our_toolset: {}".format(self._our_toolset))
+                
+        self._default_fallback_tool = Application.getInstance().getController().getFallbackTool()
 
         # Undisplay our tools!
-        self.toggleToolVisibility(False)
+        self.setToolVisibility(False)
