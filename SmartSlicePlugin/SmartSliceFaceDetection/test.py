@@ -23,7 +23,7 @@ from FaceDetection import FaceDetection, PointWithNormal, FaceWithNormal
 
 print ("CHECK 1: PointWithNormal\n")
 
-#  Define 6 Points that make a cube
+#  Define 8 Points that make a cube
 p1   = Point_3(0, 0, 0)
 v1   = Vector_3(-1, -1, -1)
 pwn1 = PointWithNormal(p1, v1)
@@ -57,14 +57,15 @@ v8 = Vector_3(-1, 1, 1)
 pwn8 = PointWithNormal(p8, v8)
 
 #  Put into List
-pwns = [pwn1, pwn2, pwn3, pwn4, pwn5, pwn6, pwn7, pwn8]
-
+pwns = [pwn1, pwn2, pwn3, pwn4, pwn5, pwn6, pwn7, pwn8]  #  CUBE
+#pwns = [pwn1, pwn2, pwn3, pwn6]                         #  TETRAHEDRON
+ 
 print ("CHECK 2: FaceWithNormal\n")
 
-points_neg_z = [pwn1, pwn2, pwn3, pwn4]
-normal_neg_z = (0, 0, -1)
+#points_neg_z = [pwn1, pwn2, pwn3, pwn4]
+#normal_neg_z = (0, 0, -1)
 
-face = FaceWithNormal(points_neg_z)
+#face = FaceWithNormal(points_neg_z)
 
 
 print ("CHECK 3: FaceDetection\n")
@@ -77,4 +78,8 @@ fd.detect()
 
 #  Report Findings
 print (str(fd.count()) + " shapes found\n")
+
+
+print ("Shape 0:\n")
+fd.getShape(0).printDetails()
 
