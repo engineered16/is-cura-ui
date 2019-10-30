@@ -80,6 +80,7 @@ fd.detect()
 print (str(fd.count()) + " shapes found\n")
 
 
-print ("Shape 0:\n")
+print ("Shape 1:\n")
 fd.getShape(0).printDetails()
+
 

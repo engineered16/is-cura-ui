@@ -47,56 +47,71 @@ class FaceDetection:
         for pwn in self._pwns:
             
             #  X Normal Component
-            if (self._discovered_x.count(pwn.getNormal().x()) == 0):    # First Two Vertices (No Shape)
+            if (self._discovered_x.count(pwn.getNormal().x()) < 2):    # First Two Vertices (No Shape)
                 self._discovered_x.append(pwn.getNormal().x())
-                self._possible_vertices.append(pwn)
+                if (self._possible_vertices.count(pwn) == 0):
+                    self._possible_vertices.append(pwn)
             elif (self._discovered_x.count(pwn.getNormal().x()) == 2):  # Third Vertex (Becomes Shape)
                 self._discovered_x.append(pwn.getNormal().x())
-                vertices = [ pwn.getPoint() ]
+                if (self._possible_vertices.count(pwn) == 0):
+                    self._possible_vertices.append(pwn)
+                vertices = [ ]
                 for vert in self._possible_vertices:
                     if (vert.getNormal().x() == pwn.getNormal().x()):
                         vertices.append( vert.getPoint() )
                 self._extracted_shapes.append(FaceWithNormal(vertices, Vector_3(pwn.getNormal().x(),0,0)))
             else:                                                       # Fourth Vertex and Beyond
                 self._discovered_x.append(pwn.getNormal().x())
+                if (self._possible_vertices.count(pwn) == 0):
+                    self._possible_vertices.append(pwn)
                 for shape in self._extracted_shapes:
                     if (pwn.getNormal() == shape.getNormalVector()):
                         shape.addPoint(pwn)
 
             #  Y Normal Component
-            if (self._discovered_y.count(pwn.getNormal().y()) == 0):
+            if (self._discovered_y.count(pwn.getNormal().y()) < 2):     # First Two Vertices (No Shape)
                 self._discovered_y.append(pwn.getNormal().y())
-                self._possible_vertices.append(pwn)
-            elif (self._discovered_y.count(pwn.getNormal().y()) == 1):
+                if (self._possible_vertices.count(pwn) == 0):
+                    self._possible_vertices.append(pwn)
+            elif (self._discovered_y.count(pwn.getNormal().y()) == 2):  # Third Vertex (Becomes Shape)
                 self._discovered_y.append(pwn.getNormal().y())
-            elif (self._discovered_y.count(pwn.getNormal().y()) == 2):
-                self._discovered_y.append(pwn.getNormal().y())
-                vertices = [ pwn.getPoint() ]
+                if (self._possible_vertices.count(pwn) == 0):
+                    self._possible_vertices.append(pwn)
+                vertices = [ ]
                 for vert in self._possible_vertices:
                     if (vert.getNormal().y() == pwn.getNormal().y()):
                         vertices.append( vert.getPoint() )
-                self._extracted_shapes.append(FaceWithNormal(vertices, pwn.getNormal()))
-            else:                                                       # Fourth Vertex and Beyond
+                self._extracted_shapes.append(FaceWithNormal(vertices, Vector_3(0, pwn.getNormal().y(), 0)))
+            else:                                        # Fourth Vertex and Beyond
                 self._discovered_y.append(pwn.getNormal().y())
+                if (self._possible_vertices.count(pwn) == 0):
+                    self._possible_vertices.append(pwn)
                 for shape in self._extracted_shapes:
                     if (pwn.getNormal() == shape.getNormalVector()):
                         shape.addPoint(pwn)
                 
             #  Z Normal Component
-            if (self._discovered_z.count(pwn.getNormal().z()) == 0):
+            if (self._discovered_z.count(pwn.getNormal().z()) < 2):
                 self._discovered_z.append(pwn.getNormal().z())
-                self._possible_vertices.append(pwn)
+                if (self._possible_vertices.count(pwn) == 0):
+                    self._possible_vertices.append(pwn)
             elif (self._discovered_z.count(pwn.getNormal().z()) == 1):
                 self._discovered_z.append(pwn.getNormal().z())
+                if (self._possible_vertices.count(pwn) == 0):
+                    self._possible_vertices.append(pwn)
             elif (self._discovered_z.count(pwn.getNormal().z()) == 2):
                 self._discovered_z.append(pwn.getNormal().z())
-                vertices = [ pwn.getPoint() ]
+                if (self._possible_vertices.count(pwn) == 0):
+                    self._possible_vertices.append(pwn)
+                vertices = [ ]
                 for vert in self._possible_vertices:
                     if (vert.getNormal().z() == pwn.getNormal().z()):
                         vertices.append( vert.getPoint() )
-                self._extracted_shapes.append(FaceWithNormal(vertices, pwn.getNormal()))
+                self._extracted_shapes.append(FaceWithNormal(vertices, Vector_3(0, 0, pwn.getNormal().z())))
             else:                                                       # Fourth Vertex and Beyond
                 self._discovered_z.append(pwn.getNormal().z())
+                if (self._possible_vertices.count(pwn) == 0):
+                    self._possible_vertices.append(pwn)
                 for shape in self._extracted_shapes:
                     if (pwn.getNormal() == shape.getNormalVector()):
                         shape.addPoint(pwn)
