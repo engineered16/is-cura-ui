@@ -8,8 +8,7 @@
 #
 
 
-import sys
-import os
+import sys, os
 sys.path.append('/usr/lib/python3.7')
 sys.path.append(os.getcwd())
 
@@ -19,10 +18,12 @@ from CGAL.CGAL_Kernel import Point_3
 from CGAL.CGAL_Kernel import Vector_3
 
 #  Face Detection Imports
-from FaceDetection import FaceDetection, PointWithNormal
+from FaceDetection import FaceDetection, PointWithNormal, FaceWithNormal
 
 
-#  Define 6 Points that make a cube
+print ("CHECK 1: PointWithNormal\n")
+
+#  Define 8 Points that make a cube
 p1   = Point_3(0, 0, 0)
 v1   = Vector_3(-1, -1, -1)
 pwn1 = PointWithNormal(p1, v1)
@@ -56,7 +57,18 @@ v8 = Vector_3(-1, 1, 1)
 pwn8 = PointWithNormal(p8, v8)
 
 #  Put into List
-pwns = [pwn1, pwn2, pwn3, pwn4, pwn5, pwn6, pwn7, pwn8]
+pwns = [pwn1, pwn2, pwn3, pwn4, pwn5, pwn6, pwn7, pwn8]  #  CUBE
+#pwns = [pwn1, pwn2, pwn3, pwn6]                         #  TETRAHEDRON
+ 
+print ("CHECK 2: FaceWithNormal\n")
+
+#points_neg_z = [pwn1, pwn2, pwn3, pwn4]
+#normal_neg_z = (0, 0, -1)
+
+#face = FaceWithNormal(points_neg_z)
+
+
+print ("CHECK 3: FaceDetection\n")
 
 #  Create new FaceDetection object from the cube's PointWithNormals
 fd = FaceDetection(pwns)
@@ -65,5 +77,10 @@ fd = FaceDetection(pwns)
 fd.detect()
 
 #  Report Findings
-print (str(fd.countShapes()) + " shapes found\n")
+print (str(fd.count()) + " shapes found\n")
+
+
+print ("Shape 1:\n")
+fd.getShape(0).printDetails()
+
 
