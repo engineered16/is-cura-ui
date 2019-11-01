@@ -18,10 +18,11 @@ from CGAL.CGAL_Kernel import Point_3
 from CGAL.CGAL_Kernel import Vector_3
 
 # Local
-from FaceSelection import FaceSelection, SelectableFace, NormalVector
+from FaceSelection import FaceSelection
+from Detessellate import detessellate
+from Facet import SelectableFace, NormalVector
 
-
-faces  = []
+tris  = []
 points = []
 
 #  Define Vertices of Regular Cube
@@ -36,32 +37,46 @@ p8 = Point_3(1, 1, 1)
 
 
 # Bottom Face
-sface = SelectableFace([p1, p2, p3], NormalVector(p1, p2, p3))  
-faces.append(sface)
+sface0 = SelectableFace([p1, p2, p4], NormalVector(p1, p2, p4))
+sface1 = SelectableFace([p2, p4, p6], NormalVector(p2, p4, p6))
+tris.append(sface0)
+tris.append(sface1)
 
 # Top Face
-sface = SelectableFace([p4, p6, p7], NormalVector(p4, p6, p7))  
-faces.append(sface)
+sface0 = SelectableFace([p3, p5, p8], NormalVector(p3, p5, p8))
+sface1 = SelectableFace([p3, p7, p8], NormalVector(p3, p7, p8))
+tris.append(sface0)
+tris.append(sface1)
 
 # Left Face
-sface = SelectableFace([p1, p2, p3], NormalVector(p1, p2, p4))  
-faces.append(sface)
+sface0 = SelectableFace([p1, p3, p4], NormalVector(p1, p3, p4))
+sface1 = SelectableFace([p3, p4, p7], NormalVector(p3, p4, p7))
+tris.append(sface0)
+tris.append(sface1)
 
 # Right Face
-sface = SelectableFace([p1, p2, p3], NormalVector(p3, p5, p7))  
-faces.append(sface)
+sface0 = SelectableFace([p2, p5, p6], NormalVector(p2, p5, p6))
+sface1 = SelectableFace([p5, p6, p8], NormalVector(p5, p6, p8))
+tris.append(sface0)
+tris.append(sface1)
 
 # Front Face
-sface = SelectableFace([p2, p5, p6], NormalVector(p2, p5, p6))  
-faces.append(sface)
+sface0 = SelectableFace([p4, p7, p6], NormalVector(p4, p7, p6))
+sface1 = SelectableFace([p7, p8, p6], NormalVector(p7, p8, p6))
+tris.append(sface0)
+tris.append(sface1)
 
 # Back Face
-sface = SelectableFace([p1, p3, p4], NormalVector(p1, p3, p4))  
-faces.append(sface)
+sface0 = SelectableFace([p1, p2, p3], NormalVector(p1, p2, p3))
+sface1 = SelectableFace([p2, p3, p5], NormalVector(p2, p3, p5))
+tris.append(sface0)
+tris.append(sface1)
 
 
-fs = FaceSelection(faces)
+fs = FaceSelection(tris)
+
 
 fs.select_face(fs.getFace(2)) #  Should report LEFT FACE
 
 fs.selected_faces[0].printDetails()
+
