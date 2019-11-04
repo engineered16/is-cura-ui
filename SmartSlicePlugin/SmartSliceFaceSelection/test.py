@@ -21,6 +21,7 @@ from CGAL.CGAL_Kernel import Vector_3
 from FaceSelection import FaceSelection
 from Detessellate import detessellate
 from Facet import SelectableFace, NormalVector
+from SmartSliceVisualization import SmartSliceSelectionVisualizer
 
 tris  = []
 points = []
@@ -77,10 +78,17 @@ tris.append(sface1)
 fs = FaceSelection()
 fs.from_stl("cube.stl")
 
-fs.select_face(fs.getFace(0))
-fs.select_face(fs.getFace(1)) 
+#fs.select_face(fs.getFace(0)) 
+#fs.select_face(fs.getFace(1)) 
+fs.select_face(fs.getFace(2)) 
+#fs.select_face(fs.getFace(3))
+#fs.select_face(fs.getFace(4))  
+fs.select_face(fs.getFace(5)) 
 
 print ("Found " + str(len(fs._faces)) + " faces.")
 
 fs.selected_faces[0].printDetails()
+
+
+vis = SmartSliceSelectionVisualizer(fs)
 

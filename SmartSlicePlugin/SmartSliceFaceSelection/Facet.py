@@ -95,6 +95,12 @@ class SelectableFace:
     def selected(self, isSelected):
         self._selected = isSelected
 
+    def select(self):
+        self._selected = True
+
+    def deselect(self):
+        self._selected = False
+
     '''
       addTri()
         Adds triangle to SelectableFace
@@ -113,15 +119,6 @@ class SelectableFace:
                 for p2 in tri.points:
                     if (p != p2):
                         self.addEdge(p, p2)
-        #  Remove Jointed Edges
-        for p in tri.points:
-            for q in self._points:
-                if (p.x() == q.x() and p.y() == q.y()):
-                    self.removeEdge(Edge(p, q))
-                if (p.x() == q.x() and p.z() == q.z()):
-                    self.removeEdge(Edge(p, q))
-                if (p.y() == q.y() and p.z() == q.z()):
-                    self.removeEdge(Edge(p, q))
         
   
 

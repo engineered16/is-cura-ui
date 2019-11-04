@@ -93,7 +93,9 @@ class FaceSelection():
         Adds given 'face' to active selection
     '''
     def select_face(self, face):
-        self._selected.append(face)
+        f = face
+        f.select()
+        self._selected.append(f)
 
     ''' 
       clear_selection()
