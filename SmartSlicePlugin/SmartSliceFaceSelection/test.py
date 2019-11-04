@@ -38,7 +38,7 @@ p8 = Point_3(1, 1, 1)
 
 # Bottom Face
 sface0 = SelectableFace([p1, p2, p4], NormalVector(p1, p2, p4))
-sface1 = SelectableFace([p2, p4, p6], NormalVector(p2, p4, p6))
+sface1 = SelectableFace([p6, p2, p4], NormalVector(p6, p2, p4))
 tris.append(sface0)
 tris.append(sface1)
 
@@ -73,10 +73,14 @@ tris.append(sface0)
 tris.append(sface1)
 
 
-fs = FaceSelection(tris)
+#fs = FaceSelection(tris)
+fs = FaceSelection()
+fs.from_stl("cube.stl")
 
+fs.select_face(fs.getFace(0))
+fs.select_face(fs.getFace(1)) 
 
-fs.select_face(fs.getFace(2)) #  Should report LEFT FACE
+print ("Found " + str(len(fs._faces)) + " faces.")
 
 fs.selected_faces[0].printDetails()
 

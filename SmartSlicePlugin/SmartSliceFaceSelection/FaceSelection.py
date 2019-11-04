@@ -20,7 +20,6 @@ from CGAL.CGAL_Kernel import Point_3
 from CGAL.CGAL_Kernel import Vector_3
 
 #  NUMPY IMPORTS
-import numpy
 from stl import mesh
 
 #  Local Imports
@@ -102,4 +101,37 @@ class FaceSelection():
     '''
     def clear_selection(self):
         self._selected = []
+
+
+    '''
+      from_stl(filename)
+        Populates triangles and faces using an STL file
+    '''
+    def from_stl(self, file):
+        self._tris = []
+        _mesh = mesh.Mesh.from_file(file)
+        face = 0
+
+        #  For each face in STL file
+        for norm in _mesh.normals:
+            points = []
+
+            points.append(Point_3(_mesh.points[face][0].item(), _mesh.points[face][1].item(), _mesh.points[face][2].item()))
+            points.append(Point_3(_mesh.points[face][3].item(), _mesh.points[face][4].item(), _mesh.points[face][5].item()))
+            points.append(Point_3(_mesh.points[face][6].item(), _mesh.points[face][7].item(), _mesh.points[face][8].item()))
+
+            #print ("Point 0: (" + str(points[0].x()) + ", " + str(points[0].y()) + ", " + str(points[0].z()) + ")")
+            #print ("Point 1: (" + str(points[1].x()) + ", " + str(points[1].y()) + ", " + str(points[1].z()) + ")")
+            #print ("Point 2: (" + str(points[2].x()) + ", " + str(points[2].y()) + ", " + str(points[2].z()) + ")")
+
+            #print ("Normal: (" + str(norm[0]) + ", " + str(norm[1]) + ", " + str(norm[2]) + ")")
+
+            self._tris.append(SelectableFace(points, norm))
+            
+            face += 1
+
+        self._faces = detessellate(self._tris)
+
+
+
 

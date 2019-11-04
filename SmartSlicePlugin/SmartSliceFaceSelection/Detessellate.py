@@ -59,14 +59,13 @@ def detessellate(tris):
     Returns TRUE if 'face1' and 'face2' share at least 2 vertices
 '''
 def isJointed(face1, face2):
+    matched = 0
     for p in face1.points:
         for q in face2.points:
-            if (p.x() == q.x() and p.y() == q.y()):
-                return True
-            if (p.x() == q.x() and p.z() == q.z()):
-                return True
-            if (p.y() == q.y() and p.z() == q.z()):
-                return True
+            if (p.x() == q.x() and p.y() == q.y() and p.z() == q.z()):
+                matched += 1
+                if (matched >= 2):
+                    return True
     return False
 
 '''
@@ -74,7 +73,7 @@ def isJointed(face1, face2):
     Returns TRUE if 'face1' and 'face2' share the same normal vector
 '''
 def isCoplanar(face1, face2):
-    if (face1.normal == face2.normal):
+    if ((face1.normal[0] == face2.normal[0]) and (face1.normal[1] == face2.normal[1]) and (face1.normal[2] == face2.normal[2])):
         return True
     return False
 

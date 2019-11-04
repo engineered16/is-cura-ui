@@ -108,7 +108,6 @@ class SelectableFace:
                 if ((p.x() == q.x()) and (p.y() == q.y()) and (p.z() == q.z())):
                     _add = False
             if (_add):
-                print "Check"
                 #  Add Point and Associated Edges to Face
                 self.addPoint(p)
                 for p2 in tri.points:
