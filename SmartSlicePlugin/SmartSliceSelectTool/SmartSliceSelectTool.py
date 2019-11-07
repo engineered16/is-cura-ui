@@ -2,13 +2,18 @@
 # Uranium is released under the terms of the LGPLv3 or higher.
 
 
+#   Filesystem Control
+import os.path
+
 from UM.Application import Application
 from UM.Logger import Logger
 from UM.Tool import Tool
 from UM.Event import Event, MouseEvent, KeyEvent
+from UM.PluginRegistry import PluginRegistry
 from UM.Scene.Selection import Selection
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QUrl
+from PyQt5.QtQml import QQmlComponent, QQmlContext # @UnresolvedImport
 
 from UM.Version import Version
 
@@ -94,22 +99,24 @@ class SmartSliceSelectTool(Tool):
             Logger.log("d", "Selection.getSelectedFace(): {}".format(Selection.getSelectedFace()))
 
             return True
+            
 
         if event.type == Event.MouseReleaseEvent:
             # Finish a rotate operation
             if self.selected_face:
-                Application.getInstance().messageBox("SmartSlice",
+                '''Application.getInstance().messageBox("SmartSlice",
                                                      "You selected face: {}\ngetFaceSelectMode={}".format(self.selected_face,
                                                                                                           Selection.getFaceSelectMode()
                                                                                                           )
-                                                     )
+                                                     )'''
+
             return True
 
     def _onSelectedFaceChanged(self):
         self.selected_face = Selection.getSelectedFace()
         if self.selected_face:
             scene_node, face_id = self.selected_face
-            mesh_data =scene_node.getMeshData()
+            mesh_data = scene_node.getMeshData()
             print(dir(scene_node.getMeshData()))
             
             if not mesh_data._indices or len(mesh_data._indices) == 0:
@@ -125,6 +132,8 @@ class SmartSliceSelectTool(Tool):
             print("v_a", v_a)
             print("v_b", v_b)
             print("v_c", v_c)
+
+
 
     def _onActiveStateChanged(self):
         active_tool = Application.getInstance().getController().getActiveTool()

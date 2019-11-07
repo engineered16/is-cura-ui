@@ -24,9 +24,11 @@ import Cura 1.0 as Cura
 */
 Item {
     id: constraintsTooltip
-    width: childrenRect.width
-    height: childrenRect.height
-    
+    //width: childrenRect.width
+    width: selectAnchorButton.width * 3 - 2*UM.Theme.getSize("default_margin").width
+    //height: childrenRect.height
+    height: selectAnchorButton.height + UM.Theme.getSize("default_margin").width
+
     UM.I18nCatalog {
         id: catalog;
         name: "smartslice"
@@ -58,8 +60,7 @@ Item {
         //checked: constraintsRoot.anchorActive
     }
 
-    Button
-    {
+    Button {
         id: selectLoadButton
         anchors.left: selectAnchorButton.right;
         anchors.leftMargin: UM.Theme.getSize("default_margin").width;
@@ -78,4 +79,89 @@ Item {
         }
         //checked: constraintsRoot.loadActive
     }
+
+
+    Rectangle {
+        id: applyLoadDialog
+
+        visible: (selectLoadButton.checked) ? true : false
+
+        width: UM.Theme.getSize("action_panel_widget").width/2 + UM.Theme.getSize("default_margin").width
+        height: 100 + 2 * UM.Theme.getSize("thick_margin").width
+        
+        anchors.bottom: selectAnchorButton.top
+        anchors.bottomMargin: UM.Theme.getSize("default_margin").width * 2
+        anchors.left: selectAnchorButton.left
+
+
+        color: UM.Theme.getColor("main_background")
+        border.width: UM.Theme.getSize("default_lining").width
+        border.color: UM.Theme.getColor("lining")
+        radius: UM.Theme.getSize("default_radius").width
+
+        /* 'Type:' text */
+        Label {
+            id: labelLoadDialogType
+
+            anchors.top: parent.top
+            anchors.topMargin: UM.Theme.getSize("default_margin").width
+            anchors.left: parent.left
+            anchors.leftMargin: UM.Theme.getSize("default_margin").width
+
+            font.bold: true
+
+            text: "Type:"
+
+            ComboBox {
+                id: comboLoadDialogType
+
+                width: UM.Theme.getSize("action_panel_widget").width/3
+
+                anchors.top: parent.top
+                anchors.left: parent.right
+                anchors.leftMargin: UM.Theme.getSize("default_margin").width
+                anchors.right: parent.parent.right
+                anchors.rightMargin: UM.Theme.getSize("default_margin").width
+
+                model: ["Push / Pull", "Rotate"]
+            }
+        }
+
+        CheckBox {
+            id: checkboxLoadDialogFlipDirection
+
+            anchors.top: labelLoadDialogType.bottom
+            anchors.topMargin: UM.Theme.getSize("default_margin").width
+            anchors.left: parent.left
+            anchors.leftMargin: UM.Theme.getSize("default_margin").width
+
+            text: "Flip Direction"
+        }
+
+        Label {
+            id: labelLoadDialogMagnitude
+
+            anchors.top: checkboxLoadDialogFlipDirection.bottom
+            anchors.topMargin: UM.Theme.getSize("default_margin").width
+            anchors.left: parent.left
+            anchors.leftMargin: UM.Theme.getSize("default_margin").width
+
+            font.bold: true
+
+            text: "Magnitude:"
+        }
+
+        TextField {
+            id: textLoadDialogMagnitude
+
+            anchors.top: labelLoadDialogMagnitude.bottom
+            anchors.topMargin: UM.Theme.getSize("default_margin").width
+            anchors.left: parent.left
+            anchors.leftMargin: UM.Theme.getSize("default_margin").width
+
+            placeholderText: "kN"
+        }
+    }
 }
+
+

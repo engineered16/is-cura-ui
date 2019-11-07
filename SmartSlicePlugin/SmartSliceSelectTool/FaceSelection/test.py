@@ -12,6 +12,7 @@ import sys, os
 sys.path.append('/usr/lib/python3')
 sys.path.append(os.getcwd())
 
+
 # CGAL
 import CGAL
 from CGAL.CGAL_Kernel import Point_3
@@ -80,10 +81,10 @@ fs.from_stl("cube.stl")
 
 #fs.select_face(fs.getFace(0)) 
 #fs.select_face(fs.getFace(1)) 
-fs.select_face(fs.getFace(2)) 
-#fs.select_face(fs.getFace(3))
+#fs.select_face(fs.getFace(2)) 
+fs.select_face(fs.getFace(3))
 #fs.select_face(fs.getFace(4))  
-fs.select_face(fs.getFace(5)) 
+#fs.select_face(fs.getFace(5)) 
 
 print ("Found " + str(len(fs._faces)) + " faces.")
 
@@ -91,4 +92,5 @@ fs.selected_faces[0].printDetails()
 
 
 vis = SmartSliceSelectionVisualizer(fs)
+
 

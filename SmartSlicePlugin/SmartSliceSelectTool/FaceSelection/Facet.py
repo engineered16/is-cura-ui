@@ -8,10 +8,6 @@
 #
 
 #  STANDARD IMPORTS (FOR TESTING)
-import sys, os
-sys.path.append('/usr/lib/python3')
-sys.path.append('/usr/lib/python3/dist-packages')
-sys.path.append(os.getcwd())
 
 import CGAL
 from CGAL.CGAL_Kernel import Point_3, Vector_3
@@ -22,7 +18,7 @@ from CGAL.CGAL_Kernel import Point_3, Vector_3
     Contains definition for a shape face with a normal vector
 '''
 class SelectableFace:
-    def __init__(self, points, normal):
+    def __init__(self, points, normal=Vector_3(0, 0, 0)):
         self._points = points
         self._edges = []
         self.generateEdges()

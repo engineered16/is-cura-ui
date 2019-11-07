@@ -9,10 +9,6 @@
 
 
 #  STANDARD IMPORTS
-import sys, os
-sys.path.append('/usr/lib/python3')
-sys.path.append('/usr/lib/python3/dist-packages')
-sys.path.append(os.getcwd())
 
 #  CGAL IMPORTS
 import CGAL
@@ -23,8 +19,8 @@ from CGAL.CGAL_Kernel import Vector_3
 from stl import mesh
 
 #  Local Imports
-from Facet import SelectableFace
-from Detessellate import detessellate
+from .Facet import SelectableFace
+from .Detessellate import detessellate
 
 
 ''' 
