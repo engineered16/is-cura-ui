@@ -10,6 +10,10 @@
 #  Ultimaker/Cura Libraries
 from UM.Mesh.MeshData import MeshData
 
+#  Geometry Manipulation Libs
+from UM.Math.NumPyUtil import immutableNDArray
+from CGAL.CGAL_Kernel import Point_3, Vector_3
+
 #  SmartSlice UI Backend Libs
 from .FaceSelection import SelectableFace
 
@@ -43,7 +47,7 @@ class SmartSliceSelectionVisualizer:
     def getFace(self, index):
         if index >= 0 and index < len(self._faces):
             return self._faces[index]
-        else 
+        else:
             return None
         
 
@@ -57,6 +61,10 @@ class SmartSliceSelectionVisualizer:
     '''
     def selectFace (self, face):
         if not (face in self._faces):
+            #  Set Attributes
+            face.select()
+
+            #  Add to Selection Object and Draw in Canvas
             self._selected_faces.append(face)
             drawFace(face)
 

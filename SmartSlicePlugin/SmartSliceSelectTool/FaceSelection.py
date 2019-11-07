@@ -9,7 +9,8 @@
 
 
 #  STANDARD IMPORTS
-
+import sys
+sys.path.append('/usr/lib/python3/CGAL') # Temporary
 
 #  CGAL Imports
 import CGAL
@@ -102,17 +103,17 @@ class SelectableFace:
     def addPoint(self, point):
         self._points.append(point)
 
-    ''' 
-      selected(isSelected)
-        Changes SelectableFace status to 'isSelected'
     '''
-    @selected.setter
-    def selected(self, isSelected):
-        self._selected = isSelected
-
+      select()
+        Sets SelectableFace Selection status to True
+    '''
     def select(self):
         self._selected = True
 
+    '''
+      deselect()
+        Sets SelectableFace Selection status to False
+    '''
     def deselect(self):
         self._selected = False
 

@@ -5,24 +5,28 @@
 #   Filesystem Control
 import os.path
 
+#  Ultimaker Imports
+from UM.i18n import i18nCatalog
+i18n_catalog = i18nCatalog("smartslice")
+
 from UM.Application import Application
-from UM.Logger import Logger
-from UM.Tool import Tool
-from UM.Event import Event, MouseEvent, KeyEvent
+from UM.Version import Version
 from UM.PluginRegistry import PluginRegistry
+from UM.Logger import Logger
+from UM.Event import Event, MouseEvent, KeyEvent
+
+from UM.Tool import Tool
+
+from UM.View.GL.OpenGL import OpenGL
 from UM.Scene.Selection import Selection
 
+#  QT / QML Imports
 from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtQml import QQmlComponent, QQmlContext # @UnresolvedImport
 
-from UM.Version import Version
-
-from UM.View.GL.OpenGL import OpenGL
-
+#  Local Imports
 from .SmartSliceSelectHandle import SmartSliceSelectHandle
-
-from UM.i18n import i18nCatalog
-i18n_catalog = i18nCatalog("smartslice")
+from .SmartSliceDrawSelection import SmartSliceSelectionVisualizer
 
 
 # Provides enums
@@ -51,6 +55,10 @@ class SmartSliceSelectTool(Tool):
         self.selected_face = None
 
         self._controller.activeToolChanged.connect(self._onActiveStateChanged)
+
+        #  Create new 'Selection Visualizer' with no faces actively selected
+        #self._visualizer = SmartSliceSelectionVisualizer()
+    
 
 
     ##  Handle mouse and keyboard events

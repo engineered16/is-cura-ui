@@ -37,6 +37,8 @@ Semantic versioning is employed with the following format:
 #### Prerequisites
 
 *  Ultimaker Cura
+*  Python 3.5
+    *  Pip
 
 #### Installation
 
@@ -45,6 +47,9 @@ Semantic versioning is employed with the following format:
 ```bash
 [user@computer ~]$ cd .local/share/cura/[VERSION NUMBER]/plugins/
 [user@computer plugins] git clone https://github.com/tetonsim/is-cura-ui.git
+[user@computer plugins] pip install cgal-bindings --user
+[user@computer plugins] pip install teton-3mf --user
+[user@computer plugins] pip install teton-pywim --user
 ```
 
 ###### Windows
