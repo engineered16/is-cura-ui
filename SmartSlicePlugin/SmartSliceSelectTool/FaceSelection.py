@@ -4,38 +4,57 @@
 # Last Modified November 1, 2019
 
 #
-# Contains definitions for Cura Smart Slice Facets (Face)
+# Contains definitions for Cura Smart Slice Selectable Faces
 #
 
-#  STANDARD IMPORTS (FOR TESTING)
 
+#  STANDARD IMPORTS
+
+
+#  CGAL Imports
 import CGAL
 from CGAL.CGAL_Kernel import Point_3, Vector_3
 
+#  Ultimaker/Cura Imports
+from UM.Math import NumPyUtil
+
+
 
 ''' 
-  SelectableFace(points, normal)
-    Contains definition for a shape face with a normal vector
+  SelectableFace(points, normals)
+    'points' is a list of Point_3(x, y, z)
+    'normals' is an 'immutableNDArray' containing (x, y, z) components for point normal vectors
+
+    Contains definition for a selectable face with normal vector
+    
+    NOTE:  'normals' is passed through for Cura  (UNUSED)
+           'normals' will likely be used by CGAL (NOT DEPRECATED!!)
 '''
 class SelectableFace:
-    def __init__(self, points, normal=Vector_3(0, 0, 0)):
+#  CONSTRUCTOR
+    def __init__(self, points, normals):
         self._points = points
-        self._edges = []
-        self.generateEdges()
-        self._normal = normal
+        self._edges = self.generateEdges()
+        self._normal = self.generateNormalVector()
+
+        self._vert_normals = normals
         self._selected = False
 
 
-  #  ACCESSORS
+#  ACCESSORS
 
     '''
       points()
-        Returns the list of Point_3 that defines the FaceWithNormal
+        Returns list of Selectable Points
     '''
     @property
     def points(self):
         return self._points
 
+    '''
+      edges()
+        Returns list of Selectable Edges
+    '''
     @property
     def edges(self):
         return self._edges
@@ -74,7 +93,7 @@ class SelectableFace:
         print ("\n")
 
 
-  #  MUTATORS
+#  MUTATORS
 
     '''
       addPoint()
@@ -124,12 +143,13 @@ class SelectableFace:
     '''
     def generateEdges(self):
         #  ASSUMES STARTING FACET IS TRIANGLE FOR NOW
-        self._edges = [Edge(self._points[0], self._points[1])]
-        self._edges.append(Edge(self._points[0], self._points[2]))
-        self._edges.append(Edge(self._points[1], self._points[2]))
+        edges = [SelectableEdge(self._points[0], self._points[1])]
+        edges.append(SelectableEdge(self._points[1], self._points[2]))
+        edges.append(SelectableEdge(self._points[2], self._points[0]))
+        return edges
 
     def addEdge(self, p1, p2):
-        self._edges.append(Edge(p1, p2))
+        self._edges.append(SelectableEdge(p1, p2))
 
     '''
       removeEdge(edge)
@@ -157,25 +177,95 @@ class SelectableFace:
 
 
 
+'''
+  SelectableEdge(p1, p2)
+    'p1' and 'p2' are 'SelectablePoint'
 
-class Edge:
+    Edges denote lines between two vertices in 3D space
+'''
+class SelectableEdge:
     def __init__(self, p1, p2):
         self.p1 = p1
         self.p2 = p2
-
+        
+        self._selected = False
 
 
 '''
-    NormalVector(p1, p2, p3)
-    Returns the cross product of the first three points within the Face
+  SelectablePoint(x, y, z, normals)
+    'x', 'y', and 'z' are floating point coordinates
+    'normals' is an immutableNDArray containing normal vectors for each vertex
 
-    This makes the assumption that all other points beyond p3 are COPLANAR
+    NOTE:  'normals' is passed through for Cura  (UNUSED)
+           'normals' will likely be used by CGAL (NOT DEPRECATED!!)
 '''
-def NormalVector(p0, p1, p2):
-    vec1 = Vector_3(p1.x() - p0.x(), p1.y() - p0.y(), p1.z() - p0.z())
-    vec2 = Vector_3(p2.x() - p0.x(), p2.y() - p0.y(), p2.z() - p0.z())
-    cross_x = vec1.y()*vec2.z() - vec1.z()*vec2.y()
-    cross_y = vec1.z()*vec2.x() - vec1.x()*vec2.z()
-    cross_z = vec1.x()*vec2.y() - vec1.y()*vec2.x()
-    cross   = (cross_x*cross_x) + (cross_y*cross_y) + (cross_z*cross_z)
-    return Vector_3(cross_x/cross, cross_y/cross, cross_z/cross)
+class SelectablePoint:
+#  CONSTRUCTORS
+    def __init__(self, x, y, z, normals):
+        self._p = Point_3(x, y, z)
+        self._normals = normals
+
+        self._selected = False
+        
+
+#  ACCESSORS
+
+    '''
+      x()
+        Returns value of SelectablePoint x coordinate component
+    '''
+    @property
+    def x(self):
+        return self._p.x()
+
+    '''
+      y()
+        Returns value of SelectablePoint y coordinate component
+    '''
+    @property
+    def y(self):
+        return self._p.y()
+
+    '''
+      z()
+        Returns value of SelectablePoint z coordinate component
+    '''
+    @property
+    def z(self):
+        return self._p.z()
+
+
+#  MUTATORS 
+
+    '''
+      x(new_x)
+        'new_x' is a floating point value
+
+        Sets SelectablePoint x coordinate component to 'new_x'
+    '''
+    @x.setter
+    def x(self, new_x):
+        self._p.x(new_x)
+
+    '''
+      y(new_y)
+        'new_y' is a floating point value
+
+        Sets SelectablePoint x coordinate component to 'new_y'
+    '''
+    @y.setter
+    def y(self, new_y):
+        self._p.y(new_y)
+
+    '''
+      z(new_z)
+        'new_z' is a floating point value
+
+        Sets SelectablePoint x coordinate component to 'new_z'
+    '''
+    @z.setter
+    def z(self, new_z):
+        self._p.z(new_z)
+
+
+

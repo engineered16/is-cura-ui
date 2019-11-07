@@ -119,7 +119,8 @@ class SmartSliceSelectTool(Tool):
             mesh_data = scene_node.getMeshData()
             print(dir(scene_node.getMeshData()))
             
-            if not mesh_data._indices or len(mesh_data._indices) == 0:
+            #if not mesh_data._indices or len(mesh_data._indices) == 0:
+            if len(mesh_data._indices) == 0:
                 base_index = face_id * 3
                 v_a = mesh_data._vertices[base_index]
                 v_b = mesh_data._vertices[base_index + 1]
@@ -132,7 +133,6 @@ class SmartSliceSelectTool(Tool):
             print("v_a", v_a)
             print("v_b", v_b)
             print("v_c", v_c)
-
 
 
     def _onActiveStateChanged(self):
