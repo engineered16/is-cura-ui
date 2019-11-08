@@ -136,16 +136,21 @@ class SmartSliceSelectTool(Tool):
             #if not mesh_data._indices or len(mesh_data._indices) == 0:
             if len(mesh_data._indices) == 0:
                 base_index = face_id * 3
-                p0 = SelectablePoint(mesh_data._vertices[base_index][0], mesh_data._vertices[base_index][1], mesh_data._vertices[base_index][2])
-                p1 = SelectablePoint(mesh_data._vertices[base_index+1][0], mesh_data._vertices[base_index+1][1], mesh_data._vertices[base_index+1][2])
-                p2 = SelectablePoint(mesh_data._vertices[base_index+2][0], mesh_data._vertices[base_index+2][1], mesh_data._vertices[base_index+2][2])
+                v_a = mesh_data._vertices[base_index]
+                v_b = mesh_data._vertices[base_index+1]
+                v_c = mesh_data._vertices[base_index+2]
             else:
-                p0 = SelectablePoint(mesh_data._vertices[mesh_data._indices[face_id][0]][0], mesh_data._vertices[mesh_data._indices[face_id][0]][1], mesh_data._vertices[mesh_data._indices[face_id][0]][2])
-                p1 = SelectablePoint(mesh_data._vertices[mesh_data._indices[face_id][1]][0], mesh_data._vertices[mesh_data._indices[face_id][1]][1], mesh_data._vertices[mesh_data._indices[face_id][1]][2])
-                p2 = SelectablePoint(mesh_data._vertices[mesh_data._indices[face_id][2]][0], mesh_data._vertices[mesh_data._indices[face_id][2]][1], mesh_data._vertices[mesh_data._indices[face_id][2]][2])
+                v_a = mesh_data._vertices[mesh_data._indices[face_id][0]]
+                v_b = mesh_data._vertices[mesh_data._indices[face_id][1]]
+                v_c = mesh_data._vertices[mesh_data._indices[face_id][2]]
+            
+            p0 = SelectablePoint(v_a[0], v_a[1], v_a[2])
+            p1 = SelectablePoint(v_b[0], v_b[1], v_b[2])
+            p2 = SelectablePoint(v_c[0], v_c[1], v_c[2])
             
             #  Construct Selectable Face && Draw Selection in canvas
-            sf = SelectableFace([p0, p1, p2], mesh_data._normals)
+            sf = SelectableFace([p0, p1, p2],
+                                mesh_data._normals)
             self._visualizer.changeSelection([sf])
 
 
