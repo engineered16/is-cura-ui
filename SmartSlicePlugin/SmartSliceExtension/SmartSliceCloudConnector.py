@@ -10,6 +10,8 @@ import tempfile
 import json
 import zipfile
 
+import pywim
+
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtCore import QObject
@@ -307,22 +309,122 @@ class SmartSliceCloudConnector(QObject):
 
         return location
 
-    def appendTo3mf(self, filename):
-        requirements = {
-            "savety_factor": self.variables.safetyFactor,
-            "max_deflect": self.variables.maxDeflect,
-            }
-        json_data = json.dumps(requirements,
-                               # Some optional formatting for the json file
-                               indent=4,
-                               )
-        threemf_file = zipfile.ZipFile(filename,
-                                       "a",
-                                       compression=zipfile.ZIP_DEFLATED,
-                                       )
-        json_zip_content = zipfile.ZipInfo("Teton/requirements.json")
-        json_zip_content.compress_type = zipfile.ZIP_DEFLATED
-        threemf_file.writestr(json_zip_content, json_data)
+    def appendTo3mf(self, filename, node):
+        machine_manager = Application.getInstance().getMachineManager()
+        active_machine = machine_manager.activeMachine
+        
+        active_extruder = node.callDecoration("getActiveExtruderPosition")
+        
+        extruders = list(active_machine.extruders.values())
+        extruders = sorted(extruders, key = lambda extruder: extruder.getMetaDataEntry("position"))
+
+        material_guids_per_extruder = [extruder.material.getMetaData().get("GUID", "") for extruder in extruders]
+
+        # TODO: Needs to be determined from the used model
+        guid = material_guids_per_extruder[active_extruder]
+        
+        # Determine material properties from material database
+        this_dir = os.path.split(__file__)[0]
+        database_location = os.path.join(this_dir, "data", "POC_material_database.json")
+        jdata = json.loads(open(database_location).read())
+        material_found = None
+        for material in jdata["materials"]:
+            if "cura-guid" not in material.keys():
+                continue
+            if guid in material["cura-guid"]:
+                material_found = material
+                break
+        
+        if not material_found:
+            return None
+        
+        job = pywim.smartslice.job.Job()
+
+        job.type = pywim.smartslice.job.JobType.optimization
+    
+        # Create the bulk material definition. This likely will be pre-defined
+        # in a materials database or file somewhere
+        job.bulk = pywim.fea.model.Material(name=material_found["name"])
+        job.bulk.density = material_found["density"]
+        job.bulk.elastic = pywim.fea.model.Elastic(properties={'E': material_found['E'],
+                                                               'nu': material_found['v']})
+    
+        # Setup optimization configuration
+        job.optimization.min_safety_factor = self.variables.safetyFactor
+        job.optimization.max_displacement = self.variables.maxDeflect
+    
+        # Setup the chop model - chop is responsible for creating an FEA model
+        # from the triangulated surface mesh, slicer configuration, and
+        # the prescribed boundary conditions
+        
+        # The chop.model.Model class has an attribute for defining
+        # the mesh, however, it's not necessary that we do so.
+        # When the back-end reads the 3MF it will obtain the mesh
+        # from the 3MF object model, therefore, defining it in the 
+        # chop object would be redundant.
+        #job.chop.meshes.append( ... ) <-- Not necessary
+    
+        # Define the load step for the FE analysis
+        step = pywim.chop.model.Step(name='default')
+    
+        # Create the fixed boundary conditions (anchor points)
+        anchor1 = pywim.chop.model.FixedBoundaryCondition(name='anchor1')
+    
+        # Add the face Ids from the STL mesh that the user selected for
+        # this anchor
+        anchor1.face.extend(
+            (97, 98, 111, 112)
+        )
+    
+        step.boundary_conditions.append(anchor1)
+    
+        # Add any other boundary conditions in a similar manner...
+    
+        # Create an applied force
+        force1 = pywim.chop.model.Force(name='force1')
+    
+        # Set the components on the force vector. In this example
+        # we have 100 N, 200 N, and 50 N in the x, y, and z
+        # directions respectfully.
+        force1.force.set((100., 200., 50.))
+    
+        # Add the face Ids from the STL mesh that the user selected for
+        # this force
+        force1.face.extend(
+            (156, 157, 158)
+        )
+    
+        step.loads.append(force1)
+    
+        # Add any other loads in a similar manner...
+    
+        # Append the step definition to the chop model. Smart Slice only
+        # supports one step right now. In the future we may allow multiple
+        # loading steps.
+        job.chop.steps.append(step)
+    
+        # Now we need to setup the print/slicer configuration
+        
+        print_config = pywim.am.Config()
+        print_config.layer_width = 0.45
+        # ... and so on, check pywim.am.Config for full definition
+    
+        # The am.Config contains an "auxiliary" dictionary which should
+        # be used to define the slicer specific settings. These will be
+        # passed on directly to the slicer (CuraEngine).
+        print_config.auxiliary['print_bed_temperature'] = '60.0'
+    
+        # Setup the slicer configuration. See each class for more
+        # information.
+        extruder0 = pywim.chop.machine.Extruder(diameter=0.4)
+        printer = pywim.chop.machine.Printer(name=active_machine.getName(), extruders=(extruder0, ))
+    
+        # And finally set the slicer to the Cura Engine with the config and printer defined above
+        job.chop.slicer = pywim.chop.slicer.CuraEngine(config=print_config, printer=printer)
+    
+        with zipfile.ZipFile(filename, 'a') as tmf:
+            tmf.writestr('SmartSlice/job.json', job.to_json())
+        
 
         return filename
 
