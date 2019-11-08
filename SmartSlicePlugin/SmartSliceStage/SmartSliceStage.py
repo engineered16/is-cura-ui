@@ -25,6 +25,7 @@ from UM.Logger import Logger
 from UM.Application import Application
 from UM.PluginRegistry import PluginRegistry
 from UM.Scene.Selection import Selection
+from UM.Scene import Scene, SceneNode
 
 from cura.Stages.CuraStage import CuraStage
 
@@ -64,8 +65,9 @@ class SmartSliceStage(CuraStage):
 
         # Ensure we have tools defined and apply them here
         self.setToolVisibility(True)
-        Application.getInstance().getController().setFallbackTool(self._our_toolset[0])
+        #Application.getInstance().getController().setFallbackTool(self._our_toolset[0])
         Application.getInstance().getController().setActiveTool(None)
+
 
     #   onStageDeselected:
     #       Sets attributes that allow the Smart Slice Stage to properly deactivate
@@ -78,7 +80,7 @@ class SmartSliceStage(CuraStage):
 
         # Recover if we have tools defined
         self.setToolVisibility(False)
-        Application.getInstance().getController().setFallbackTool(self._default_fallback_tool)
+        #Application.getInstance().getController().setFallbackTool(self._default_fallback_tool)
         Application.getInstance().getController().setActiveTool(None)
 
         # Reset selection
@@ -159,7 +161,7 @@ class SmartSliceStage(CuraStage):
             if tool in self._our_toolset:
                 self._default_toolset.remove(tool)
                 
-        self._default_fallback_tool = Application.getInstance().getController().getFallbackTool()
+        #self._default_fallback_tool = Application.getInstance().getController().getFallbackTool()
 
         # Undisplay our tools!
         self.setToolVisibility(False)

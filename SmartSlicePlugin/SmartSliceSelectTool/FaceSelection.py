@@ -68,6 +68,14 @@ class SelectableFace:
     def normal(self):
         return self._normal
 
+    '''
+      vnormals()
+        Returns the list of vertex normal vector
+    '''
+    @property
+    def vnormals(self):
+        return self._vert_normals
+
     '''  selected()
         Returns true if face is selected
                 false otherwise

@@ -27,6 +27,7 @@ from PyQt5.QtQml import QQmlComponent, QQmlContext # @UnresolvedImport
 #  Local Imports
 from .SmartSliceSelectHandle import SmartSliceSelectHandle
 from .SmartSliceDrawSelection import SmartSliceSelectionVisualizer
+from .FaceSelection import SelectableFace, SelectablePoint
 
 
 # Provides enums
@@ -57,8 +58,12 @@ class SmartSliceSelectTool(Tool):
         self._controller.activeToolChanged.connect(self._onActiveStateChanged)
 
         #  Create new 'Selection Visualizer' with no faces actively selected
-        #self._visualizer = SmartSliceSelectionVisualizer()
-    
+        print("\n")
+        self._visualizer = SmartSliceSelectionVisualizer()
+        Logger.log("d", "Enabling Selection Vizualizer")
+
+
+        print("\n")
 
 
     ##  Handle mouse and keyboard events
@@ -123,22 +128,31 @@ class SmartSliceSelectTool(Tool):
         if self.selected_face:
             scene_node, face_id = self.selected_face
             mesh_data = scene_node.getMeshData()
-            print(dir(scene_node.getMeshData()))
+            
+            norms = []
+
+            #print(dir(scene_node.getMeshData()))
             
             #if not mesh_data._indices or len(mesh_data._indices) == 0:
             if len(mesh_data._indices) == 0:
                 base_index = face_id * 3
-                v_a = mesh_data._vertices[base_index]
-                v_b = mesh_data._vertices[base_index + 1]
-                v_c = mesh_data._vertices[base_index + 2]
+                p0 = SelectablePoint(mesh_data._vertices[base_index][0], mesh_data._vertices[base_index][1], mesh_data._vertices[base_index][2])
+                p1 = SelectablePoint(mesh_data._vertices[base_index+1][0], mesh_data._vertices[base_index+1][1], mesh_data._vertices[base_index+1][2])
+                p2 = SelectablePoint(mesh_data._vertices[base_index+2][0], mesh_data._vertices[base_index+2][1], mesh_data._vertices[base_index+2][2])
             else:
-                v_a = mesh_data._vertices[mesh_data._indices[face_id][0]]
-                v_b = mesh_data._vertices[mesh_data._indices[face_id][1]]
-                v_c = mesh_data._vertices[mesh_data._indices[face_id][2]]
+                p0 = SelectablePoint(mesh_data._vertices[mesh_data._indices[face_id][0]][0], mesh_data._vertices[mesh_data._indices[face_id][0]][1], mesh_data._vertices[mesh_data._indices[face_id][0]][2])
+                p1 = SelectablePoint(mesh_data._vertices[mesh_data._indices[face_id][1]][0], mesh_data._vertices[mesh_data._indices[face_id][1]][1], mesh_data._vertices[mesh_data._indices[face_id][1]][2])
+                p2 = SelectablePoint(mesh_data._vertices[mesh_data._indices[face_id][2]][0], mesh_data._vertices[mesh_data._indices[face_id][2]][1], mesh_data._vertices[mesh_data._indices[face_id][2]][2])
             
+            #  Construct Selectable Face && Draw Selection in canvas
+            sf = SelectableFace([p0, p1, p2], mesh_data._normals)
+            self._visualizer.changeSelection([sf])
+
+            '''
             print("v_a", v_a)
             print("v_b", v_b)
             print("v_c", v_c)
+            '''
 
 
     def _onActiveStateChanged(self):
