@@ -148,6 +148,7 @@ class SmartSliceSelectTool(Tool):
             sf = SelectableFace([p0, p1, p2], mesh_data._normals)
             self._visualizer.changeSelection([sf])
 
+
             '''
             print("v_a", v_a)
             print("v_b", v_b)
