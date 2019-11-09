@@ -9,7 +9,8 @@
 #
 
 
-from PyQt5.QtCore import *
+from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import QObject
 
 from .Compat import ApplicationCompat
 from PyQt5.QtQml import QQmlContext # @UnresolvedImport
@@ -18,14 +19,8 @@ class SmartSliceBridge(QObject):
     def __init__(self): 
         QObject.__init__(self)
 
-        #print ("\n\n\n")   # For Testing
-
         _context = QQmlContext(ApplicationCompat().qml_engine.rootContext())
-
-        _context.setContextProperty('PyConsole', self)
         _context.setContextProperty("_bridge", self)
-
-        #print ("\n\n\n")
 
     #    
     #  ACCESSORS
