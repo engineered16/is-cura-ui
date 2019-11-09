@@ -53,7 +53,7 @@ class SmartSliceSelectTool(Tool):
                                   )
 
         Selection.selectedFaceChanged.connect(self._onSelectedFaceChanged)
-        self.selected_face = None
+        self.selected_faces = []
         self._scene = self.getController().getScene()
 
         self._controller.activeToolChanged.connect(self._onActiveStateChanged)
