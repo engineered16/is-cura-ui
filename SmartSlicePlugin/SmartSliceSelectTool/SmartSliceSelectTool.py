@@ -27,7 +27,7 @@ from PyQt5.QtQml import QQmlComponent, QQmlContext # @UnresolvedImport
 #  Local Imports
 from .SmartSliceSelectHandle import SmartSliceSelectHandle
 from .SmartSliceDrawSelection import SmartSliceSelectionVisualizer
-from .FaceSelection import SelectableFace, SelectablePoint
+from .FaceSelection import SelectablePoint, SelectableEdge, SelectableFace
 
 
 # Provides enums
@@ -54,6 +54,7 @@ class SmartSliceSelectTool(Tool):
 
         Selection.selectedFaceChanged.connect(self._onSelectedFaceChanged)
         self.selected_face = None
+        self._scene = self.getController().getScene()
 
         self._controller.activeToolChanged.connect(self._onActiveStateChanged)
 
@@ -153,6 +154,8 @@ class SmartSliceSelectTool(Tool):
                                 mesh_data._normals)
             self._visualizer.changeSelection([sf])
 
+            #  Add Selection Visualizer to Root SceneNode
+            self._scene.getRoot().addChild(self._visualizer)
 
             '''
             print("v_a", v_a)

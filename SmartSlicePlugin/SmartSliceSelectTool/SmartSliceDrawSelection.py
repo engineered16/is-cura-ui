@@ -9,7 +9,8 @@
 
 #  Ultimaker/Cura Libraries
 from UM.Application import Application
-from UM.Scene import SceneNode, Scene
+from UM.Scene import Scene
+from UM.Scene.SceneNode import SceneNode
 from UM.Mesh.MeshData import MeshData
 
 #  Geometry Manipulation Libs
@@ -18,13 +19,14 @@ from CGAL.CGAL_Kernel import Point_3, Vector_3
 
 #  SmartSlice UI Backend Libs
 from .FaceSelection import SelectableFace
+from .FaceSelectionDecorator import FaceSelectionDecorator
 
 '''
   class SmartSliceSelectionVisualizer
     
     Contains functionality for drawing selected faces within Smart Slice Scene Node
 '''
-class SmartSliceSelectionVisualizer:
+class SmartSliceSelectionVisualizer(SceneNode):
 #  Constructors
     '''
       SmartSliceSelectionVisualizer([OPTIONAL] faces)
@@ -33,19 +35,22 @@ class SmartSliceSelectionVisualizer:
         Creates a new object for visualizing selected faces on a mesh
     '''
     def __init__(self, faces = []):
+        super().__init__()
         #  Set Selected Faces
         self._selected_faces = faces
 
-        self._scene = Application.getInstance().getController().getScene()
+        #  Get Copy of Scene
+        self._scene = Application.getInstance().getController().getScene().getRoot()
+
+        #  Set MeshData to Selected Face
         
-        #  Set this SceneNode's Default Traits
-        self._scene_node = SceneNode.SceneNode(name="selection_visualizer", parent=self._scene.getRoot())
-        self._scene_node.setSelectable(False)
-
-
+        
+        #  Add Decorator
+        self._decor = FaceSelectionDecorator(self)
+        self.addDecorator(self._decor)
 
         #  Add this SceneNode to Cura Scene
-        
+        self._scene.addChild(self)
 
 
 #  Accessors
