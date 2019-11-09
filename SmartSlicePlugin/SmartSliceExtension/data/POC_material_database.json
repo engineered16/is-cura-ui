@@ -1,0 +1,250 @@
+{
+    "materials": [
+        {
+            "name": "ABS",
+            "cura-guid": [
+                "60636bb4-518f-42e7-8237-fe77b194ebe0",
+                "2780b345-577b-4a24-a2c5-12e6aad3e690"
+            ],
+            "density": 1.1e-9,
+            "elastic": {
+                "type": "isotropic",
+                "E": 1619.0,
+                "v": 0.35
+            },
+            "failure_yield": {
+                "type": "von_mises",
+                "Sy": 39.0
+            },
+            "fracture": {
+                "KIc": 7.42
+            }
+        },
+        {
+            "name": "CPE",
+            "cura-guid": [
+                "12f41353-1a33-415e-8b4f-a775a6c70cc6",
+                "da1872c1-b991-4795-80ad-bdac0f131726"
+            ],
+            "density": 1.27e-9,
+            "elastic": {
+                "type": "isotropic",
+                "E": 1538.0,
+                "v": 0.33
+            },
+            "failure_yield": {
+                "type": "von_mises",
+                "Sy": 41.1
+            },
+            "fracture": {
+                "KIc": 7.84
+            }
+        },
+        {
+            "name": "CPE+",
+            "cura-guid": [
+                "e2409626-b5a0-4025-b73e-b58070219259"
+            ],
+            "density": 1.18e-9,
+            "elastic": {
+                "type": "isotropic",
+                "E": 1129.0,
+                "v": 0.33
+            },
+            "failure_yield": {
+                "type": "von_mises",
+                "Sy": 35.2
+            },
+            "fracture": {
+                "KIc": 6.7
+            }
+        },
+        {
+            "name": "Nylon",
+            "cura-guid": [
+                "28fb4162-db74-49e1-9008-d05f1e8bef5c",
+                "283d439a-3490-4481-920c-c51d8cdecf9c"
+            ],
+            "density": 1.14e-9,
+            "elastic": {
+                "type": "isotropic",
+                "E": 579.0,
+                "v": 0.39
+            },
+            "failure_yield": {
+                "type": "von_mises",
+                "Sy": 27.8
+            },
+            "fracture": {
+                "KIc": 5.29
+            }
+        },
+        {
+            "name": "PC",
+            "cura-guid": [
+                "98c05714-bf4e-4455-ba27-57d74fe331e4",
+                "62414577-94d1-490d-b1e4-7ef3ec40db02"
+            ],
+            "density": 1.19e-9,
+            "elastic": {
+                "type": "isotropic",
+                "E": 1904.0,
+                "v": 0.37
+            },
+            "failure_yield": {
+                "type": "von_mises",
+                "Sy": 40.2
+            },
+            "fracture": {
+                "KIc": 7.65
+            }
+        },
+        {
+            "name": "PLA",
+            "cura-guid": [
+                "506c9f0d-e3aa-4bd4-b2d2-23e2425b1aa9",
+                "0ff92885-617b-4144-a03c-9989872454bc"
+            ],
+            "density": 1.24e-9,
+            "elastic": {
+                "type": "isotropic",
+                "E": 2347.0,
+                "v": 0.34
+            },
+            "failure_yield": {
+                "type": "von_mises",
+                "Sy": 49.5
+            },
+            "fracture": {
+                "KIc": 9.44
+            }
+        },
+        {
+            "name": "Tough PLA",
+            "cura-guid": [
+                "9d5d2d7c-4e77-441c-85a0-e9eefd4aa68c"
+            ],
+            "density": 1.22e-9,
+            "elastic": {
+                "type": "isotropic",
+                "E": 1820.0,
+                "v": 0.34
+            },
+            "failure_yield": {
+                "type": "von_mises",
+                "Sy": 37.0
+            },
+            "fracture": {
+                "KIc": 7.04
+            }
+        },
+        {
+            "name": "CFF CPE",
+            "cura-guid": [
+                "f8e496d6-7599-4015-9fac-c7ce53f6633c"
+            ],
+            "density": 1.35e-9,
+            "elastic": {
+                "type": "orthotropic",
+                "E11": 5698.0,
+                "E22": 1818.0,
+                "E33": 1818.0,
+                "nu12": 0.32,
+                "nu13": 0.32,
+                "nu23": 0.46,
+                "G12": 634.0,
+                "G13": 634.0,
+                "G23": 623.0
+            },
+            "failure_yield": {
+                "type": "von_mises",
+                "S11y": 82.2,
+                "Sshear": 47.5
+            },
+            "fracture": {
+                "KIc": 7.84
+            }
+        },
+        {
+            "name": "CFF PA",
+            "cura-guid": [
+                "bd66b243-9d50-4e12-bfc3-51c874fca16a"
+            ],
+            "density": 1.35e-9,
+            "elastic": {
+                "type": "orthotropic",
+                "E11": 4443.0,
+                "E22": 731.0,
+                "E33": 731.0,
+                "nu12": 0.38,
+                "nu13": 0.38,
+                "nu23": 0.61,
+                "G12": 230.0,
+                "G13": 230.0,
+                "G23": 227.0
+            },
+            "failure_yield": {
+                "type": "von_mises",
+                "S11y": 55.6,
+                "Sshear": 32.1
+            },
+            "fracture": {
+                "KIc": 5.29
+            }
+        },
+        {
+            "name": "GFF CPE",
+            "cura-guid": [
+                "d4b786bb-e5d2-481b-b3ab-0be976d36af8"
+            ],
+            "density": 1.35e-9,
+            "elastic": {
+                "type": "orthotropic",
+                "E11": 2608.0,
+                "E22": 1797.0,
+                "E33": 1797.0,
+                "nu12": 0.32,
+                "nu13": 0.32,
+                "nu23": 0.43,
+                "G12": 637.0,
+                "G13": 637.0,
+                "G23": 628.0
+            },
+            "failure_yield": {
+                "type": "von_mises",
+                "S11y": 74.0,
+                "Sshear": 42.7
+            },
+            "fracture": {
+                "KIc": 7.84
+            }
+        },
+        {
+            "name": "GFF PA",
+            "cura-guid": [
+                "837cf11b-6b1e-48dc-94dc-4a2b4888648e"
+            ],
+            "density": 1.35e-9,
+            "elastic": {
+                "type": "orthotropic",
+                "E11": 2025.0,
+                "E22": 723.0,
+                "E33": 723.0,
+                "nu12": 0.38,
+                "nu13": 0.38,
+                "nu23": 0.59,
+                "G12": 230.0,
+                "G13": 230.0,
+                "G23": 227.0
+            },
+            "failure_yield": {
+                "type": "von_mises",
+                "S11y": 50.0,
+                "Sshear": 28.9
+            },
+            "fracture": {
+                "KIc": 5.29
+            }
+        }
+    ]
+}
