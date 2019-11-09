@@ -131,7 +131,6 @@ class SmartSliceSelectTool(Tool):
             scene_node, face_id = curr_sf
             mesh_data = scene_node.getMeshData()
 
-            
             norms = []
 
             #print(dir(scene_node.getMeshData()))

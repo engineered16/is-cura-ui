@@ -19,7 +19,6 @@ from CGAL.CGAL_Kernel import Point_3, Vector_3
 
 #  SmartSlice UI Backend Libs
 from .FaceSelection import SelectableFace
-from .FaceSelectionDecorator import FaceSelectionDecorator
 
 '''
   class SmartSliceSelectionVisualizer
@@ -42,15 +41,12 @@ class SmartSliceSelectionVisualizer(SceneNode):
         #  Get Copy of Scene
         self._scene_node = Application.getInstance().getController().getScene().getRoot()
 
-        #  Set MeshData to Selected Face
-
+        #  Define Selection Color Codes
+        self.ActiveBlue = [100, 100, 255]
+        self.InactiveBlack = [0, 0, 0]
         
-        #  Add Decorator
-        self._decor = FaceSelectionDecorator(self)
-        self.addDecorator(self._decor)
-
-        #  Add this SceneNode to Cura Scene
-        self._scene_node.addChild(self)
+        #  Add Decorator && Paint Selected Faces
+        self.drawSelection()
 
 
 #  Accessors
@@ -95,18 +91,53 @@ class SmartSliceSelectionVisualizer(SceneNode):
             self._selected_faces.remove(face)
 
     def clearFace (self, face):
-        1 + 1  #  STUB; Not necessary yet
+        deselectFace(face)
+        # TODO: Remove Face from MeshData
 
     '''
       clearSelection()
-
         Clears all selection drawings within Cura's Scene
     '''
     def clearSelection(self):
         for _face in self._selected_faces:
             self.clearFace(_face)
 
+  #  Scene Mutation
+    '''
+      drawSelection()
+        Draws all currently selected faces within Cura Scene
+    '''
+    def drawSelection(self):
 
+        #  Create MeshData using Selected Faces
+        v = []
+        n = []
+        i = []
+        c = []
+
+        #  Add each selected face to MeshData
+        for _face in self._selected_faces:
+            j = []
+            index = 0
+            for _point in _face.points:
+                v.append([_point.x, _point.y, _point.z])
+                j.append(index)
+                index += 1
+            n.append(_face.vnormals)
+            i.append(j)
+            c.append(self.ActiveBlue)
+
+        #  Define/Set the MeshData
+        md = MeshData(v, n, i, c)
+        self.setMeshData(md)
+
+        #  Add this SceneNode to Cura Scene
+        self._scene_node.addChild(self)
+
+    '''
+      redrawSelection()
+        Clears current selection scene and draws new scene with current MeshData
+    '''
     def redrawSelection(self):
         self.clearSelection()
         self.drawSelection()
@@ -122,38 +153,6 @@ class SmartSliceSelectionVisualizer(SceneNode):
     def changeSelection (self, faces):
         self._selected_faces = faces
         self.redrawSelection()
-
-
-  #  Scene Mutation
-    '''
-      drawSelection()
-
-        Draws all currently selected faces within Cura Scene
-    '''
-    def drawSelection(self):
-        #  Draw New Selection
-        verts = []
-        norms = []
-
-        for _face in self._selected_faces:
-            #  NOTE: ASSUMES FACES ARE TESSELATED TRIANGLES
-            #  TODO: Allow any face shape
-
-            #  Add each point's coordinate components
-            for _point in _face.points:
-                verts.append([_point.x, _point.y, _point.z])
-            #  Add each point's normal vertex
-            norms.append(_face.vnormals)
-
-        # Convert to NumPy Array for MeshData
-        v = immutableNDArray(verts)
-        n = immutableNDArray(norms)
-
-        # Construct new 'MeshData' object, representative of current face selection
-        md = MeshData(vertices=v, normals=n)
-
-        # Change SceneNode's MeshData to current selection in Cura
-        self._scene_node.setMeshData(md)
 
             
                 
