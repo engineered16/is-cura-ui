@@ -108,14 +108,14 @@ class SmartSliceSelectTool(Tool):
                 Logger.log("d", "Disabled faceSelectMode!")
             """
 
-            Logger.log("d", "Selection.getSelectedFace(): {}".format(Selection.getSelectedFace()))
+            Logger.log("d", "Selection.getSelectedFace(): {}".format(Selection.getSelectedFace()[0]))
 
             return True
             
 
         if event.type == Event.MouseReleaseEvent:
             # Finish a rotate operation
-            if self.selected_face:
+            if len(self.selected_faces) > 0:
                 '''Application.getInstance().messageBox("SmartSlice",
                                                      "You selected face: {}\ngetFaceSelectMode={}".format(self.selected_face,
                                                                                                           Selection.getFaceSelectMode()
@@ -125,10 +125,12 @@ class SmartSliceSelectTool(Tool):
             return True
 
     def _onSelectedFaceChanged(self):
-        self.selected_face = Selection.getSelectedFace()
-        if self.selected_face:
-            scene_node, face_id = self.selected_face
+        curr_sf = Selection.getSelectedFace()
+        if curr_sf is not None:
+
+            scene_node, face_id = curr_sf
             mesh_data = scene_node.getMeshData()
+
             
             norms = []
 
@@ -138,20 +140,27 @@ class SmartSliceSelectTool(Tool):
             if len(mesh_data._indices) == 0:
                 base_index = face_id * 3
                 v_a = mesh_data._vertices[base_index]
+                n_a = mesh_data._normals[base_index]
                 v_b = mesh_data._vertices[base_index+1]
+                n_b = mesh_data._normals[base_index+1]
                 v_c = mesh_data._vertices[base_index+2]
+                n_c = mesh_data._normals[base_index+2]
             else:
                 v_a = mesh_data._vertices[mesh_data._indices[face_id][0]]
+                n_a = mesh_data._normals[mesh_data._indices[face_id][0]]
                 v_b = mesh_data._vertices[mesh_data._indices[face_id][1]]
+                n_b = mesh_data._normals[mesh_data._indices[face_id][1]]
                 v_c = mesh_data._vertices[mesh_data._indices[face_id][2]]
+                n_c = mesh_data._normals[mesh_data._indices[face_id][2]]
             
-            p0 = SelectablePoint(v_a[0], v_a[1], v_a[2])
-            p1 = SelectablePoint(v_b[0], v_b[1], v_b[2])
-            p2 = SelectablePoint(v_c[0], v_c[1], v_c[2])
+            p0 = SelectablePoint(float(v_a[0]), float(v_a[1]), float(v_a[2]), n_a)
+            p1 = SelectablePoint(float(v_b[0]), float(v_b[1]), float(v_b[2]), n_b)
+            p2 = SelectablePoint(float(v_c[0]), float(v_c[1]), float(v_c[2]), n_c)
             
             #  Construct Selectable Face && Draw Selection in canvas
             sf = SelectableFace([p0, p1, p2],
                                 mesh_data._normals)
+            self.selected_faces = [sf] # TODO: Rewrite for >1 concurrently selected faces
             self._visualizer.changeSelection([sf])
 
             #  Add Selection Visualizer to Root SceneNode

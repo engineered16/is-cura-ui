@@ -40,17 +40,17 @@ class SmartSliceSelectionVisualizer(SceneNode):
         self._selected_faces = faces
 
         #  Get Copy of Scene
-        self._scene = Application.getInstance().getController().getScene().getRoot()
+        self._scene_node = Application.getInstance().getController().getScene().getRoot()
 
         #  Set MeshData to Selected Face
-        
+
         
         #  Add Decorator
         self._decor = FaceSelectionDecorator(self)
         self.addDecorator(self._decor)
 
         #  Add this SceneNode to Cura Scene
-        self._scene.addChild(self)
+        self._scene_node.addChild(self)
 
 
 #  Accessors
@@ -94,6 +94,24 @@ class SmartSliceSelectionVisualizer(SceneNode):
         if face in self._selected_faces:
             self._selected_faces.remove(face)
 
+    def clearFace (self, face):
+        1 + 1  #  STUB; Not necessary yet
+
+    '''
+      clearSelection()
+
+        Clears all selection drawings within Cura's Scene
+    '''
+    def clearSelection(self):
+        for _face in self._selected_faces:
+            self.clearFace(_face)
+
+
+    def redrawSelection(self):
+        self.clearSelection()
+        self.drawSelection()
+
+
   #  Multiple Face Mutation
     '''
       changeSelection(faces)
@@ -103,7 +121,7 @@ class SmartSliceSelectionVisualizer(SceneNode):
     '''
     def changeSelection (self, faces):
         self._selected_faces = faces
-        redrawSelection()
+        self.redrawSelection()
 
 
   #  Scene Mutation
@@ -123,7 +141,7 @@ class SmartSliceSelectionVisualizer(SceneNode):
 
             #  Add each point's coordinate components
             for _point in _face.points:
-                verts.append([_point.x(), _point.y(), _point.z()])
+                verts.append([_point.x, _point.y, _point.z])
             #  Add each point's normal vertex
             norms.append(_face.vnormals)
 
@@ -139,27 +157,4 @@ class SmartSliceSelectionVisualizer(SceneNode):
 
             
                 
-
-    '''
-      clearSelection()
-
-        Clears all selection drawings within Cura's Scene
-    '''
-    def clearSelection(self):
-        for _face in self._selected_faces:
-            clearFace(_face)
-
-
-    def redrawSelection(self):
-        self.clearSelection()
-        self.drawSelection()
-
-
-    '''
-      clearFace(face)
-
-        Clears 'face' from selection drawings within Cura's Scene
-    '''
-    def clearFace(self, face):
-        1 + 1 #  STUB
 
