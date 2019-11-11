@@ -44,6 +44,9 @@ class SmartSliceSelectionVisualizer(SceneNode):
         #  Define Selection Color Codes
         self.ActiveBlue = [100, 100, 255]
         self.InactiveBlack = [0, 0, 0]
+
+        #  Add this SceneNode to Cura Scene
+        self._scene_node.addChild(self)
         
         #  Add Decorator && Paint Selected Faces
         self.drawSelection()
@@ -91,7 +94,7 @@ class SmartSliceSelectionVisualizer(SceneNode):
             self._selected_faces.remove(face)
 
     def clearFace (self, face):
-        deselectFace(face)
+        self.deselectFace(face)
         # TODO: Remove Face from MeshData
 
     '''
@@ -130,9 +133,6 @@ class SmartSliceSelectionVisualizer(SceneNode):
         #  Define/Set the MeshData
         md = MeshData(v, n, i, c)
         self.setMeshData(md)
-
-        #  Add this SceneNode to Cura Scene
-        self._scene_node.addChild(self)
 
     '''
       redrawSelection()
