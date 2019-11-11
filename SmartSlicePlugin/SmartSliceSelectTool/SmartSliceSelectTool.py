@@ -28,6 +28,7 @@ from PyQt5.QtQml import QQmlComponent, QQmlContext # @UnresolvedImport
 from .SmartSliceSelectHandle import SmartSliceSelectHandle
 from .SmartSliceDrawSelection import SmartSliceSelectionVisualizer
 from .FaceSelection import SelectablePoint, SelectableEdge, SelectableFace
+from .SmartSliceNormalArrow import SmartSliceNormalArrow
 
 
 # Provides enums
@@ -62,8 +63,10 @@ class SmartSliceSelectTool(Tool):
         print("\n")
         self._visualizer = SmartSliceSelectionVisualizer()
         Logger.log("d", "Enabling Selection Vizualizer")
-
-
+        
+        #  Create new Normal Arrow for vizualising selected face normal vector
+        self._normal_arrow = SmartSliceNormalArrow()
+        Logger.log("d", "Creating Normal Arrow Mesh")
         print("\n")
 
 
@@ -161,6 +164,8 @@ class SmartSliceSelectTool(Tool):
                                 mesh_data._normals)
             self.selected_faces = [sf] # TODO: Rewrite for >1 concurrently selected faces
             self._visualizer.changeSelection([sf])
+
+            self._normal_arrow = SmartSliceNormalArrow(sf)
 
             #  Add Selection Visualizer to Root SceneNode
             self._scene.getRoot().addChild(self._visualizer)

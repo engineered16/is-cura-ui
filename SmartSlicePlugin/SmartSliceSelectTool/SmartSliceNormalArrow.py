@@ -11,6 +11,9 @@
 #  QML Imports 
 from PyQt5.QtCore import QUrl, QObject
 
+#  Selectable Faces
+from .FaceSelection import SelectableFace
+
 
 '''
   SmartSliceNormalArrow(sf)
@@ -22,10 +25,14 @@ from PyQt5.QtCore import QUrl, QObject
 '''
 class SmartSliceNormalArrow(QObject):
 #  CONSTRUCTORS
-    def __init__(self, parent : SelectableFace) -> None:
+    def __init__(self, parent : SelectableFace = None) -> None:
         super().__init__()
         
         self._parent = parent
+        
+        #  If SelectableFace is provided, draw the Normal Arrow
+        if parent is not None:
+            drawNormalArrow()
 
 
 #  ACCESSORS
