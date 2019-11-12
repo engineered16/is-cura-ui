@@ -528,7 +528,7 @@ class SmartSliceCloudConnector(QObject):
         # information.
         extruders = ()
         for extruder_stack in global_stack.extruderList:
-            extruder_object = pywim.chop.machine.Extruder(diameter=active_extruder.getProperty("machine_nozzle_size",
+            extruder_object = pywim.chop.machine.Extruder(diameter=extruder_stack.getProperty("machine_nozzle_size",
                                                                                      "value"))
             pickled_info = self._buildExtruderMessage(extruder_stack)
             extruder_object.id = pickled_info["id"]
