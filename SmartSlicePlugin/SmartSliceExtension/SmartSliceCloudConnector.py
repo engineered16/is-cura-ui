@@ -357,14 +357,15 @@ class SmartSliceCloudConnector(QObject):
         return True
 
     def extend3mf(self, filepath, mesh_nodes, job_type):
+        global_stack = Application.getInstance().getGlobalContainerStack()
+        machine_manager = Application.getInstance().getMachineManager()
+        active_machine = machine_manager.activeMachine
+        
         # NOTE: As agreed during the POC, we want to analyse and optimize only one model at the moment.
         #       The lines below will partly need to be executed as "for model in models: bla bla.."
         mesh_node = mesh_nodes[0]
         
         mesh_node_stack = mesh_node.callDecoration("getStack")
-        
-        machine_manager = Application.getInstance().getMachineManager()
-        active_machine = machine_manager.activeMachine
         
         active_extruder_position = mesh_node.callDecoration("getActiveExtruderPosition")
         if active_extruder_position is None:
@@ -521,25 +522,21 @@ class SmartSliceCloudConnector(QObject):
         # The am.Config contains an "auxiliary" dictionary which should
         # be used to define the slicer specific settings. These will be
         # passed on directly to the slicer (CuraEngine).
-        has_machine_heated_bed = active_machine.getProperty("machine_heated_bed", "value")
-        if has_machine_heated_bed:
-            print_config.auxiliary['print_bed_temperature'] = active_extruder.getProperty("material_bed_temperature",
-                                                                                          "value")
-        else:
-            print_config.auxiliary['print_bed_temperature'] = 0
-            
-        CuraEngineMessages = self.replicateCuraEngineMessages()
-        for key in CuraEngineMessages.keys():
-            result = json.dumps(CuraEngineMessages[key])
-            print_config.auxiliary[key] = result
+        print_config.auxiliary = self._buildGlobalSettingsMessage()
     
         # Setup the slicer configuration. See each class for more
         # information.
-        extruder0 = pywim.chop.machine.Extruder(diameter=active_extruder.getProperty("machine_nozzle_size",
+        extruders = ()
+        for extruder_stack in global_stack.extruderList:
+            extruder_object = pywim.chop.machine.Extruder(diameter=active_extruder.getProperty("machine_nozzle_size",
                                                                                      "value"))
+            pickled_info = self._buildExtruderMessage(extruder_stack)
+            extruder_object.id = pickled_info["id"]
+            extruder_object.print_config.auxiliary = pickled_info["settings"]
+            extruders += (extruder_object, )
+        
         printer = pywim.chop.machine.Printer(name=active_machine.getName(),
-                                             extruders=(extruder0,
-                                                        )
+                                             extruders=extruders
                                              )
     
         # And finally set the slicer to the Cura Engine with the config and printer defined above
@@ -646,13 +643,167 @@ class SmartSliceCloudConnector(QObject):
     
     
     def replicateCuraEngineMessages(self):
-        scene = Application.getInstance().getController().getScene()
-        
-        active_buildplate = Application.getInstance().getMultiBuildPlateModel().activeBuildPlate
-        
         global_stack = Application.getInstance().getGlobalContainerStack()
         if not global_stack:
             return
+        
+        # Build messages for extruder stacks
+        extruders_message = []
+        for extruder_stack in global_stack.extruderList:
+            extruders_message.append(self._buildExtruderMessage(extruder_stack))
+        
+        return {"object_lists": self._buildObjectsListsMessage(global_stack),
+                "global_settings": self._buildGlobalSettingsMessage(global_stack),
+                "limit_to_extruder": self._buildGlobalInheritsStackMessage(global_stack),
+                "extruders": extruders_message,
+                }
+        
+    ##  Check if a node has per object settings and ensure that they are set correctly in the message
+    #   \param node Node to check.
+    #   \param message object_lists message to put the per object settings in
+    def _handlePerObjectSettings(self, node):
+        stack = node.callDecoration("getStack")
+
+        # Check if the node has a stack attached to it and the stack has any settings in the top container.
+        if not stack:
+            return
+
+        # Check all settings for relations, so we can also calculate the correct values for dependent settings.
+        top_of_stack = stack.getTop()  # Cache for efficiency.
+        changed_setting_keys = top_of_stack.getAllKeys()
+
+        # Add all relations to changed settings as well.
+        for key in top_of_stack.getAllKeys():
+            instance = top_of_stack.getInstance(key)
+            self._addRelations(changed_setting_keys, instance.definition.relations)
+
+        # Ensure that the engine is aware what the build extruder is.
+        changed_setting_keys.add("extruder_nr")
+
+        settings = []
+        # Get values for all changed settings
+        for key in changed_setting_keys:
+            setting = {}
+            setting["name"] = key
+            extruder = int(round(float(stack.getProperty(key, "limit_to_extruder"))))
+
+            # Check if limited to a specific extruder, but not overridden by per-object settings.
+            if extruder >= 0 and key not in changed_setting_keys:
+                limited_stack = ExtruderManager.getInstance().getActiveExtruderStacks()[extruder]
+            else:
+                limited_stack = stack
+
+            setting["value"] = str(limited_stack.getProperty(key, "value"))
+            
+            settings.append(setting)
+        
+        return settings
+    
+    def _cacheAllExtruderSettings(self):
+        global_stack = Application.getInstance().getGlobalContainerStack()
+
+        # NB: keys must be strings for the string formatter
+        self._all_extruders_settings = {
+            "-1": self._buildReplacementTokens(global_stack)
+        }
+        for extruder_stack in ExtruderManager.getInstance().getActiveExtruderStacks():
+            extruder_nr = extruder_stack.getProperty("extruder_nr", "value")
+            self._all_extruders_settings[str(extruder_nr)] = self._buildReplacementTokens(extruder_stack)
+    
+    ##  Creates a dictionary of tokens to replace in g-code pieces.
+    #
+    #   This indicates what should be replaced in the start and end g-codes.
+    #   \param stack The stack to get the settings from to replace the tokens
+    #   with.
+    #   \return A dictionary of replacement tokens to the values they should be
+    #   replaced with.
+    def _buildReplacementTokens(self, stack):
+        result = {}
+        for key in stack.getAllKeys():
+            value = stack.getProperty(key, "value")
+            result[key] = value
+
+        result["print_bed_temperature"] = result["material_bed_temperature"] # Renamed settings.
+        result["print_temperature"] = result["material_print_temperature"]
+        result["travel_speed"] = result["speed_travel"]
+        result["time"] = time.strftime("%H:%M:%S") #Some extra settings.
+        result["date"] = time.strftime("%d-%m-%Y")
+        result["day"] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][int(time.strftime("%w"))]
+
+        initial_extruder_stack = Application.getInstance().getExtruderManager().getUsedExtruderStacks()[0]
+        initial_extruder_nr = initial_extruder_stack.getProperty("extruder_nr", "value")
+        result["initial_extruder_nr"] = initial_extruder_nr
+
+        return result
+
+    ##  Replace setting tokens in a piece of g-code.
+    #   \param value A piece of g-code to replace tokens in.
+    #   \param default_extruder_nr Stack nr to use when no stack nr is specified, defaults to the global stack
+    def _expandGcodeTokens(self, value, default_extruder_nr) -> str:
+        if not self._all_extruders_settings:
+            self._cacheAllExtruderSettings()
+
+        try:
+            # any setting can be used as a token
+            fmt = GcodeStartEndFormatter(default_extruder_nr = default_extruder_nr)
+            if self._all_extruders_settings is None:
+                return ""
+            settings = self._all_extruders_settings.copy()
+            settings["default_extruder_nr"] = default_extruder_nr
+            return str(fmt.format(value, **settings))
+        except:
+            Logger.logException("w", "Unable to do token replacement on start/end g-code")
+            return str(value)
+
+    ##  Sends all global settings to the engine.
+    #
+    #   The settings are taken from the global stack. This does not include any
+    #   per-extruder settings or per-object settings.
+    def _buildGlobalSettingsMessage(self, stack = None):
+        if not stack:
+            stack = Application.getInstance().getGlobalContainerStack()
+        
+        if not stack:
+            return
+        
+        if not self._all_extruders_settings:
+            self._cacheAllExtruderSettings()
+
+        if self._all_extruders_settings is None:
+            return
+
+        settings = self._all_extruders_settings["-1"].copy()
+
+        # Pre-compute material material_bed_temp_prepend and material_print_temp_prepend
+        start_gcode = settings["machine_start_gcode"]
+        bed_temperature_settings = ["material_bed_temperature", "material_bed_temperature_layer_0"]
+        pattern = r"\{(%s)(,\s?\w+)?\}" % "|".join(bed_temperature_settings) # match {setting} as well as {setting, extruder_nr}
+        settings["material_bed_temp_prepend"] = re.search(pattern, start_gcode) == None
+        print_temperature_settings = ["material_print_temperature", "material_print_temperature_layer_0", "default_material_print_temperature", "material_initial_print_temperature", "material_final_print_temperature", "material_standby_temperature"]
+        pattern = r"\{(%s)(,\s?\w+)?\}" % "|".join(print_temperature_settings) # match {setting} as well as {setting, extruder_nr}
+        settings["material_print_temp_prepend"] = re.search(pattern, start_gcode) == None
+
+        # Replace the setting tokens in start and end g-code.
+        # Use values from the first used extruder by default so we get the expected temperatures
+        initial_extruder_stack = Application.getInstance().getExtruderManager().getUsedExtruderStacks()[0]
+        initial_extruder_nr = initial_extruder_stack.getProperty("extruder_nr", "value")
+
+        settings["machine_start_gcode"] = self._expandGcodeTokens(settings["machine_start_gcode"], initial_extruder_nr)
+        settings["machine_end_gcode"] = self._expandGcodeTokens(settings["machine_end_gcode"], initial_extruder_nr)
+
+        for key, value in settings.items():
+            settings[key] = str(value)
+
+        return settings
+
+    ##  Sends all global settings to the engine.
+    #
+    #   The settings are taken from the global stack. This does not include any
+    #   per-extruder settings or per-object settings.
+    def _buildObjectsListsMessage(self, global_stack):
+        scene = Application.getInstance().getController().getScene()
+        
+        active_buildplate = Application.getInstance().getMultiBuildPlateModel().activeBuildPlate
         
         with scene.getSceneLock():
             # Remove old layer data.
@@ -739,14 +890,6 @@ class SmartSliceCloudConnector(QObject):
                 associated_disabled_extruders = {str(c) for c in sorted([int(p) + 1 for p in associated_disabled_extruders])}
                 self.setMessage(", ".join(associated_disabled_extruders))
                 return
-        
-        global_settings_message = self._buildGlobalSettingsMessage(global_stack)
-        limit_to_extruder_message = self._buildGlobalInheritsStackMessage(global_stack)
-    
-        # Build messages for extruder stacks
-        extruders_message = []
-        for extruder_stack in global_stack.extruderList:
-            extruders_message.append(self._buildExtruderMessage(extruder_stack))
     
         object_lists_message = []
         for group in filtered_object_groups:
@@ -788,143 +931,8 @@ class SmartSliceCloudConnector(QObject):
                 group_message_message["objects"].append(obj)
             
             object_lists_message.append(group_message_message)
-        
-        
-        return {"object_lists": object_lists_message,
-                "global_settings": global_settings_message,
-                "limit_to_extruder": limit_to_extruder_message,
-                "extruders": extruders_message,
-                }
-        
-    ##  Check if a node has per object settings and ensure that they are set correctly in the message
-    #   \param node Node to check.
-    #   \param message object_lists message to put the per object settings in
-    def _handlePerObjectSettings(self, node):
-        stack = node.callDecoration("getStack")
 
-        # Check if the node has a stack attached to it and the stack has any settings in the top container.
-        if not stack:
-            return
-
-        # Check all settings for relations, so we can also calculate the correct values for dependent settings.
-        top_of_stack = stack.getTop()  # Cache for efficiency.
-        changed_setting_keys = top_of_stack.getAllKeys()
-
-        # Add all relations to changed settings as well.
-        for key in top_of_stack.getAllKeys():
-            instance = top_of_stack.getInstance(key)
-            self._addRelations(changed_setting_keys, instance.definition.relations)
-
-        # Ensure that the engine is aware what the build extruder is.
-        changed_setting_keys.add("extruder_nr")
-
-        settings = []
-        # Get values for all changed settings
-        for key in changed_setting_keys:
-            setting = {}
-            setting["name"] = key
-            extruder = int(round(float(stack.getProperty(key, "limit_to_extruder"))))
-
-            # Check if limited to a specific extruder, but not overridden by per-object settings.
-            if extruder >= 0 and key not in changed_setting_keys:
-                limited_stack = ExtruderManager.getInstance().getActiveExtruderStacks()[extruder]
-            else:
-                limited_stack = stack
-
-            setting["value"] = str(limited_stack.getProperty(key, "value"))
-            
-            settings.append(setting)
-        
-        return settings
-    
-    def _cacheAllExtruderSettings(self):
-        global_stack = Application.getInstance().getGlobalContainerStack()
-
-        # NB: keys must be strings for the string formatter
-        self._all_extruders_settings = {
-            "-1": self._buildReplacementTokens(global_stack)
-        }
-        for extruder_stack in ExtruderManager.getInstance().getActiveExtruderStacks():
-            extruder_nr = extruder_stack.getProperty("extruder_nr", "value")
-            self._all_extruders_settings[str(extruder_nr)] = self._buildReplacementTokens(extruder_stack)
-    
-    ##  Creates a dictionary of tokens to replace in g-code pieces.
-    #
-    #   This indicates what should be replaced in the start and end g-codes.
-    #   \param stack The stack to get the settings from to replace the tokens
-    #   with.
-    #   \return A dictionary of replacement tokens to the values they should be
-    #   replaced with.
-    def _buildReplacementTokens(self, stack):
-        result = {}
-        for key in stack.getAllKeys():
-            value = stack.getProperty(key, "value")
-            result[key] = value
-            Job.yieldThread()
-
-        result["print_bed_temperature"] = result["material_bed_temperature"] # Renamed settings.
-        result["print_temperature"] = result["material_print_temperature"]
-        result["travel_speed"] = result["speed_travel"]
-        result["time"] = time.strftime("%H:%M:%S") #Some extra settings.
-        result["date"] = time.strftime("%d-%m-%Y")
-        result["day"] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][int(time.strftime("%w"))]
-
-        initial_extruder_stack = Application.getInstance().getExtruderManager().getUsedExtruderStacks()[0]
-        initial_extruder_nr = initial_extruder_stack.getProperty("extruder_nr", "value")
-        result["initial_extruder_nr"] = initial_extruder_nr
-
-        return result
-
-    ##  Replace setting tokens in a piece of g-code.
-    #   \param value A piece of g-code to replace tokens in.
-    #   \param default_extruder_nr Stack nr to use when no stack nr is specified, defaults to the global stack
-    def _expandGcodeTokens(self, value, default_extruder_nr) -> str:
-        if not self._all_extruders_settings:
-            self._cacheAllExtruderSettings()
-
-        try:
-            # any setting can be used as a token
-            fmt = GcodeStartEndFormatter(default_extruder_nr = default_extruder_nr)
-            if self._all_extruders_settings is None:
-                return ""
-            settings = self._all_extruders_settings.copy()
-            settings["default_extruder_nr"] = default_extruder_nr
-            return str(fmt.format(value, **settings))
-        except:
-            Logger.logException("w", "Unable to do token replacement on start/end g-code")
-            return str(value)
-
-    ##  Sends all global settings to the engine.
-    #
-    #   The settings are taken from the global stack. This does not include any
-    #   per-extruder settings or per-object settings.
-    def _buildGlobalSettingsMessage(self, stack):
-        if not self._all_extruders_settings:
-            self._cacheAllExtruderSettings()
-
-        if self._all_extruders_settings is None:
-            return
-
-        settings = self._all_extruders_settings["-1"].copy()
-
-        # Pre-compute material material_bed_temp_prepend and material_print_temp_prepend
-        start_gcode = settings["machine_start_gcode"]
-        bed_temperature_settings = ["material_bed_temperature", "material_bed_temperature_layer_0"]
-        pattern = r"\{(%s)(,\s?\w+)?\}" % "|".join(bed_temperature_settings) # match {setting} as well as {setting, extruder_nr}
-        settings["material_bed_temp_prepend"] = re.search(pattern, start_gcode) == None
-        print_temperature_settings = ["material_print_temperature", "material_print_temperature_layer_0", "default_material_print_temperature", "material_initial_print_temperature", "material_final_print_temperature", "material_standby_temperature"]
-        pattern = r"\{(%s)(,\s?\w+)?\}" % "|".join(print_temperature_settings) # match {setting} as well as {setting, extruder_nr}
-        settings["material_print_temp_prepend"] = re.search(pattern, start_gcode) == None
-
-        # Replace the setting tokens in start and end g-code.
-        # Use values from the first used extruder by default so we get the expected temperatures
-        initial_extruder_stack = Application.getInstance().getExtruderManager().getUsedExtruderStacks()[0]
-        initial_extruder_nr = initial_extruder_stack.getProperty("extruder_nr", "value")
-
-        settings["machine_start_gcode"] = self._expandGcodeTokens(settings["machine_start_gcode"], initial_extruder_nr)
-        settings["machine_end_gcode"] = self._expandGcodeTokens(settings["machine_end_gcode"], initial_extruder_nr)
-
-        return settings
+        return object_lists_message
 
     ##  Sends for some settings which extruder they should fallback to if not
     #   set.
@@ -946,7 +954,7 @@ class SmartSliceCloudConnector(QObject):
         return limit_to_extruder_message
             
     ##  Create extruder message from stack
-    def _buildExtruderMessage(self, stack) -> None:
+    def _buildExtruderMessage(self, stack) -> dict:
         extruder_message = {}
         extruder_message["id"] = int(stack.getMetaDataEntry("position"))
         if not self._all_extruders_settings:
@@ -965,6 +973,9 @@ class SmartSliceCloudConnector(QObject):
         extruder_nr = stack.getProperty("extruder_nr", "value")
         settings["machine_extruder_start_code"] = self._expandGcodeTokens(settings["machine_extruder_start_code"], extruder_nr)
         settings["machine_extruder_end_code"] = self._expandGcodeTokens(settings["machine_extruder_end_code"], extruder_nr)
+
+        for key, value in settings.items():
+            settings[key] = str(value)
 
         extruder_message["settings"] = settings
         
