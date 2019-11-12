@@ -139,7 +139,7 @@ class SmartSliceSelectTool(Tool):
             #print(dir(scene_node.getMeshData()))
             
             #if not mesh_data._indices or len(mesh_data._indices) == 0:
-            if len(mesh_data._indices) == 0:
+            if (mesh_data._indices is None) or (len(mesh_data._indices) == 0):
                 base_index = face_id * 3
                 v_a = mesh_data._vertices[base_index]
                 n_a = mesh_data._normals[base_index]
@@ -167,8 +167,9 @@ class SmartSliceSelectTool(Tool):
 
             self._normal_arrow = SmartSliceNormalArrow(sf)
 
-            #  Add Selection Visualizer to Root SceneNode
+            #  Add Selection Visualizer/Normal Arrow to Root SceneNode
             self._scene.getRoot().addChild(self._visualizer)
+            self._normal_arrow.addToScene()
 
             '''
             print("v_a", v_a)

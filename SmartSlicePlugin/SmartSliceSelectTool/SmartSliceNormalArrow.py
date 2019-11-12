@@ -7,9 +7,14 @@
 # Contains backend functionality for displaying arrow in Cura Scene
 #
 
+import os.path
 
 #  QML Imports 
 from PyQt5.QtCore import QUrl, QObject
+
+#  Ultimaker/Cura Imports
+from UM.Application import Application
+from UM.PluginRegistry import PluginRegistry
 
 #  Selectable Faces
 from .FaceSelection import SelectableFace
@@ -28,7 +33,10 @@ class SmartSliceNormalArrow(QObject):
     def __init__(self, parent : SelectableFace = None) -> None:
         super().__init__()
         
+        #  Set Hooks
         self._parent = parent
+        self._view = Application.getInstance().getController().getActiveView()
+        
 
         #  Rotations (Euler Angles)
         self._rot_x = 0.
@@ -47,7 +55,14 @@ class SmartSliceNormalArrow(QObject):
         
         #  If SelectableFace is provided, draw the Normal Arrow
         if parent is not None:
-            drawNormalArrow()
+            #  Set Physical Properties
+            self.deriveTranslation()
+            self.deriveRotation()
+            self.deriveNormalVector()
+            
+            #  Draw Arrow in Canvas
+            self.drawNormalArrow()
+
 
 
 #  ACCESSORS
@@ -115,6 +130,16 @@ class SmartSliceNormalArrow(QObject):
         self._norm_z = norms[2]
 
 
+    def addToScene(self):
+
+        #  Get Plugin Path
+        #base_path = PluginRegistry.getInstance().getPluginPath("SmartSlicePlugin")
+
+        # Add Normal Arrow to Canvas
+        #component_path = os.path.join(base_path, "SmartSliceSelectTool", "NormalArrow.qml")
+        #self._view.addDisplayComponent("_NormalArrow", component_path)
+        print ("\nADD NORMAL ARROW TO SCENE HERE\n")
+
     '''
       drawNormalArrow()
     '''
@@ -127,7 +152,10 @@ class SmartSliceNormalArrow(QObject):
         Set's the normal arrow's coordinates (x, y, z) to the selected face's centroid
     '''
     def deriveTranslation(self):
-        1 + 1 #  STUB
+        #  NOTE:  Assumes Trianglar Face
+        self._coord_x = (self._parent.points[0].x + self._parent.points[1].x + self._parent.points[2].x)/3
+        self._coord_y = (self._parent.points[0].y + self._parent.points[1].y + self._parent.points[2].y)/3
+        self._coord_z = (self._parent.points[0].z + self._parent.points[1].z + self._parent.points[2].z)/3
 
     '''
       deriveRotation()
@@ -135,6 +163,7 @@ class SmartSliceNormalArrow(QObject):
         Set's the normal arrow's euler rotation's to the selected face's rotation
     '''
     def deriveRotation(self):
+        # Produce Euler Angles
         1 + 1 #  STUB 
 
     ''' 
@@ -144,6 +173,9 @@ class SmartSliceNormalArrow(QObject):
           * Necessary for Arrow Head Translation
     '''
     def deriveNormalVector(self):
-        1 + 1 #  STUB
+        self._parent.generateNormalVector()
+        self._norm_x = self._parent.normal.x()
+        self._norm_y = self._parent.normal.y()
+        self._norm_z = self._parent.normal.z()
 
 
