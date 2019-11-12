@@ -62,6 +62,7 @@ class SmartSliceSelectTool(Tool):
         #  Create new 'Selection Visualizer' with no faces actively selected
         print("\n")
         self._visualizer = SmartSliceSelectionVisualizer()
+        self.getController().getScene().getRoot().addChild(self._visualizer)
         Logger.log("d", "Enabling Selection Vizualizer")
         
         #  Create new Normal Arrow for vizualising selected face normal vector

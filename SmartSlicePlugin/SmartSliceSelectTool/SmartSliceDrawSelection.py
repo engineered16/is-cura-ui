@@ -38,15 +38,9 @@ class SmartSliceSelectionVisualizer(SceneNode):
         #  Set Selected Faces
         self._selected_faces = faces
 
-        #  Get Copy of Scene
-        self._scene_node = Application.getInstance().getController().getScene().getRoot()
-
         #  Define Selection Color Codes
         self.ActiveBlue = [100, 100, 255]
         self.InactiveBlack = [0, 0, 0]
-
-        #  Add this SceneNode to Cura Scene
-        self._scene_node.addChild(self)
         
         #  Add Decorator && Paint Selected Faces
         self.drawSelection()
