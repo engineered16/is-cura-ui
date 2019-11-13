@@ -32,7 +32,6 @@ from .FaceSelection import fromMeshData
 #from .SmartSliceNormalArrow import SmartSliceNormalArrow
 
 
-
 # Provides enums
 class SelectionMode:
     AnchorMode = 1
@@ -177,7 +176,15 @@ class SmartSliceSelectTool(Tool):
             #self._visualizer.changeSelection([sf])
 
             self._handle.setFace(sf)
-            self._handle.drawFaceSelection()
+
+            '''
+                TODO:  It is *never* AnchorMode, so this switch doesn't actually stop the arrow
+                    from being drawn in the canvas when the user has 'Set Anchor' tool active.
+            '''
+            if self.getSelectionMode != SelectionMode.AnchorMode:
+                self._handle.drawFaceSelection(True)
+            else:
+                self._handle.drawFaceSelection(False)
 
             #self._normal_arrow = SmartSliceNormalArrow(sf)
 

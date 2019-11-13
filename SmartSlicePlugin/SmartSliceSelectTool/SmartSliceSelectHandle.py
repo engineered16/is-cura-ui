@@ -54,10 +54,11 @@ class SmartSliceSelectHandle(ToolHandle):
 
         Uses UM's MeshBuilder to construct 3D Arrow mesh and translates/rotates as to be normal to the selected face
     '''
-    def drawFaceSelection(self):
+    def drawFaceSelection(self, arrow=True):
         #  Construct Edges using MeshBuilder Cubes
         mb = MeshBuilder()
 
+        
         f = self._face
         
         #  Paint Face Selection
@@ -65,27 +66,38 @@ class SmartSliceSelectHandle(ToolHandle):
         f.generateNormalVector()
         n = f.normal
 
+
+        '''
+            TODO:  The Face is displayed askew from where it should lie in the model. 
+                Two rotations occur after the face is substantiated:
+                    *  Normal Arrow is rotated to match the selected face's normal vector (Most likely cause)
+                    *  The entire mesh is rotated to align the selected face flush downwards against the 3d-printer's Build Plate
+
+        '''
         p0 = Vector(p[0].x, p[0].y, p[0].z)
         p1 = Vector(p[1].x, p[1].y, p[1].z)
         p2 = Vector(p[2].x, p[2].y, p[2].z)
         norm = Vector(n.x, n.y, n.z)
         mb.addFace(p0, p1, p2, norm, self._color)
 
-        #  Paint Normal Arrow
-        center_shaft = Vector(self._center[0], self._center[1]+5, self._center[2])
-        center_head = Vector(self._center[0], self._center[1]+10, self._center[2])
+        if arrow:
+            #  Paint Normal Arrow
+            center_shaft = Vector(self._center[0], self._center[1]+5, self._center[2])
+            center_head = Vector(self._center[0], self._center[1]+10, self._center[2])
 
-        mb.addCube(1, 10, 1, center_shaft, self._color)
-        mb.addPyramid(5, 5, 5, 0, Vector.Unit_Y, center_head, self._color)
+            mb.addCube(1, 10, 1, center_shaft, self._color)
+            mb.addPyramid(5, 5, 5, 0, Vector.Unit_Y, center_head, self._color)
+                
+            mat = Matrix()
+            mat.setByRotationAxis(180*n.x, Vector.Unit_X)
+            mat.setByRotationAxis(-180*(1-n.y), Vector.Unit_Y)
+            mat.setByRotationAxis(180*n.z, Vector.Unit_Z)
+            self.rotate(Quaternion().fromMatrix(mat))
 
         #  Add to Cura Scene
         self.setSolidMesh(mb.build())
 
-        mat = Matrix()
-        mat.setByRotationAxis(180*n.x, Vector.Unit_X)
-        mat.setByRotationAxis(-180*(1-n.y), Vector.Unit_Y)
-        mat.setByRotationAxis(180*n.z, Vector.Unit_Z)
-        self.rotate(Quaternion().fromMatrix(mat))
+
 
     '''
       findCenter()
