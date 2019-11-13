@@ -15,7 +15,7 @@ from UM.Mesh.MeshData import MeshData
 
 #  Geometry Manipulation Libs
 from UM.Math.NumPyUtil import immutableNDArray
-from CGAL.CGAL_Kernel import Point_3, Vector_3
+from UM.Math.Vector import Vector
 
 #  SmartSlice UI Backend Libs
 from .FaceSelection import SelectableFace

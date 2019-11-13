@@ -26,10 +26,10 @@ from PyQt5.QtQml import QQmlComponent, QQmlContext # @UnresolvedImport
 
 #  Local Imports
 from .SmartSliceSelectHandle import SmartSliceSelectHandle
-from .SmartSliceDrawSelection import SmartSliceSelectionVisualizer
+#from .SmartSliceDrawSelection import SmartSliceSelectionVisualizer
 from .FaceSelection import SelectablePoint, SelectableEdge, SelectableFace
 from .FaceSelection import fromMeshData
-from .SmartSliceNormalArrow import SmartSliceNormalArrow
+#from .SmartSliceNormalArrow import SmartSliceNormalArrow
 
 
 
@@ -177,7 +177,7 @@ class SmartSliceSelectTool(Tool):
             #self._visualizer.changeSelection([sf])
 
             self._handle.setFace(sf)
-            self._handle.drawFaceSelection(self.selectable_faces)
+            self._handle.drawFaceSelection()
 
             #self._normal_arrow = SmartSliceNormalArrow(sf)
 

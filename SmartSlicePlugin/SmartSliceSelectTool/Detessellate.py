@@ -8,14 +8,9 @@
 # irregular polyhedron into a set of facets
 #
 
-#  STANDARD IMPORTS (FOR TESTING)
-import sys, os
-sys.path.append('/usr/lib/python3')
-sys.path.append('/usr/lib/python3/dist-packages')
-sys.path.append(os.getcwd())
 
-import CGAL
-from CGAL.CGAL_Kernel import Point_3, Vector_3
+#  UM/Cura Imports
+from UM.Math.Vector import Vector
 
 from .FaceSelection import SelectableFace
 

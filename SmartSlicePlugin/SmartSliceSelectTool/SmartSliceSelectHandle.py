@@ -54,29 +54,22 @@ class SmartSliceSelectHandle(ToolHandle):
 
         Uses UM's MeshBuilder to construct 3D Arrow mesh and translates/rotates as to be normal to the selected face
     '''
-    def drawFaceSelection(self, other_faces):
+    def drawFaceSelection(self):
         #  Construct Edges using MeshBuilder Cubes
         mb = MeshBuilder()
 
-        shape = [self._face]
-
-        for _face in other_faces:
-            if isCoplanar(self._face, _face):
-                for _tri in shape:
-                    if isJointed(_tri, _face):
-                        shape.append(_face)
+        f = self._face
         
-        for s in shape:
-            #  Paint Face Selection
-            p = s.points
-            s.generateNormalVector()
-            n = s.normal
+        #  Paint Face Selection
+        p = f.points
+        f.generateNormalVector()
+        n = f.normal
 
-            p0 = Vector(p[0].x, p[0].y, p[0].z)
-            p1 = Vector(p[1].x, p[1].y, p[1].z)
-            p2 = Vector(p[2].x, p[2].y, p[2].z)
-            norm = Vector(n.x(), n.y(), n.z())
-            mb.addFace(p0, p1, p2, norm, self._color)
+        p0 = Vector(p[0].x, p[0].y, p[0].z)
+        p1 = Vector(p[1].x, p[1].y, p[1].z)
+        p2 = Vector(p[2].x, p[2].y, p[2].z)
+        norm = Vector(n.x, n.y, n.z)
+        mb.addFace(p0, p1, p2, norm, self._color)
 
         #  Paint Normal Arrow
         center_shaft = Vector(self._center[0], self._center[1]+5, self._center[2])
@@ -89,9 +82,9 @@ class SmartSliceSelectHandle(ToolHandle):
         self.setSolidMesh(mb.build())
 
         mat = Matrix()
-        mat.setByRotationAxis(180*n.x(), Vector.Unit_X)
-        mat.setByRotationAxis(-180*(1-n.y()), Vector.Unit_Y)
-        mat.setByRotationAxis(180*n.z(), Vector.Unit_Z)
+        mat.setByRotationAxis(180*n.x, Vector.Unit_X)
+        mat.setByRotationAxis(-180*(1-n.y), Vector.Unit_Y)
+        mat.setByRotationAxis(180*n.z, Vector.Unit_Z)
         self.rotate(Quaternion().fromMatrix(mat))
 
     '''

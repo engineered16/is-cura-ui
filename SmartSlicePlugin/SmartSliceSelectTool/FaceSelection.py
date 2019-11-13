@@ -9,12 +9,7 @@
 
 
 #  STANDARD IMPORTS
-import sys
-sys.path.append('/usr/lib/python3/CGAL') # Temporary
-
-#  CGAL Imports
-import CGAL
-from CGAL.CGAL_Kernel import Point_3, Vector_3
+from UM.Math.Vector import Vector
 
 #  Ultimaker/Cura Imports
 from UM.Math import NumPyUtil
@@ -63,7 +58,7 @@ class SelectableFace:
 
     '''
       normal()
-        Returns the FaceWithNormal's Normal Vector_3
+        Returns the FaceWithNormal's Normal Vector
     '''
     @property
     def normal(self):
@@ -177,13 +172,13 @@ class SelectableFace:
         This makes the assumption that all other points beyond p3 are COPLANAR
     '''
     def generateNormalVector(self):
-        vec1 = Vector_3(self._points[1].x - self._points[0].x, self._points[1].y - self._points[0].y, self._points[1].z - self._points[0].z)
-        vec2 = Vector_3(self._points[2].x - self._points[0].x, self._points[2].y - self._points[0].y, self._points[2].z - self._points[0].z)
-        cross_x = vec1.y()*vec2.z() - vec1.z()*vec2.y()
-        cross_y = vec1.z()*vec2.x() - vec1.x()*vec2.z()
-        cross_z = vec1.x()*vec2.y() - vec1.y()*vec2.x()
+        vec1 = Vector(self._points[1].x - self._points[0].x, self._points[1].y - self._points[0].y, self._points[1].z - self._points[0].z)
+        vec2 = Vector(self._points[2].x - self._points[0].x, self._points[2].y - self._points[0].y, self._points[2].z - self._points[0].z)
+        cross_x = vec1.y*vec2.z - vec1.z*vec2.y
+        cross_y = vec1.z*vec2.x - vec1.x*vec2.z
+        cross_z = vec1.x*vec2.y - vec1.y*vec2.x
         cross   = (cross_x*cross_x) + (cross_y*cross_y) + (cross_z*cross_z)
-        self._normal = Vector_3(cross_x/cross, cross_y/cross, cross_z/cross)
+        self._normal = Vector(cross_x/cross, cross_y/cross, cross_z/cross)
 
 
 def fromMeshData(mesh_data: MeshData):
@@ -241,7 +236,7 @@ class SelectableEdge:
 class SelectablePoint:
 #  CONSTRUCTORS
     def __init__(self, x, y, z, normals):
-        self._p = Point_3(x, y, z)
+        self._p = Vector(x, y, z)
         self._normals = normals
 
         self._selected = False
@@ -255,7 +250,7 @@ class SelectablePoint:
     '''
     @property
     def x(self):
-        return self._p.x()
+        return self._p.x
 
     '''
       y()
@@ -263,7 +258,7 @@ class SelectablePoint:
     '''
     @property
     def y(self):
-        return self._p.y()
+        return self._p.y
 
     '''
       z()
@@ -271,7 +266,7 @@ class SelectablePoint:
     '''
     @property
     def z(self):
-        return self._p.z()
+        return self._p.z
 
 
 #  MUTATORS 
