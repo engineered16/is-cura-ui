@@ -28,7 +28,9 @@ from PyQt5.QtQml import QQmlComponent, QQmlContext # @UnresolvedImport
 from .SmartSliceSelectHandle import SmartSliceSelectHandle
 from .SmartSliceDrawSelection import SmartSliceSelectionVisualizer
 from .FaceSelection import SelectablePoint, SelectableEdge, SelectableFace
+from .FaceSelection import fromMeshData
 from .SmartSliceNormalArrow import SmartSliceNormalArrow
+
 
 
 # Provides enums
@@ -43,7 +45,7 @@ class SelectionMode:
 class SmartSliceSelectTool(Tool):
     def __init__(self):
         super().__init__()
-        #self._handle = SmartSliceSelectHandle()
+        self._handle = SmartSliceSelectHandle()
 
         #self._shortcut_key = Qt.Key_S
 
@@ -54,21 +56,25 @@ class SmartSliceSelectTool(Tool):
                                   )
 
         Selection.selectedFaceChanged.connect(self._onSelectedFaceChanged)
+        self.selected_face = None   # DEPRECATED
         self.selected_faces = []
+        self.selectable_faces = []
+
         self._scene = self.getController().getScene()
 
         self._controller.activeToolChanged.connect(self._onActiveStateChanged)
 
         #  Create new 'Selection Visualizer' with no faces actively selected
-        print("\n")
-        self._visualizer = SmartSliceSelectionVisualizer()
-        self.getController().getScene().getRoot().addChild(self._visualizer)
-        Logger.log("d", "Enabling Selection Vizualizer")
+        #  TODO:  Return to this after conference
+        #print("\n")
+        #self._visualizer = SmartSliceSelectionVisualizer()
+        #self.getController().getScene().getRoot().addChild(self._visualizer)
+        #Logger.log("d", "Enabling Selection Vizualizer")
         
         #  Create new Normal Arrow for vizualising selected face normal vector
-        self._normal_arrow = SmartSliceNormalArrow()
-        Logger.log("d", "Creating Normal Arrow Mesh")
-        print("\n")
+        #self._normal_arrow = SmartSliceNormalArrow()
+        #Logger.log("d", "Creating Normal Arrow Mesh")
+        #print("\n")
 
 
     ##  Handle mouse and keyboard events
@@ -94,6 +100,7 @@ class SmartSliceSelectTool(Tool):
             #if not id:
             #    return False
 
+        
             """
             if self._handle.isAxis(id):
                 self.setLockedAxis(id)
@@ -111,6 +118,7 @@ class SmartSliceSelectTool(Tool):
                 Selection.setFaceSelectMode(False)
                 Logger.log("d", "Disabled faceSelectMode!")
             """
+        
 
             Logger.log("d", "Selection.getSelectedFace(): {}".format(Selection.getSelectedFace()[0]))
 
@@ -134,6 +142,8 @@ class SmartSliceSelectTool(Tool):
 
             scene_node, face_id = curr_sf
             mesh_data = scene_node.getMeshData()
+
+            self.selectable_faces = fromMeshData(mesh_data)
 
             norms = []
 
@@ -164,13 +174,16 @@ class SmartSliceSelectTool(Tool):
             sf = SelectableFace([p0, p1, p2],
                                 mesh_data._normals)
             self.selected_faces = [sf] # TODO: Rewrite for >1 concurrently selected faces
-            self._visualizer.changeSelection([sf])
+            #self._visualizer.changeSelection([sf])
 
-            self._normal_arrow = SmartSliceNormalArrow(sf)
+            self._handle.setFace(sf)
+            self._handle.drawFaceSelection(self.selectable_faces)
+
+            #self._normal_arrow = SmartSliceNormalArrow(sf)
 
             #  Add Selection Visualizer/Normal Arrow to Root SceneNode
-            self._scene.getRoot().addChild(self._visualizer)
-            self._normal_arrow.addToScene()
+            #self._scene.getRoot().addChild(self._visualizer)
+            #self._normal_arrow.addToScene()
 
             '''
             print("v_a", v_a)

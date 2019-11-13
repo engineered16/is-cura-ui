@@ -17,7 +17,7 @@ sys.path.append(os.getcwd())
 import CGAL
 from CGAL.CGAL_Kernel import Point_3, Vector_3
 
-from Facet import SelectableFace
+from .FaceSelection import SelectableFace
 
 '''
   detessellate(tris)
