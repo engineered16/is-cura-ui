@@ -18,6 +18,7 @@ from CGAL.CGAL_Kernel import Point_3, Vector_3
 
 #  Ultimaker/Cura Imports
 from UM.Math import NumPyUtil
+from UM.Mesh import MeshData
 
 
 
@@ -176,8 +177,8 @@ class SelectableFace:
         This makes the assumption that all other points beyond p3 are COPLANAR
     '''
     def generateNormalVector(self):
-        vec1 = Vector_3(self._points[1].x() - self._points[0].x(), self._points[1].y() - self._points[0].y(), self._points[1].z() - self._points[0].z())
-        vec2 = Vector_3(self._points[2].x() - self._points[0].x(), self._points[2].y() - self._points[0].y(), self._points[2].z() - self._points[0].z())
+        vec1 = Vector_3(self._points[1].x - self._points[0].x, self._points[1].y - self._points[0].y, self._points[1].z - self._points[0].z)
+        vec2 = Vector_3(self._points[2].x - self._points[0].x, self._points[2].y - self._points[0].y, self._points[2].z - self._points[0].z)
         cross_x = vec1.y()*vec2.z() - vec1.z()*vec2.y()
         cross_y = vec1.z()*vec2.x() - vec1.x()*vec2.z()
         cross_z = vec1.x()*vec2.y() - vec1.y()*vec2.x()
@@ -185,6 +186,35 @@ class SelectableFace:
         self._normal = Vector_3(cross_x/cross, cross_y/cross, cross_z/cross)
 
 
+def fromMeshData(mesh_data: MeshData):
+    _faces = []
+    for face_id in range(0, mesh_data.getFaceCount()):
+        if (mesh_data._indices is None) or (len(mesh_data._indices) == 0):
+            base_index = face_id * 3
+            v_a = mesh_data._vertices[base_index]
+            n_a = mesh_data._normals[base_index]
+            v_b = mesh_data._vertices[base_index+1]
+            n_b = mesh_data._normals[base_index+1]
+            v_c = mesh_data._vertices[base_index+2]
+            n_c = mesh_data._normals[base_index+2]
+        else:
+            v_a = mesh_data._vertices[mesh_data._indices[face_id][0]]
+            n_a = mesh_data._normals[mesh_data._indices[face_id][0]]
+            v_b = mesh_data._vertices[mesh_data._indices[face_id][1]]
+            n_b = mesh_data._normals[mesh_data._indices[face_id][1]]
+            v_c = mesh_data._vertices[mesh_data._indices[face_id][2]]
+            n_c = mesh_data._normals[mesh_data._indices[face_id][2]]
+
+        p0 = SelectablePoint(float(v_a[0]), float(v_a[1]), float(v_a[2]), n_a)
+        p1 = SelectablePoint(float(v_b[0]), float(v_b[1]), float(v_b[2]), n_b)
+        p2 = SelectablePoint(float(v_c[0]), float(v_c[1]), float(v_c[2]), n_c)
+
+        #  Construct Selectable Face && Draw Selection in canvas
+        sf = SelectableFace([p0, p1, p2],
+                            mesh_data._normals)
+        _faces.append(sf) 
+    return _faces
+        
 
 '''
   SelectableEdge(p1, p2)
