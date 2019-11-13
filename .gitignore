@@ -95,5 +95,5 @@ ENV/
 .project
 .pydevproject
 
-# win32com - generated files
-ComFactory/win32com_dir/
+# Third party software
+SmartSlicePlugin/SmartSliceExtension/3rd-party/cpython-common/teton-*/*
