@@ -18,7 +18,7 @@ class SmartSliceProxy(QObject):
         self._multi_build_plate_model = Application.getInstance().activityChanged.connect(self._onSliceableNodesChanged)
         self._hasSliceableNodes = False
 
-        self.sendJobSignal.connect(self.extension.cloud.sendJob)
+        #self.sendJobSignal.connect(self.extension.cloud.sendJob)
 
     sliceableNodesChanged = pyqtSignal()
 
@@ -31,7 +31,7 @@ class SmartSliceProxy(QObject):
         self._hasSliceableNodes = value
         self.sliceableNodesChanged.emit()
 
-    sendJobSignal = pyqtSignal()
+    #sendJobSignal = pyqtSignal()
 
     def _onSliceableNodesChanged(self):
         self.hasSliceableNodes = len(self.extension.cloud.getSliceableNodes()) == 1
