@@ -118,8 +118,8 @@ class SmartSliceSelectTool(Tool):
                 Logger.log("d", "Disabled faceSelectMode!")
             """
         
-
-            Logger.log("d", "Selection.getSelectedFace(): {}".format(Selection.getSelectedFace()[0]))
+            if Selection.getSelectedFace() is not None:
+                Logger.log("d", "Selection.getSelectedFace(): {}".format(Selection.getSelectedFace()[0]))
 
             return True
             
@@ -181,16 +181,10 @@ class SmartSliceSelectTool(Tool):
                 TODO:  It is *never* AnchorMode, so this switch doesn't actually stop the arrow
                     from being drawn in the canvas when the user has 'Set Anchor' tool active.
             '''
-            if self.getSelectionMode != SelectionMode.AnchorMode:
-                self._handle.drawFaceSelection(True)
+            if self.getLoadSelectionActive():
+                self._handle.drawFaceSelection(draw_arrow=True)
             else:
-                self._handle.drawFaceSelection(False)
-
-            #self._normal_arrow = SmartSliceNormalArrow(sf)
-
-            #  Add Selection Visualizer/Normal Arrow to Root SceneNode
-            #self._scene.getRoot().addChild(self._visualizer)
-            #self._normal_arrow.addToScene()
+                self._handle.drawFaceSelection()
 
             '''
             print("v_a", v_a)

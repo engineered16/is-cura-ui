@@ -179,6 +179,7 @@ class SelectableFace:
         cross_z = vec1.x*vec2.y - vec1.y*vec2.x
         cross   = (cross_x*cross_x) + (cross_y*cross_y) + (cross_z*cross_z)
         self._normal = Vector(cross_x/cross, cross_y/cross, cross_z/cross)
+        return self._normal
 
 
 def fromMeshData(mesh_data: MeshData):

@@ -120,8 +120,6 @@ Item {
                 anchors.top: parent.top
                 anchors.left: parent.right
                 anchors.leftMargin: UM.Theme.getSize("default_margin").width
-                anchors.right: applyLoadDialog.right
-                anchors.rightMargin: UM.Theme.getSize("default_margin").width
 
                 model: ["Push / Pull", "Rotate"]
             }
