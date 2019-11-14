@@ -19,6 +19,7 @@ from UM.Tool import Tool
 
 from UM.View.GL.OpenGL import OpenGL
 from UM.Scene.Selection import Selection
+from UM.Scene.SceneNode import SceneNode
 
 #  QT / QML Imports
 from PyQt5.QtCore import Qt, QUrl
@@ -141,8 +142,7 @@ class SmartSliceSelectTool(Tool):
 
             scene_node, face_id = curr_sf
             mesh_data = scene_node.getMeshData()
-
-            self.selectable_faces = fromMeshData(mesh_data)
+            selectable_faces = fromMeshData(mesh_data)
 
             norms = []
 
@@ -177,14 +177,13 @@ class SmartSliceSelectTool(Tool):
 
             self._handle.setFace(sf)
 
-            '''
-                TODO:  It is *never* AnchorMode, so this switch doesn't actually stop the arrow
-                    from being drawn in the canvas when the user has 'Set Anchor' tool active.
-            '''
             if self.getLoadSelectionActive():
-                self._handle.drawFaceSelection(draw_arrow=True)
+                self._handle.drawFaceSelection(draw_arrow=True, other_faces=selectable_faces)
             else:
-                self._handle.drawFaceSelection()
+                self._handle.drawFaceSelection(other_faces=selectable_faces)
+                
+            
+
 
             '''
             print("v_a", v_a)

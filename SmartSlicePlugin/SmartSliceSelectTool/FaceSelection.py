@@ -40,6 +40,15 @@ class SelectableFace:
 
 #  ACCESSORS
 
+    def __eq__(self, other):
+        p1 = self.points
+        p2 = other.points
+        if (p1[0].x == p2[0].x) and (p1[0].y == p2[0].y) and (p1[0].z == p2[0].z):
+            if (p1[1].x == p2[1].x) and (p1[1].y == p2[1].y) and (p1[1].z == p2[1].z):
+                if (p1[2].x == p2[2].x) and (p1[2].y == p2[2].y) and (p1[2].z == p2[2].z):
+                    return True
+        return False
+
     '''
       points()
         Returns list of Selectable Points
@@ -184,7 +193,7 @@ class SelectableFace:
 
 def fromMeshData(mesh_data: MeshData):
     _faces = []
-    for face_id in range(0, mesh_data.getFaceCount()):
+    for face_id in range(0, int(len(mesh_data._vertices)/3)):
         if (mesh_data._indices is None) or (len(mesh_data._indices) == 0):
             base_index = face_id * 3
             v_a = mesh_data._vertices[base_index]

@@ -57,7 +57,7 @@ def isJointed(face1, face2):
     matched = 0
     for p in face1.points:
         for q in face2.points:
-            if (p.x() == q.x() and p.y() == q.y() and p.z() == q.z()):
+            if ((p.x == q.x) and (p.y == q.y) and (p.z == q.z)):
                 matched += 1
                 if (matched >= 2):
                     return True
@@ -68,7 +68,7 @@ def isJointed(face1, face2):
     Returns TRUE if 'face1' and 'face2' share the same normal vector
 '''
 def isCoplanar(face1, face2):
-    if ((face1.normal[0] == face2.normal[0]) and (face1.normal[1] == face2.normal[1]) and (face1.normal[2] == face2.normal[2])):
+    if ((face1.normal.x == face2.normal.x) and (face1.normal.y == face2.normal.y) and (face1.normal.z == face2.normal.z)):
         return True
     return False
 
