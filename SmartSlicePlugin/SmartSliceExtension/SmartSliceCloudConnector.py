@@ -321,23 +321,23 @@ class SmartSliceCloudConnector(QObject):
             self._proxy.sliceButtonText = "Waiting for model"
             self._proxy.sliceButtonEnabled = False
         elif self.status is SmartSliceCloudStatus.ReadyToVerify:
-            self._proxy.sliceStatus = "Ready to verify"
-            self._proxy.sliceHint = "Press on the button below to verify your part."
-            self._proxy.sliceButtonText = "Verify"
+            self._proxy.sliceStatus = "Ready to validate"
+            self._proxy.sliceHint = "Press on the button below to validate your part."
+            self._proxy.sliceButtonText = "Validate"
             self._proxy.sliceButtonEnabled = True
         elif self.status is SmartSliceCloudStatus.BusyValidating:
-            self._proxy.sliceStatus = "Verifying your part"
-            self._proxy.sliceHint = "Please wait until the verification is done."
+            self._proxy.sliceStatus = "Validating your part"
+            self._proxy.sliceHint = "Please wait until the validation is done."
             self._proxy.sliceButtonText = "Busy..."
             self._proxy.sliceButtonEnabled = False
         elif self.status is SmartSliceCloudStatus.Underdimensioned:
-            self._proxy.sliceStatus = "Your part is underdimensioned!"
-            self._proxy.sliceHint = "Press the button below to strengthen your part."
+            self._proxy.sliceStatus = "Your part is underdesigned!"
+            self._proxy.sliceHint = "Optimize to meet requirements."
             self._proxy.sliceButtonText = "Optimize"
             self._proxy.sliceButtonEnabled = True
         elif self.status is SmartSliceCloudStatus.Overdimensioned:
-            self._proxy.sliceStatus = "Your part is overdimensioned!"
-            self._proxy.sliceHint = "Press the button to reduce needed material."
+            self._proxy.sliceStatus = "Your part is overdesigned!"
+            self._proxy.sliceHint = "Optimize to improve your part."
             self._proxy.sliceButtonText = "Optimize"
             self._proxy.sliceButtonEnabled = True
         elif self.status is SmartSliceCloudStatus.BusyOptimizing:
