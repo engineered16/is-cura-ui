@@ -47,6 +47,9 @@ class SmartSliceSelectHandle(ToolHandle):
 
         #   Arrow Mesh
         self._arrow = None
+        
+        #  Disable auto scale
+        self._auto_scale = False
 
 #  ACCESSORS
     @property
