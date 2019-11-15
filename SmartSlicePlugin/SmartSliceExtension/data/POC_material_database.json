@@ -10,7 +10,7 @@
             "elastic": {
                 "type": "isotropic",
                 "E": 1619.0,
-                "v": 0.35
+                "nu": 0.35
             },
             "failure_yield": {
                 "type": "von_mises",
@@ -30,7 +30,7 @@
             "elastic": {
                 "type": "isotropic",
                 "E": 1538.0,
-                "v": 0.33
+                "nu": 0.33
             },
             "failure_yield": {
                 "type": "von_mises",
@@ -49,7 +49,7 @@
             "elastic": {
                 "type": "isotropic",
                 "E": 1129.0,
-                "v": 0.33
+                "nu": 0.33
             },
             "failure_yield": {
                 "type": "von_mises",
@@ -69,7 +69,7 @@
             "elastic": {
                 "type": "isotropic",
                 "E": 579.0,
-                "v": 0.39
+                "nu": 0.39
             },
             "failure_yield": {
                 "type": "von_mises",
@@ -89,7 +89,7 @@
             "elastic": {
                 "type": "isotropic",
                 "E": 1904.0,
-                "v": 0.37
+                "nu": 0.37
             },
             "failure_yield": {
                 "type": "von_mises",
@@ -109,7 +109,7 @@
             "elastic": {
                 "type": "isotropic",
                 "E": 2347.0,
-                "v": 0.34
+                "nu": 0.34
             },
             "failure_yield": {
                 "type": "von_mises",
@@ -128,7 +128,7 @@
             "elastic": {
                 "type": "isotropic",
                 "E": 1820.0,
-                "v": 0.34
+                "nu": 0.34
             },
             "failure_yield": {
                 "type": "von_mises",
@@ -157,9 +157,10 @@
                 "G23": 623.0
             },
             "failure_yield": {
-                "type": "von_mises",
-                "S11y": 82.2,
-                "Sshear": 47.5
+                "type": "isotropic",
+                "T": 82.2,
+                "C": 82.2,
+                "S": 47.5
             },
             "fracture": {
                 "KIc": 7.84
@@ -184,9 +185,10 @@
                 "G23": 227.0
             },
             "failure_yield": {
-                "type": "von_mises",
-                "S11y": 55.6,
-                "Sshear": 32.1
+                "type": "isotropic",
+                "T": 55.6,
+                "C": 55.6,
+                "S": 32.1
             },
             "fracture": {
                 "KIc": 5.29
@@ -211,9 +213,10 @@
                 "G23": 628.0
             },
             "failure_yield": {
-                "type": "von_mises",
-                "S11y": 74.0,
-                "Sshear": 42.7
+                "type": "isotropic",
+                "T": 74.0,
+                "C": 74.0,
+                "S": 42.7
             },
             "fracture": {
                 "KIc": 7.84
@@ -238,9 +241,10 @@
                 "G23": 227.0
             },
             "failure_yield": {
-                "type": "von_mises",
-                "S11y": 50.0,
-                "Sshear": 28.9
+                "type": "isotropic",
+                "T": 50.0,
+                "C": 50.0,
+                "S": 28.9
             },
             "fracture": {
                 "KIc": 5.29
