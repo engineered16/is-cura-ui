@@ -24,13 +24,8 @@ import os.path
 from UM.Logger import Logger
 from UM.Application import Application
 from UM.PluginRegistry import PluginRegistry
-from UM.Scene.Selection import Selection
-from UM.Scene import Scene, SceneNode
 
 from cura.Stages.CuraStage import CuraStage
-
-from .ui.Bridge import SmartSliceBridge
-from PyQt5.QtQml import QQmlComponent, QQmlContext # @UnresolvedImport
 
 #
 #   Stage Class Definition
@@ -64,9 +59,10 @@ class SmartSliceStage(CuraStage):
             self._was_buildvolume_hidden = True
 
         # Ensure we have tools defined and apply them here
+        our_tool = self._our_toolset[0]
         self.setToolVisibility(True)
-        #Application.getInstance().getController().setFallbackTool(self._our_toolset[0])
-        Application.getInstance().getController().setActiveTool(None)
+        Application.getInstance().getController().setFallbackTool(our_tool)
+        Application.getInstance().getController().setActiveTool(our_tool)
 
 
     #   onStageDeselected:
@@ -80,14 +76,8 @@ class SmartSliceStage(CuraStage):
 
         # Recover if we have tools defined
         self.setToolVisibility(False)
-        #Application.getInstance().getController().setFallbackTool(self._default_fallback_tool)
-        Application.getInstance().getController().setActiveTool(None)
-
-        # Reset selection
-        if self._was_selection_face is not None and self._was_selection_face is not Selection.getFaceSelectMode():
-            Selection.setFaceSelectMode(self._was_selection_face)
-        Selection.clear()
-        Selection.clearFace()
+        Application.getInstance().getController().setFallbackTool(self._default_fallback_tool)
+        Application.getInstance().getController().setActiveTool(self._default_fallback_tool)
 
     def getVisibleTools(self):
         visible_tools = []

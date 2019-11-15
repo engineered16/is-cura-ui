@@ -35,7 +35,7 @@ class SmartSliceCloudStatus:
 class SmartSliceCloudProxy(QObject):
     def __init__(self, connector) -> None:
         super().__init__()
-        
+
         self.connector = connector
 
         # Properties (mainly) for the login window
@@ -76,7 +76,7 @@ class SmartSliceCloudProxy(QObject):
         self._percentageTimeSkin = 0.0
         self._percentageTimeSkirt = 0.0
         self._percentageTimeTravel = 0.0
-        
+
         self.resultTimeInfillChanged.connect(self._onResultTimeChanged)
         self.resultTimeInnerWallsChanged.connect(self._onResultTimeChanged)
         self.resultTimeOuterWallsChanged.connect(self._onResultTimeChanged)
@@ -84,6 +84,11 @@ class SmartSliceCloudProxy(QObject):
         self.resultTimeSkinChanged.connect(self._onResultTimeChanged)
         self.resultTimeSkirtChanged.connect(self._onResultTimeChanged)
         self.resultTimeTravelChanged.connect(self._onResultTimeChanged)
+
+        self._materialName = "None"
+        self._materialCost = 0.0
+        self._materialLength = 0.0
+        self._materialWeight = 0.0
 
     # Properties (mainly) for the login window
 
@@ -125,7 +130,7 @@ class SmartSliceCloudProxy(QObject):
             Logger.log("d", "loginPassword: <secret!>")
             self._loginPassword = value
             self.loginPasswordChanged.emit()
-            
+
     @pyqtProperty(bool, notify=loginPasswordChanged)
     def loginResult(self):
         return self.connector.login()
@@ -183,7 +188,7 @@ class SmartSliceCloudProxy(QObject):
             Logger.log("d", "sliceButtonEnabled: <{}> -> <{}>".format(self._sliceButtonEnabled, value))
             self._sliceButtonEnabled = value
             self.sliceButtonEnabledChanged.emit()
-            
+
     sliceButtonClicked = pyqtSignal()
 
     sliceIconImageChanged = pyqtSignal()
@@ -223,7 +228,6 @@ class SmartSliceCloudProxy(QObject):
     @resultSafetyFactor.setter
     def resultSafetyFactor(self, value):
         if self._resultSafetyFactor is not value:
-            Logger.log("d", "resultSafetyFactor: <{}> -> <{}>".format(self._resultSafetyFactor, value))
             self._resultSafetyFactor = value
             self.resultSafetyFactorChanged.emit()
 
@@ -236,7 +240,6 @@ class SmartSliceCloudProxy(QObject):
     @resultMaximalDisplacement.setter
     def resultMaximalDisplacement(self, value):
         if self._resultMaximalDisplacement is not value:
-            Logger.log("d", "resultMaximalDisplacement: <{}> -> <{}>".format(self._resultMaximalDisplacement, value))
             self._resultMaximalDisplacement = value
             self.resultMaximalDisplacementChanged.emit()
 
@@ -249,7 +252,6 @@ class SmartSliceCloudProxy(QObject):
     @resultTimeInfill.setter
     def resultTimeInfill(self, value: QTime):
         if self._resultTimeInfill is not value:
-            Logger.log("d", "resultTimeInfill: <{}> -> <{}>".format(self._resultTimeInfill, value))
             self._resultTimeInfill = value
             self.resultTimeInfillChanged.emit()
 
@@ -262,7 +264,6 @@ class SmartSliceCloudProxy(QObject):
     @resultTimeInnerWalls.setter
     def resultTimeInnerWalls(self, value: QTime):
         if self._resultTimeInnerWalls is not value:
-            Logger.log("d", "resultTimeInnerWalls: <{}> -> <{}>".format(self._resultTimeInnerWalls, value))
             self._resultTimeInnerWalls = value
             self.resultTimeInnerWallsChanged.emit()
 
@@ -275,7 +276,6 @@ class SmartSliceCloudProxy(QObject):
     @resultTimeOuterWalls.setter
     def resultTimeOuterWalls(self, value: QTime):
         if self._resultTimeOuterWalls is not value:
-            Logger.log("d", "resultTimeOuterWalls: <{}> -> <{}>".format(self._resultTimeOuterWalls, value))
             self._resultTimeOuterWalls = value
             self.resultTimeOuterWallsChanged.emit()
 
@@ -288,7 +288,6 @@ class SmartSliceCloudProxy(QObject):
     @resultTimeRetractions.setter
     def resultTimeRetractions(self, value: QTime):
         if self._resultTimeRetractions is not value:
-            Logger.log("d", "resultTimeRetractions: <{}> -> <{}>".format(self._resultTimeRetractions, value))
             self._resultTimeRetractions = value
             self.resultTimeRetractionsChanged.emit()
 
@@ -301,7 +300,6 @@ class SmartSliceCloudProxy(QObject):
     @resultTimeSkin.setter
     def resultTimeSkin(self, value: QTime):
         if self._resultTimeSkin is not value:
-            Logger.log("d", "resultTimeSkin: <{}> -> <{}>".format(self._resultTimeSkin, value))
             self._resultTimeSkin = value
             self.resultTimeSkinChanged.emit()
 
@@ -314,7 +312,6 @@ class SmartSliceCloudProxy(QObject):
     @resultTimeSkirt.setter
     def resultTimeSkirt(self, value: QTime):
         if self._resultTimeSkirt is not value:
-            Logger.log("d", "resultTimeSkirt: <{}> -> <{}>".format(self._resultTimeSkirt, value))
             self._resultTimeSkirt = value
             self.resultTimeSkirtChanged.emit()
 
@@ -327,7 +324,6 @@ class SmartSliceCloudProxy(QObject):
     @resultTimeTravel.setter
     def resultTimeTravel(self, value: QTime):
         if self._resultTimeTravel is not value:
-            Logger.log("d", "resultTimeTravel: <{}> -> <{}>".format(self._resultTimeTravel, value))
             self._resultTimeTravel = value
             self.resultTimeTravelChanged.emit()
 
@@ -340,7 +336,6 @@ class SmartSliceCloudProxy(QObject):
     @percentageTimeInfill.setter
     def percentageTimeInfill(self, value):
         if not self._percentageTimeInfill == value:
-            Logger.log("d", "percentageTimeInfill: <{}> -> <{}>".format(self._percentageTimeInfill, value))
             self._percentageTimeInfill = value
             self.percentageTimeInfillChanged.emit()
 
@@ -353,7 +348,6 @@ class SmartSliceCloudProxy(QObject):
     @percentageTimeInnerWalls.setter
     def percentageTimeInnerWalls(self, value):
         if not self._percentageTimeInnerWalls == value:
-            Logger.log("d", "percentageTimeInnerWalls: <{}> -> <{}>".format(self._percentageTimeInnerWalls, value))
             self._percentageTimeInnerWalls = value
             self.percentageTimeInnerWallsChanged.emit()
 
@@ -366,7 +360,6 @@ class SmartSliceCloudProxy(QObject):
     @percentageTimeOuterWalls.setter
     def percentageTimeOuterWalls(self, value):
         if not self._percentageTimeOuterWalls == value:
-            Logger.log("d", "percentageTimeOuterWalls: <{}> -> <{}>".format(self._percentageTimeOuterWalls, value))
             self._percentageTimeOuterWalls = value
             self.percentageTimeOuterWallsChanged.emit()
 
@@ -379,7 +372,6 @@ class SmartSliceCloudProxy(QObject):
     @percentageTimeRetractions.setter
     def percentageTimeRetractions(self, value):
         if not self._percentageTimeRetractions == value:
-            Logger.log("d", "percentageTimeRetractions: <{}> -> <{}>".format(self._percentageTimeRetractions, value))
             self._percentageTimeRetractions = value
             self.percentageTimeRetractionsChanged.emit()
 
@@ -392,7 +384,6 @@ class SmartSliceCloudProxy(QObject):
     @percentageTimeSkin.setter
     def percentageTimeSkin(self, value):
         if not self._percentageTimeSkin == value:
-            Logger.log("d", "percentageTimeSkin: <{}> -> <{}>".format(self._percentageTimeSkin, value))
             self._percentageTimeSkin = value
             self.percentageTimeSkinChanged.emit()
 
@@ -405,7 +396,6 @@ class SmartSliceCloudProxy(QObject):
     @percentageTimeSkirt.setter
     def percentageTimeSkirt(self, value):
         if not self._percentageTimeSkirt == value:
-            Logger.log("d", "percentageTimeSkirt: <{}> -> <{}>".format(self._percentageTimeSkirt, value))
             self._percentageTimeSkirt = value
             self.percentageTimeSkirtChanged.emit()
 
@@ -418,16 +408,15 @@ class SmartSliceCloudProxy(QObject):
     @percentageTimeTravel.setter
     def percentageTimeTravel(self, value):
         if not self._percentageTimeTravel == value:
-            Logger.log("d", "percentageTimeTravel: <{}> -> <{}>".format(self._percentageTimeTravel, value))
             self._percentageTimeTravel = value
             self.percentageTimeTravelChanged.emit()
-            
+
     def _onResultTimeChanged(self):
         total_time = 0
-        
+
         #for result_time in self._resultTimes:
         #    total_time += result_time.msecsSinceStartOfDay()
-        
+
         total_time += self.resultTimeInfill.msecsSinceStartOfDay()
         total_time += self.resultTimeInnerWalls.msecsSinceStartOfDay()
         total_time += self.resultTimeOuterWalls.msecsSinceStartOfDay()
@@ -435,7 +424,7 @@ class SmartSliceCloudProxy(QObject):
         total_time += self.resultTimeSkin.msecsSinceStartOfDay()
         total_time += self.resultTimeSkirt.msecsSinceStartOfDay()
         total_time += self.resultTimeTravel.msecsSinceStartOfDay()
-        
+
         self.percentageTimeInfill = 100.0 / total_time * self.resultTimeInfill.msecsSinceStartOfDay()
         self.percentageTimeInnerWalls = 100.0 / total_time * self.resultTimeInnerWalls.msecsSinceStartOfDay()
         self.percentageTimeOuterWalls = 100.0 / total_time * self.resultTimeOuterWalls.msecsSinceStartOfDay()
@@ -443,3 +432,55 @@ class SmartSliceCloudProxy(QObject):
         self.percentageTimeSkin = 100.0 / total_time * self.resultTimeSkin.msecsSinceStartOfDay()
         self.percentageTimeSkirt = 100.0 / total_time * self.resultTimeSkirt.msecsSinceStartOfDay()
         self.percentageTimeTravel = 100.0 / total_time * self.resultTimeTravel.msecsSinceStartOfDay()
+
+    materialNameChanged = pyqtSignal()
+
+    @pyqtProperty(str, notify=materialNameChanged)
+    def materialName(self):
+        return self._materialName
+
+    @materialName.setter
+    def materialName(self, value):
+        if not self._materialName == value:
+            Logger.log("d", "materialName: <{}> -> <{}>".format(self._percentageTimeInnerWalls, value))
+            self._materialName = value
+            self.percentageTimeInnerWallsChanged.emit()
+
+    materialLengthChanged = pyqtSignal()
+
+    @pyqtProperty(float, notify=materialLengthChanged)
+    def materialLength(self):
+        return self._materialLength
+
+    @materialLength.setter
+    def materialLength(self, value):
+        if not self._materialLength == value:
+            Logger.log("d", "materialLength: <{}> -> <{}>".format(self._percentageTimeInnerWalls, value))
+            self._materialLength = value
+            self.percentageTimeInnerWallsChanged.emit()
+
+    materialWeightChanged = pyqtSignal()
+
+    @pyqtProperty(float, notify=materialWeightChanged)
+    def materialWeight(self):
+        return self._materialWeight
+
+    @materialWeight.setter
+    def materialWeight(self, value):
+        if not self._materialWeight == value:
+            Logger.log("d", "materialWeight: <{}> -> <{}>".format(self._percentageTimeInnerWalls, value))
+            self._materialWeight = value
+            self.percentageTimeInnerWallsChanged.emit()
+
+    materialCostChanged = pyqtSignal()
+
+    @pyqtProperty(float, notify=materialCostChanged)
+    def materialCost(self):
+        return self._materialCost
+
+    @materialCost.setter
+    def materialCost(self, value):
+        if not self._materialCost == value:
+            Logger.log("d", "materialCost: <{}> -> <{}>".format(self._percentageTimeInnerWalls, value))
+            self._materialCost = value
+            self.percentageTimeInnerWallsChanged.emit()

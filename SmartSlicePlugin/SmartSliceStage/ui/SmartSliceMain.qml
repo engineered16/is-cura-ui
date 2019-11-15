@@ -23,8 +23,6 @@ import UM 1.2 as UM
 import Cura 1.0 as Cura
 import SmartSlice 1.0 as SmartSlice
 
-import "Bridge.js" as Data
-
 //  Main UI Stage Components
 Item {
     id: smartSliceMain
@@ -508,7 +506,7 @@ Item {
                                     Layout.fillWidth: true
                                     font: UM.Theme.getFont("default")
 
-                                    text: Data.Material()
+                                    text: SmartSlice.Cloud.materialName
                                 }
 
                                 Label {
@@ -516,7 +514,7 @@ Item {
                                     font: smartSlicePopupContents.value_font
                                     color: smartSlicePopupContents.value_color
 
-                                    text: Data.Length()
+                                    text: SmartSlice.Cloud.materialLength
                                 }
 
                                 Label {
@@ -524,7 +522,7 @@ Item {
                                     font: smartSlicePopupContents.value_font
                                     color: smartSlicePopupContents.value_color
 
-                                    text: Data.Weight()
+                                    text: SmartSlice.Cloud.materialWeight
                                 }
 
                                 Label {
@@ -532,7 +530,7 @@ Item {
                                     font: smartSlicePopupContents.value_font
                                     color: smartSlicePopupContents.value_color
 
-                                    text: Data.Cost()
+                                    text: SmartSlice.Cloud.materialCost
                                 }
                             }
                         }

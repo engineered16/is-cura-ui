@@ -27,9 +27,11 @@ from PyQt5.QtNetwork import QNetworkRequest
 from PyQt5.QtNetwork import QNetworkAccessManager
 from PyQt5.QtQml import qmlRegisterSingletonType
 
+from UM.i18n import i18nCatalog
 from UM.Application import Application
 from UM.Job import Job
 from UM.Logger import Logger
+from UM.Message import Message
 from UM.PluginRegistry import PluginRegistry
 from UM.Scene.SceneNode import SceneNode
 from UM.Scene.Iterator.DepthFirstIterator import DepthFirstIterator
@@ -39,6 +41,8 @@ from cura.Settings.ExtruderManager import ExtruderManager
 
 from .SmartSliceCloudProxy import SmartSliceCloudStatus
 from .SmartSliceCloudProxy import SmartSliceCloudProxy
+
+i18n_catalog = i18nCatalog("smartslice")
 
 ##  Formatter class that handles token expansion in start/end gcode
 class GcodeStartEndFormatter(Formatter):
@@ -103,7 +107,7 @@ class ConnectivityChecker(QObject):
     def processErr(self, code):
         print(code)
 
-class SmartSliceCloudVerificationJob(Job):
+class SmartSliceCloudJob(Job):
     # This job is responsible for uploading the backup file to cloud storage.
     # As it can take longer than some other tasks, we schedule this using a Cura Job.
     
@@ -111,60 +115,158 @@ class SmartSliceCloudVerificationJob(Job):
         super().__init__()
         self.connector = connector
         
-        self.job_type = pywim.smartslice.job.JobType.validation
+        self.cancled = False
+        
+        self._job_status = None
+        self._wait_time = 0.05
+        
+        self.job_type = None
+        self.ui_status_per_job_type = {pywim.smartslice.job.JobType.validation : SmartSliceCloudStatus.BusyValidating,
+                                       pywim.smartslice.job.JobType.optimization : SmartSliceCloudStatus.BusyOptimizing,
+                                       }
+
+
+    @property
+    def job_status(self):
+        return self._job_status
+
+    @job_status.setter
+    def job_status(self, value):
+        if value is not self._job_status:
+            self._job_status = value
+            Logger.log("d", "Status changed: {}".format(self.job_status))
+
+    def processCloudJob(self, filepath):
+        # Read the 3MF file into bytes
+        threemf_fd = open(filepath, 'rb')
+        threemf_data = threemf_fd.read()
+        threemf_fd.close()
+    
+        # Create the HTTP client with the default connection parameters
+        client = pywim.http.thor.Client2019POC()
+    
+        # Submit the 3MF data for a new task
+        task = client.submit.post(threemf_data)
+        Logger.log("d", "Status after post'ing: {}".format(task.status))
+        
+        # While the task status is not finished or failed continue to periodically
+        # check the status. This is a naive way of waiting, since this could take
+        # a while (minutes).
+        while task.status not in (pywim.http.thor.TaskStatus.failed,
+                                  pywim.http.thor.TaskStatus.finished):
+            self.job_status = task.status
+            
+            time.sleep(self._wait_time)
+            task = client.status.get(id=task.id)
+    
+        if task.status == pywim.http.thor.TaskStatus.failed:
+            error_message = Message()
+            error_message.setTitle("SmartSlice plugin")
+            error_message.setText(i18n_catalog.i18nc("@info:status", "Error while processing the job:\n{}".format(task.error)))
+            error_message.show()
+
+            Logger.log("e", "An error occured while sending and receiving cloud job: {}".format(task.error))
+            return None
+        elif task.status == pywim.http.thor.TaskStatus.finished:
+            # Get the task again, but this time with the results included
+            task = client.result.get(id=task.id)
+            return task
+        else:
+            error_message = Message()
+            error_message.setTitle("SmartSlice plugin")
+            error_message.setText(i18n_catalog.i18nc("@info:status", "Unexpected status occured:\n{}".format(task.error)))
+            error_message.show()
+            
+            Logger.log("e", "An unexpected status occured while sending and receiving cloud job: {}".format(task.status))
+            return None
 
     def run(self) -> None:
+        if not self.job_type:
+            error_message = Message()
+            error_message.setTitle("SmartSlice plugin")
+            error_message.setText(i18n_catalog.i18nc("@info:status", "Job type not set for processing:\nDon't know what to do!"))
+            error_message.show()
+        
         # TODO: Add instructions how to send a verification job here
+        previous_connector_status = self.connector.status
+        self.connector.status = self.ui_status_per_job_type[self.job_type]
+        Job.yieldThread()
         
-        result = self.connector.prepareJob(self.job_type)
-        Logger.log("i", "Job prepared: {}".format(result))
-        result = self.connector.processCloudJob(result)
-        print(result)
-
-        if not self.connector._demo_was_underdimensioned_before:
-            self.connector.status = SmartSliceCloudStatus.Underdimensioned
-            self.connector._demo_was_underdimensioned_before = True
-            
-            self.connector._proxy.resultSafetyFactor = 0.5
-            self.connector._proxy.resultMaximalDisplacement = 5
-            
-            self.connector._proxy.resultTimeInfill = QTime(1, 0, 0, 0)
-            self.connector._proxy.resultTimeInnerWalls = QTime(0, 20, 0, 0)
-            self.connector._proxy.resultTimeOuterWalls = QTime(0, 15, 0, 0)
-            self.connector._proxy.resultTimeRetractions = QTime(0, 5, 0, 0)
-            self.connector._proxy.resultTimeSkin = QTime(0, 10, 0, 0)
-            self.connector._proxy.resultTimeSkirt = QTime(0, 1, 0, 0)
-            self.connector._proxy.resultTimeTravel = QTime(0, 30, 0, 0)
+        job = self.connector.prepareJob(self.job_type)
+        Logger.log("i", "Job prepared: {}".format(job))
+        task = self.processCloudJob(job)
         
-        elif not self.connector._demo_was_overdimensioned_before:
-            self.connector.status = SmartSliceCloudStatus.Overdimensioned
-            self.connector._demo_was_overdimensioned_before = True
+        #self.job_type == pywim.smartslice.job.JobType.optimization
+        if task:
+            result = task.result
+            if result:
+                result_dict = result.to_dict()
+                print(result_dict)
+                analyse = result.analyses[0]
+                print(analyse)
+                print(analyse.mass)
+                print(analyse.print_time)
+                print(analyse.modifier_meshes)
             
-            self.connector._proxy.resultSafetyFactor = 2
-            self.connector._proxy.resultMaximalDisplacement = 1
+            if not self.connector._demo_was_underdimensioned_before:
+                self.connector.status = SmartSliceCloudStatus.Underdimensioned
+                self.connector._demo_was_underdimensioned_before = True
+                
+                self.connector._proxy.resultSafetyFactor = 0.5
+                self.connector._proxy.resultMaximalDisplacement = 5
+                
+                self.connector._proxy.resultTimeInfill = QTime(1, 0, 0, 0)
+                self.connector._proxy.resultTimeInnerWalls = QTime(0, 20, 0, 0)
+                self.connector._proxy.resultTimeOuterWalls = QTime(0, 15, 0, 0)
+                self.connector._proxy.resultTimeRetractions = QTime(0, 5, 0, 0)
+                self.connector._proxy.resultTimeSkin = QTime(0, 10, 0, 0)
+                self.connector._proxy.resultTimeSkirt = QTime(0, 1, 0, 0)
+                self.connector._proxy.resultTimeTravel = QTime(0, 30, 0, 0)
             
-            self.connector._proxy.resultTimeInfill = QTime(2, 0, 0, 0)
-            self.connector._proxy.resultTimeInnerWalls = QTime(0, 10, 0, 0)
-            self.connector._proxy.resultTimeOuterWalls = QTime(0, 20, 0, 0)
-            self.connector._proxy.resultTimeRetractions = QTime(0, 3, 0, 0)
-            self.connector._proxy.resultTimeSkin = QTime(0, 15, 0, 0)
-            self.connector._proxy.resultTimeSkirt = QTime(0, 2, 0, 0)
-            self.connector._proxy.resultTimeTravel = QTime(0, 45, 0, 0)
+            elif not self.connector._demo_was_overdimensioned_before:
+                self.connector.status = SmartSliceCloudStatus.Overdimensioned
+                self.connector._demo_was_overdimensioned_before = True
+                
+                self.connector._proxy.resultSafetyFactor = 2
+                self.connector._proxy.resultMaximalDisplacement = 1
+                
+                self.connector._proxy.resultTimeInfill = QTime(2, 0, 0, 0)
+                self.connector._proxy.resultTimeInnerWalls = QTime(0, 10, 0, 0)
+                self.connector._proxy.resultTimeOuterWalls = QTime(0, 20, 0, 0)
+                self.connector._proxy.resultTimeRetractions = QTime(0, 3, 0, 0)
+                self.connector._proxy.resultTimeSkin = QTime(0, 15, 0, 0)
+                self.connector._proxy.resultTimeSkirt = QTime(0, 2, 0, 0)
+                self.connector._proxy.resultTimeTravel = QTime(0, 45, 0, 0)
+            else:
+                self.connector.status = SmartSliceCloudStatus.Optimized
+                
+                self.connector._proxy.resultSafetyFactor = 1
+                self.connector._proxy.resultMaximalDisplacement = 2
+                
+                self.connector._proxy.resultTimeInfill = QTime(3, 0, 0, 0)
+                self.connector._proxy.resultTimeInnerWalls = QTime(0, 10, 0, 0)
+                self.connector._proxy.resultTimeOuterWalls = QTime(0, 20, 0, 0)
+                self.connector._proxy.resultTimeRetractions = QTime(0, 3, 0, 0)
+                self.connector._proxy.resultTimeSkin = QTime(0, 15, 0, 0)
+                self.connector._proxy.resultTimeSkirt = QTime(0, 2, 0, 0)
+                self.connector._proxy.resultTimeTravel = QTime(0, 45, 0, 0)
         else:
-            self.connector.status = SmartSliceCloudStatus.Optimized
-            
-            self.connector._proxy.resultSafetyFactor = 1
-            self.connector._proxy.resultMaximalDisplacement = 2
-            
-            self.connector._proxy.resultTimeInfill = QTime(3, 0, 0, 0)
-            self.connector._proxy.resultTimeInnerWalls = QTime(0, 10, 0, 0)
-            self.connector._proxy.resultTimeOuterWalls = QTime(0, 20, 0, 0)
-            self.connector._proxy.resultTimeRetractions = QTime(0, 3, 0, 0)
-            self.connector._proxy.resultTimeSkin = QTime(0, 15, 0, 0)
-            self.connector._proxy.resultTimeSkirt = QTime(0, 2, 0, 0)
-            self.connector._proxy.resultTimeTravel = QTime(0, 45, 0, 0)
+            self.connector.status = previous_connector_status
+        
 
-SmartSliceCloudOptimizeJob = SmartSliceCloudVerificationJob
+        
+
+class SmartSliceCloudVerificationJob(SmartSliceCloudJob):
+    def __init__(self, connector)->None:
+        super().__init__(connector)
+        
+        self.job_type = pywim.smartslice.job.JobType.validation
+
+class SmartSliceCloudOptimizeJob(SmartSliceCloudVerificationJob):
+    def __init__(self, connector)->None:
+        super().__init__(connector)
+        
+        self.job_type = pywim.smartslice.job.JobType.optimization
 
 class SmartSliceCloudConnector(QObject):
     token_preference = "smartslice/token"
@@ -195,6 +297,9 @@ class SmartSliceCloudConnector(QObject):
         
         # Caches
         self._all_extruders_settings = None
+        
+        # POC
+        self._poc_default_infill_direction = 45
 
     def getProxy(self, engine, script_engine):
         return self._proxy
@@ -339,7 +444,7 @@ class SmartSliceCloudConnector(QObject):
     
     def onSliceButtonClicked(self):
         if self.status is SmartSliceCloudStatus.ReadyToVerify:
-            self.status = SmartSliceCloudStatus.BusyValidating
+            
             self.doVerification.emit()
         elif self.status in SmartSliceCloudStatus.Optimizable:
             self.status = SmartSliceCloudStatus.BusyOptimizing
@@ -372,10 +477,7 @@ class SmartSliceCloudConnector(QObject):
             active_extruder_position = 0
         else:
             active_extruder_position = int(active_extruder_position)
-        
-        
-        active_extruder = active_machine.extruders[str(active_extruder_position)]
-        
+
         extruders = list(active_machine.extruders.values())
         extruders = sorted(extruders,
                            key = lambda extruder: extruder.getMetaDataEntry("position")
@@ -413,7 +515,11 @@ class SmartSliceCloudConnector(QObject):
         job.bulk = pywim.fea.model.Material(name=material_found["name"])
         job.bulk.density = material_found["density"]
         job.bulk.elastic = pywim.fea.model.Elastic(properties={'E': material_found["elastic"]['E'],
-                                                               'nu': material_found["elastic"]['v']})
+                                                               'nu': material_found["elastic"]['nu']})
+        job.bulk.failure_yield = pywim.fea.model.Yield(type='von_mises',
+                                                       properties={'Sy': material_found['failure_yield']['Sy']}
+                                                       )
+        job.bulk.fracture = pywim.fea.model.Fracture(material_found['fracture']['KIc'])
     
         # Setup optimization configuration
         job.optimization.min_safety_factor = self.variables.safetyFactor
@@ -439,7 +545,7 @@ class SmartSliceCloudConnector(QObject):
         # Add the face Ids from the STL mesh that the user selected for
         # this anchor
         anchor1.face.extend(
-            (97, 98, 111, 112)
+            (0, 249, 1, 250)
         )
     
         step.boundary_conditions.append(anchor1)
@@ -452,12 +558,14 @@ class SmartSliceCloudConnector(QObject):
         # Set the components on the force vector. In this example
         # we have 100 N, 200 N, and 50 N in the x, y, and z
         # directions respectfully.
-        force1.force.set((100.,200., 50.))
+        force1.force.set(
+            (2., 0., 0.)
+        )
     
         # Add the face Ids from the STL mesh that the user selected for
         # this force
         force1.face.extend(
-            (156, 157, 158)
+            (255, 256, 248, 247)
         )
     
         step.loads.append(force1)
@@ -508,10 +616,9 @@ class SmartSliceCloudConnector(QObject):
         infill_angles = mesh_node_stack.getProperty("infill_angles", "value")
         if type(infill_angles) is str:
             infill_angles = eval(infill_angles)
-        #print("infill_angles: {}".format(infill_angles))
         if not len(infill_angles):
             # Check the URL below for the default angles. They are infill type depended.
-            print_config.infill.orientation = 45
+            print_config.infill.orientation = self._poc_default_infill_direction
         else:
             if len(infill_angles) > 1:
                 Logger.log("w", "More than one infill angle is set! Only the first will be taken!")
@@ -605,43 +712,6 @@ class SmartSliceCloudConnector(QObject):
         
         return filepath
 
-    def processCloudJob(self, filepath):
-        # Read the 3MF file into bytes
-        threemf_fd = open(filepath, 'rb')
-        threemf_data = threemf_fd.read()
-        threemf_fd.close()
-    
-        # Create the HTTP client with the default connection parameters
-        client = pywim.http.thor.Client2019POC()
-    
-        # Submit the 3MF data for a new task
-        task = client.submit.post(threemf_data)
-        Logger.log("d", "Status after post'ing: {}".format(task.status))
-        
-        # While the task status is not finished or failed continue to periodically
-        # check the status. This is a naive way of waiting, since this could take
-        # a while (minutes).
-        while task.status not in (pywim.http.thor.TaskStatus.finished,
-                                  pywim.http.thor.TaskStatus.failed):
-            Logger.log("d", "Status is: {}".format(task.status))
-            time.sleep(0.05)
-            task = client.status.get(id=task.id)
-    
-        if task.status == pywim.http.thor.TaskStatus.failed:
-            Logger.log("e", "An error occured while sending and receiving cloud job: {}".format(task.error))
-            return None
-        elif task.status == pywim.http.thor.TaskStatus.finished:
-            # Get the task again, but this time with the results included
-            task = client.result.get(id=task.id)
-            return task.to_dict()
-        else:
-            Logger.log("e", "An unexpected status occured while sending and receiving cloud job: {}".format(task.status))
-            return None
-    
-    def fillUiWithTaskResults(self):
-        pass
-    
-    
     def replicateCuraEngineMessages(self):
         global_stack = Application.getInstance().getGlobalContainerStack()
         if not global_stack:
@@ -755,6 +825,20 @@ class SmartSliceCloudConnector(QObject):
             Logger.logException("w", "Unable to do token replacement on start/end g-code")
             return str(value)
 
+    def modifyInfillAnglesInSettingDict(self, settings):
+        for key, value in settings.items():
+            if key == "infill_angles":
+                Logger.log("d", "Found infill_angles!")
+                if type(value) is str:
+                    value = eval(value)
+                if len(value) is 0:
+                    settings[key] = [self._poc_default_infill_direction]
+                else:
+                    settings[key] = [value[0]]
+        
+        return settings
+    
+    
     ##  Sends all global settings to the engine.
     #
     #   The settings are taken from the global stack. This does not include any
@@ -791,8 +875,11 @@ class SmartSliceCloudConnector(QObject):
         settings["machine_start_gcode"] = self._expandGcodeTokens(settings["machine_start_gcode"], initial_extruder_nr)
         settings["machine_end_gcode"] = self._expandGcodeTokens(settings["machine_end_gcode"], initial_extruder_nr)
 
+        settings = self.modifyInfillAnglesInSettingDict(settings)
+
         for key, value in settings.items():
-            settings[key] = str(value)
+            if type(value) is not str:
+                settings[key] = str(value)
 
         return settings
 
@@ -899,12 +986,12 @@ class SmartSliceCloudConnector(QObject):
                 group_message_message["settings"] = self._handlePerObjectSettings(parent)
     
             group_message_message["objects"] = []
-            for object in group:
+            for _object in group:
                 mesh_data = object.getMeshData()
                 if mesh_data is None:
                     continue
-                rot_scale = object.getWorldTransformation().getTransposed().getData()[0:3, 0:3]
-                translate = object.getWorldTransformation().getData()[:3, 3]
+                rot_scale = _object.getWorldTransformation().getTransposed().getData()[0:3, 0:3]
+                translate = _object.getWorldTransformation().getData()[:3, 3]
     
                 # This effectively performs a limited form of MeshData.getTransformed that ignores normals.
                 verts = mesh_data.getVertices()
@@ -916,8 +1003,8 @@ class SmartSliceCloudConnector(QObject):
                 verts[:, 1] *= -1
     
                 obj = {}
-                obj["id"] = id(object)
-                obj["name"] = object.getName()
+                obj["id"] = id(_object)
+                obj["name"] = _object.getName()
                 indices = mesh_data.getIndices()
                 if indices is not None:
                     flat_verts = numpy.take(verts, indices.flatten(), axis=0)
@@ -926,7 +1013,7 @@ class SmartSliceCloudConnector(QObject):
     
                 obj["vertices"] = flat_verts.tolist()
     
-                obj["settings"] = self._handlePerObjectSettings(object)
+                obj["settings"] = self._handlePerObjectSettings(_object)
                 
                 group_message_message["objects"].append(obj)
             
@@ -974,8 +1061,11 @@ class SmartSliceCloudConnector(QObject):
         settings["machine_extruder_start_code"] = self._expandGcodeTokens(settings["machine_extruder_start_code"], extruder_nr)
         settings["machine_extruder_end_code"] = self._expandGcodeTokens(settings["machine_extruder_end_code"], extruder_nr)
 
+        settings = self.modifyInfillAnglesInSettingDict(settings)
+
         for key, value in settings.items():
-            settings[key] = str(value)
+            if type(value) is not str:
+                settings[key] = str(value)
 
         extruder_message["settings"] = settings
         

@@ -20,7 +20,7 @@ class SmartSliceVariables(QObject):
 
     maxDeflectChanged = pyqtSignal()
 
-    @pyqtProperty(int, notify=maxDeflectChanged)
+    @pyqtProperty(float, notify=maxDeflectChanged)
     def maxDeflect(self):
         return self._maxDeflect
 
