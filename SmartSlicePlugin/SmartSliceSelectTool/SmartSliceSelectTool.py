@@ -29,16 +29,11 @@ from PyQt5.QtQml import QQmlComponent, QQmlContext # @UnresolvedImport
 
 #  Local Imports
 from .SmartSliceSelectHandle import SmartSliceSelectHandle
+from .SmartSliceSelectHandle import SelectionMode
 #from .SmartSliceDrawSelection import SmartSliceSelectionVisualizer
 from .FaceSelection import SelectablePoint, SelectableEdge, SelectableFace
 from .FaceSelection import fromMeshData
 #from .SmartSliceNormalArrow import SmartSliceNormalArrow
-
-
-# Provides enums
-class SelectionMode:
-    AnchorMode = 1
-    LoadMode = 2
 
 
 ##  Provides the tool to rotate meshes and groups
@@ -168,11 +163,10 @@ class SmartSliceSelectTool(Tool):
             self._handle.setFace(sf)
 
             if self.getLoadSelectionActive():
-                self._handle.drawFaceSelection(draw_arrow=True, other_faces=selectable_faces)
+                self._handle.drawFaceSelection(SelectionMode.LoadMode, draw_arrow=True, other_faces=selectable_faces)
                 
             else:
-                self._handle.drawFaceSelection(other_faces=selectable_faces)
-                self._handle.setScale(scene_node.getScale())
+                self._handle.drawFaceSelection(SelectionMode.AnchorMode, other_faces=selectable_faces)
 
 
             '''
@@ -211,6 +205,7 @@ class SmartSliceSelectTool(Tool):
 
     def setAnchorSelection(self):
         self._handle.clearSelection()
+        self._handle.paintAnchoredFaces()
         self.setSelectionMode(SelectionMode.AnchorMode)
 
     def getAnchorSelectionActive(self):
@@ -218,6 +213,7 @@ class SmartSliceSelectTool(Tool):
 
     def setLoadSelection(self):
         self._handle.clearSelection()
+        self._handle.paintLoadedFaces()
         self.setSelectionMode(SelectionMode.LoadMode)
 
     def getLoadSelectionActive(self):

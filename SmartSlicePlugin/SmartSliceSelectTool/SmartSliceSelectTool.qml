@@ -121,7 +121,7 @@ Item {
                 anchors.left: parent.right
                 anchors.leftMargin: UM.Theme.getSize("default_margin").width
 
-                model: ["Push / Pull", "Rotate"]
+                model: ["Push / Pull"]
             }
         }
 

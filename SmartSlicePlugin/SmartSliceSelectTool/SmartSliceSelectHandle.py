@@ -23,6 +23,12 @@ from UM.Math.Vector import Vector
 from .FaceSelection import SelectableFace
 from .Detessellate import isCoplanar, isJointed
 
+
+# Provides enums
+class SelectionMode:
+    AnchorMode = 1
+    LoadMode = 2
+
 class SmartSliceSelectHandle(ToolHandle):
 #  CONSTRUCTORS
     def __init__(self, parent = None, tri: SelectableFace = None):
@@ -43,7 +49,8 @@ class SmartSliceSelectHandle(ToolHandle):
         self._center = self.findCenter()
 
         #  Previously Selected Faces
-        self._applied_faces = []
+        self._loaded_faces = []
+        self._anchored_faces = []
 
         #   Arrow Mesh
         self._arrow = None
@@ -67,18 +74,22 @@ class SmartSliceSelectHandle(ToolHandle):
 
         Uses UM's MeshBuilder to construct 3D Arrow mesh and translates/rotates as to be normal to the selected face
     '''
-    def drawFaceSelection(self, draw_arrow = False, other_faces = []):
+    def drawFaceSelection(self, mode, draw_arrow = False, other_faces = []):
         #  Construct Edges using MeshBuilder Cubes
         mb = MeshBuilder()
 
         f = self._tri
         self._face = []
+        checked = []
+        if mode == SelectionMode.LoadMode:
+            self._loaded_faces = []
+        if mode == SelectionMode.AnchorMode:
+            self._anchored_faces = []
 
         #if draw_arrow:
         #    self.drawNormalArrow()
         #    self.addChild(self._arrow)
 
-        checked = []
         for _tri in other_faces:
             added = False
             if isCoplanar(f, _tri) and isJointed(f, _tri):
@@ -86,9 +97,13 @@ class SmartSliceSelectHandle(ToolHandle):
                 self.paintFace(_tri, mb)
                 self._face.append(_tri)
                 added = True
+                if mode == SelectionMode.LoadMode:
+                    self._loaded_faces.append(_tri)
+                else:
+                    self._anchored_faces.append(_tri)
                 
                 #  Paint Faces that are recursively coplanar/jointed
-                self.paintPossibleFaces(mb, _tri, checked)
+                self.paintPossibleFaces(mode, mb, _tri, checked)
 
             #  Check if Jointed/Coplanar with already selected face
             for t in self._face:
@@ -99,9 +114,13 @@ class SmartSliceSelectHandle(ToolHandle):
                     self.paintFace(_tri, mb)
                     self._face.append(_tri)
                     added = True
+                    if mode == SelectionMode.LoadMode:
+                        self._loaded_faces.append(_tri)
+                    else:
+                        self._anchored_faces.append(_tri)
                 
                     #  Paint Faces that are recursively coplanar/jointed
-                    self.paintPossibleFaces(mb, _tri, checked)
+                    self.paintPossibleFaces(mode, mb, _tri, checked)
 
             if isCoplanar(f, _tri):
                 checked.append(_tri)
@@ -109,6 +128,13 @@ class SmartSliceSelectHandle(ToolHandle):
         #  Add to Cura Scene
         self.setSolidMesh(mb.build())  
 
+    '''
+      paintFace(tri, mb)
+        tri: SelectableFace (EXACTLY 3 Vertices)
+        mb: MeshBuilder
+
+        Creates a face representitive of 'tri' within mb and paints it selected color
+    '''
     def paintFace(self, tri, mb):
         p = tri.points
         tri.generateNormalVector()
@@ -119,14 +145,40 @@ class SmartSliceSelectHandle(ToolHandle):
         norm = Vector(n.x, n.y, n.z)
         mb.addFace(p0, p1, p2, n, self._selected_color)
 
-    def paintPossibleFaces(self, mb, face, possible):
+    '''
+      paintPossibleFaces(mb, face, possible)
+        mb: MeshBuilder
+        face: SelectableFace
+        possible: List of SelectableFaces
+
+        Paints all SelectableFaces in 'possible' that are jointed/coplanar with 'face'
+        NOTE:  This assumes all entries in 'possible' are coplanar with 'face'
+    '''
+    def paintPossibleFaces(self, mode, mb, face, possible):
         for _tri in possible:
             if isJointed(face, _tri):
                 self.paintFace(_tri, mb)
                 self._face.append(_tri)
                 possible.remove(_tri)
-                self.paintPossibleFaces(mb, _tri, possible)
+                self.paintPossibleFaces(mode, mb, _tri, possible)
+                if mode == SelectionMode.LoadMode:
+                    self._loaded_faces.append(_tri)
+                else:
+                    self._anchored_faces.append(_tri)
 
+    def paintAnchoredFaces(self):
+        mb = MeshBuilder()
+        for _tri in self._anchored_faces:
+            self.paintFace(_tri, mb)
+        #  Add to Cura Scene
+        self.setSolidMesh(mb.build())  
+
+    def paintLoadedFaces(self):
+        mb = MeshBuilder()
+        for _tri in self._loaded_faces:
+            self.paintFace(_tri, mb)
+        #  Add to Cura Scene
+        self.setSolidMesh(mb.build())  
 
 
     '''
