@@ -68,12 +68,14 @@ class SmartSliceExtension(Extension):
                                  "Proxy",
                                  self.getProxy
                                  )
+        '''
         qmlRegisterSingletonType(SmartSliceVariables,
                                  "SmartSlice",
                                  1, 0,
                                  "Variables",
                                  self.getVariables
                                  )
+        '''
 
     def getProxy(self, engine, script_engine):
         return self._proxy

@@ -314,4 +314,21 @@ class SelectablePoint:
         self._p.z(new_z)
 
 
+'''
+  toCalculatablePoint(p)
+    p: SelectablePoint
+'''
+def toCalculatablePoint(p):
+    n = p._normals
+    return SelectablePoint(p.x, -p.z, p.y, [n[0], -n[2], n[1]])
 
+def toCalculatableFace(f):
+    p = f.points
+    
+    p0 = toCalculatablePoint(p[0])
+    p1 = toCalculatablePoint(p[1])
+    p2 = toCalculatablePoint(p[2])
+
+    ns = [p0._normals, p1._normals, p2._normals]
+
+    return SelectableFace([p0, p1, p2], ns, f._id)

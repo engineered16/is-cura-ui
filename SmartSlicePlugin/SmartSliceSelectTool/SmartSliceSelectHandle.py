@@ -9,6 +9,8 @@
 #   Contains functionality to be triggered upon face selection
 #
 
+
+#  UM/Cura Imports
 from UM.Scene.ToolHandle import ToolHandle
 from UM.Scene.SceneNode import SceneNode
 from UM.Mesh.MeshBuilder import MeshBuilder
@@ -21,7 +23,9 @@ from UM.Math.Vector import Vector
 
 # Local Imports
 from .FaceSelection import SelectableFace
+from .FaceSelection import toCalculatableFace
 from .Detessellate import isCoplanar, isJointed
+from .SmartSliceSelectionProxy import SmartSliceSelectionConnector
 
 
 # Provides enums
@@ -35,6 +39,7 @@ class SmartSliceSelectHandle(ToolHandle):
         super().__init__(parent)
 
         self._name = "SmartSliceSelectHandle"
+        self._connector = SmartSliceSelectionConnector()
 
         #  Default Line Properties
         self._edge_width = 0.8
@@ -59,6 +64,8 @@ class SmartSliceSelectHandle(ToolHandle):
         #  Disable auto scale
         self._auto_scale = False
 
+
+
 #  ACCESSORS
     @property
     def face(self):
@@ -68,6 +75,12 @@ class SmartSliceSelectHandle(ToolHandle):
     def setFace(self, f):
         self._tri = f
         self._center = self.findCenter()
+
+    def getLoadVector(self):
+        load_mag = self._connector._proxy._loadMagnitude
+        lf = toCalculatableFace(self._loaded_faces[0])
+        n = lf.normal
+        return Vector(load_mag*n.x, load_mag*n.y, load_mag*n.z)
 
 
     '''
@@ -129,6 +142,10 @@ class SmartSliceSelectHandle(ToolHandle):
 
         #  Add to Cura Scene
         self.setSolidMesh(mb.build())  
+        
+        lv = self.getLoadVector()
+        print ("NORMAL FORCE: (" + str(lv.x) + ", " + str(lv.y) + ", " + str(lv.z) + ")")
+
 
     '''
       paintFace(tri, mb)
@@ -251,3 +268,6 @@ class SmartSliceSelectHandle(ToolHandle):
     def clearSelection(self):
         mb = MeshBuilder()
         self.setSolidMesh(mb.build())  
+
+    def _onEngineCreated(self):
+        self._connector._onEngineCreated()

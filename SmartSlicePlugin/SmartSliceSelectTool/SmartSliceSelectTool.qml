@@ -19,6 +19,8 @@ import QtQuick.Controls.Styles 1.1
 import UM 1.2 as UM
 import Cura 1.0 as Cura
 
+import SmartSlice 1.0  as SmartSlice
+
 /*
   Constraints
 */
@@ -157,6 +159,12 @@ Item {
             anchors.left: parent.left
             anchors.leftMargin: UM.Theme.getSize("default_margin").width
 
+            onEditingFinished:
+            {
+                SmartSlice.Selection.loadMagnitude = text; // Will be converted from string to the target data type via SmartSliceVariables
+            }
+
+            text: SmartSlice.Selection.loadMagnitude
             placeholderText: "kN"
         }
     }
