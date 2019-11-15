@@ -73,18 +73,6 @@ class SmartSliceSelectHandle(ToolHandle):
 
         f = self._tri
         self._face = []
-        
-        #  Paint Face Selection
-        p = f.points
-        f.generateNormalVector()
-        n = f.normal
-
-        p0 = Vector(p[0].x, p[0].y, p[0].z)
-        p1 = Vector(p[1].x, p[1].y, p[1].z)
-        p2 = Vector(p[2].x, p[2].y, p[2].z)
-        norm = Vector(n.x, n.y, n.z)
-    
-        mb.addFace(p0, p1, p2, n, self._selected_color)
 
         #if draw_arrow:
         #    self.drawNormalArrow()
@@ -93,20 +81,14 @@ class SmartSliceSelectHandle(ToolHandle):
         checked = []
         for _tri in other_faces:
             added = False
-            p = _tri.points
-            _tri.generateNormalVector()
-            n = _tri.normal
             if isCoplanar(f, _tri) and isJointed(f, _tri):
                 #  Paint Face Selection
-                p0 = Vector(p[0].x, p[0].y, p[0].z)
-                p1 = Vector(p[1].x, p[1].y, p[1].z)
-                p2 = Vector(p[2].x, p[2].y, p[2].z)
-                norm = Vector(n.x, n.y, n.z)
-                mb.addFace(p0, p1, p2, n, self._selected_color)
+                self.paintFace(_tri, mb)
                 self._face.append(_tri)
                 added = True
-                #for _t in checked:
-                    
+                
+                #  Paint Faces that are recursively coplanar/jointed
+                self.paintPossibleFaces(mb, _tri, checked)
 
             #  Check if Jointed/Coplanar with already selected face
             for t in self._face:
@@ -114,18 +96,36 @@ class SmartSliceSelectHandle(ToolHandle):
                     1 + 1
                 elif isCoplanar(t, _tri) and isJointed(t, _tri):
                     #  Paint Face Selection
-                    p0 = Vector(p[0].x, p[0].y, p[0].z)
-                    p1 = Vector(p[1].x, p[1].y, p[1].z)
-                    p2 = Vector(p[2].x, p[2].y, p[2].z)
-                    norm = Vector(n.x, n.y, n.z)
-                    mb.addFace(p0, p1, p2, n, self._selected_color)
+                    self.paintFace(_tri, mb)
                     self._face.append(_tri)
                     added = True
-            if not added:
+                
+                    #  Paint Faces that are recursively coplanar/jointed
+                    self.paintPossibleFaces(mb, _tri, checked)
+
+            if isCoplanar(f, _tri):
                 checked.append(_tri)
 
         #  Add to Cura Scene
         self.setSolidMesh(mb.build())  
+
+    def paintFace(self, tri, mb):
+        p = tri.points
+        tri.generateNormalVector()
+        n = tri.normal
+        p0 = Vector(p[0].x, p[0].y, p[0].z)
+        p1 = Vector(p[1].x, p[1].y, p[1].z)
+        p2 = Vector(p[2].x, p[2].y, p[2].z)
+        norm = Vector(n.x, n.y, n.z)
+        mb.addFace(p0, p1, p2, n, self._selected_color)
+
+    def paintPossibleFaces(self, mb, face, possible):
+        for _tri in possible:
+            if isJointed(face, _tri):
+                self.paintFace(_tri, mb)
+                self._face.append(_tri)
+                possible.remove(_tri)
+                self.paintPossibleFaces(mb, _tri, possible)
 
 
 
