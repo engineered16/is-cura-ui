@@ -4,6 +4,7 @@ Created on 22.10.2019
 @author: thopiekar
 '''
 
+import copy
 from string import Formatter
 import time
 import os
@@ -12,6 +13,7 @@ import tempfile
 import json
 import zipfile
 import re
+import math
 
 import numpy
 
@@ -44,13 +46,15 @@ from .SmartSliceCloudProxy import SmartSliceCloudProxy
 
 i18n_catalog = i18nCatalog("smartslice")
 
-##  Formatter class that handles token expansion in start/end gcode
+
+# #  Formatter class that handles token expansion in start/end gcode
 class GcodeStartEndFormatter(Formatter):
-    def __init__(self, default_extruder_nr: int = -1) -> None:
+
+    def __init__(self, default_extruder_nr: int=-1) -> None:
         super().__init__()
         self._default_extruder_nr = default_extruder_nr
 
-    def get_value(self, key: str, args: str, kwargs: dict) -> str: #type: ignore # [CodeStyle: get_value is an overridden function from the Formatter class]
+    def get_value(self, key: str, args: str, kwargs: dict) -> str:  # type: ignore # [CodeStyle: get_value is an overridden function from the Formatter class]
         # The kwargs dictionary contains a dictionary for each stack (with a string of the extruder_nr as their key),
         # and a default_extruder_nr to use when no extruder_nr is specified
 
@@ -62,7 +66,7 @@ class GcodeStartEndFormatter(Formatter):
                 extruder_nr = int(key_fragments[1])
             except ValueError:
                 try:
-                    extruder_nr = int(kwargs["-1"][key_fragments[1]]) # get extruder_nr values from the global stack #TODO: How can you ever provide the '-1' kwarg?
+                    extruder_nr = int(kwargs["-1"][key_fragments[1]])  # get extruder_nr values from the global stack #TODO: How can you ever provide the '-1' kwarg?
                 except (KeyError, ValueError):
                     # either the key does not exist, or the value is not an int
                     Logger.log("w", "Unable to determine stack nr '%s' for key '%s' in start/end g-code, using global stack", key_fragments[1], key_fragments[0])
@@ -85,8 +89,10 @@ class GcodeStartEndFormatter(Formatter):
 
         return value
 
-## Draft of an connection check
+
+# # Draft of an connection check
 class ConnectivityChecker(QObject):
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         url = QUrl("https://amazonaws.com/")
@@ -107,10 +113,11 @@ class ConnectivityChecker(QObject):
     def processErr(self, code):
         print(code)
 
+
 class SmartSliceCloudJob(Job):
     # This job is responsible for uploading the backup file to cloud storage.
     # As it can take longer than some other tasks, we schedule this using a Cura Job.
-    
+
     def __init__(self, connector) -> None:
         super().__init__()
         self.connector = connector
@@ -119,11 +126,28 @@ class SmartSliceCloudJob(Job):
         self.cancled = False
         
         self._job_status = None
-        self._wait_time = 0.05
+        self._wait_time = 1.0
         
         self.ui_status_per_job_type = {pywim.smartslice.job.JobType.validation : SmartSliceCloudStatus.BusyValidating,
                                        pywim.smartslice.job.JobType.optimization : SmartSliceCloudStatus.BusyOptimizing,
                                        }
+
+        # get connection settings from preferences
+        preferences = Application.getInstance().getPreferences()
+
+        protocol = preferences.getValue(self.connector.http_protocol_preference)
+        hostname = preferences.getValue(self.connector.http_hostname_preference)
+        port = preferences.getValue(self.connector.http_port_preference)
+        if type(port) is not int:
+            port = int(port)
+
+        self._client = pywim.http.thor.Client2019POC(
+            protocol=protocol,
+            hostname=hostname,
+            port=port
+        )
+
+        Logger.log("d", "SmartSlice HTTP Client: {}".format(self._client.address))
 
     @property
     def job_status(self):
@@ -134,7 +158,6 @@ class SmartSliceCloudJob(Job):
         if value is not self._job_status:
             self._job_status = value
             Logger.log("d", "Status changed: {}".format(self.job_status))
-
 
     def determineTempDirectory(self):
         temporary_directory = tempfile.gettempdir()
@@ -194,11 +217,8 @@ class SmartSliceCloudJob(Job):
         threemf_data = threemf_fd.read()
         threemf_fd.close()
     
-        # Create the HTTP client with the default connection parameters
-        client = pywim.http.thor.Client2019POC()
-    
         # Submit the 3MF data for a new task
-        task = client.submit.post(threemf_data)
+        task = self._client.submit.post(threemf_data)
         Logger.log("d", "Status after post'ing: {}".format(task.status))
         
         # While the task status is not finished or failed continue to periodically
@@ -210,7 +230,7 @@ class SmartSliceCloudJob(Job):
             self.job_status = task.status
             
             time.sleep(self._wait_time)
-            task = client.status.get(id=task.id)
+            task = self._client.status.get(id=task.id)
         
         if not self.cancled:
             if task.status == pywim.http.thor.TaskStatus.failed:
@@ -223,7 +243,7 @@ class SmartSliceCloudJob(Job):
                 return None
             elif task.status == pywim.http.thor.TaskStatus.finished:
                 # Get the task again, but this time with the results included
-                task = client.result.get(id=task.id)
+                task = self._client.result.get(id=task.id)
                 return task
             else:
                 error_message = Message()
@@ -255,12 +275,10 @@ class SmartSliceCloudJob(Job):
         Logger.log("i", "Job prepared: {}".format(job))
         task = self.processCloudJob(job)
         
-        #self.job_type == pywim.smartslice.job.JobType.optimization
+        # self.job_type == pywim.smartslice.job.JobType.optimization
         if task:
             result = task.result
             if result:
-                result_dict = result.to_dict()
-                Logger.log("d", "result_dict: {}".format(result_dict))
                 analyse = result.analyses[0]
                 Logger.log("d", "analyse: {}".format(analyse))
                 Logger.log("d", "analyse.mass: {}".format(analyse.mass))
@@ -273,78 +291,69 @@ class SmartSliceCloudJob(Job):
                 qprint_time = QTime(0, 0, 0, 0)
                 qprint_time.addSecs(analyse.print_time)
                 self.connector._proxy.resultTimeTotal = qprint_time
-                Logger.log("d", "resultTimeTotal: {}".format(self.connector._proxy.resultTimeTotal))
-            
-            if not self.connector._demo_was_underdimensioned_before:
-                self.connector.status = SmartSliceCloudStatus.Underdimensioned
-                self.connector._demo_was_underdimensioned_before = True
                 
+                # TODO: Reactivate the block as soon as we have the single print times again!
+                #self.connector._proxy.resultTimeInfill = QTime(1, 0, 0, 0)
+                #self.connector._proxy.resultTimeInnerWalls = QTime(0, 20, 0, 0)
+                #self.connector._proxy.resultTimeOuterWalls = QTime(0, 15, 0, 0)
+                #self.connector._proxy.resultTimeRetractions = QTime(0, 5, 0, 0)
+                #self.connector._proxy.resultTimeSkin = QTime(0, 10, 0, 0)
+                #self.connector._proxy.resultTimeSkirt = QTime(0, 1, 0, 0)
+                #self.connector._proxy.resultTimeTravel = QTime(0, 30, 0, 0)
+            
+                material_volumina = [analyse.mass]  # TODO: rename mass to volume and provide per extruder volume on the future
+                material_extra_info = self.connector._calculateAdditionalMaterialInfo(material_volumina)
+                Logger.log("d", "material_extra_info: {}".format(material_extra_info))
+                
+                # for pos in len(material_volumina):
+                pos = 0
+                self.connector._proxy.materialWeight = material_extra_info[0][pos]
+                self.connector._proxy.materialCost = material_extra_info[1][pos]
+                self.connector._proxy.materialLength = material_extra_info[2][pos]
+                self.connector._proxy.materialName = material_extra_info[3][pos]
+                
+                # Overriding if our result is going to be optimized...
+                if previous_connector_status in SmartSliceCloudStatus.Optimizable:
+                    self.connector.status = SmartSliceCloudStatus.Optimized
+                else:
+                    if self.connector._proxy.resultSafetyFactor < self.connector._proxy.targetFactorOfSafety or self.connector._proxy.resultMaximalDisplacement > self.connector._proxy.targetMaximalDisplacement:
+                        self.connector.status = SmartSliceCloudStatus.Underdimensioned
+                    elif self.connector._proxy.resultSafetyFactor > self.connector._proxy.targetFactorOfSafety or self.connector._proxy.resultMaximalDisplacement < self.connector._proxy.targetMaximalDisplacement:
+                        self.connector.status = SmartSliceCloudStatus.Overdimensioned
+                    else:
+                        self.connector.status = SmartSliceCloudStatus.Optimized
 
-                
-                self.connector._proxy.resultTimeInfill = QTime(1, 0, 0, 0)
-                self.connector._proxy.resultTimeInnerWalls = QTime(0, 20, 0, 0)
-                self.connector._proxy.resultTimeOuterWalls = QTime(0, 15, 0, 0)
-                self.connector._proxy.resultTimeRetractions = QTime(0, 5, 0, 0)
-                self.connector._proxy.resultTimeSkin = QTime(0, 10, 0, 0)
-                self.connector._proxy.resultTimeSkirt = QTime(0, 1, 0, 0)
-                self.connector._proxy.resultTimeTravel = QTime(0, 30, 0, 0)
-                
-                #self.connector._proxy.materialName = 
-                #self.connector._proxy.materialLength = 
-                #self.connector._proxy.materialWeight = 
-                #self.connector._proxy.materialCost = 
-                
-            
-            elif not self.connector._demo_was_overdimensioned_before:
-                self.connector.status = SmartSliceCloudStatus.Overdimensioned
-                self.connector._demo_was_overdimensioned_before = True
-                
-                self.connector._proxy.resultTimeInfill = QTime(2, 0, 0, 0)
-                self.connector._proxy.resultTimeInnerWalls = QTime(0, 10, 0, 0)
-                self.connector._proxy.resultTimeOuterWalls = QTime(0, 20, 0, 0)
-                self.connector._proxy.resultTimeRetractions = QTime(0, 3, 0, 0)
-                self.connector._proxy.resultTimeSkin = QTime(0, 15, 0, 0)
-                self.connector._proxy.resultTimeSkirt = QTime(0, 2, 0, 0)
-                self.connector._proxy.resultTimeTravel = QTime(0, 45, 0, 0)
-            else:
-                self.connector.status = SmartSliceCloudStatus.Optimized
-                
-                self.connector._proxy.resultTimeInfill = QTime(3, 0, 0, 0)
-                self.connector._proxy.resultTimeInnerWalls = QTime(0, 10, 0, 0)
-                self.connector._proxy.resultTimeOuterWalls = QTime(0, 20, 0, 0)
-                self.connector._proxy.resultTimeRetractions = QTime(0, 3, 0, 0)
-                self.connector._proxy.resultTimeSkin = QTime(0, 15, 0, 0)
-                self.connector._proxy.resultTimeSkirt = QTime(0, 2, 0, 0)
-                self.connector._proxy.resultTimeTravel = QTime(0, 45, 0, 0)
         else:
             self.connector.status = previous_connector_status
 
 
 class SmartSliceCloudVerificationJob(SmartSliceCloudJob):
-    def __init__(self, connector)->None:
+
+    def __init__(self, connector) -> None:
         super().__init__(connector)
         
         self.job_type = pywim.smartslice.job.JobType.validation
 
+
 class SmartSliceCloudOptimizeJob(SmartSliceCloudVerificationJob):
-    def __init__(self, connector)->None:
+
+    def __init__(self, connector) -> None:
         super().__init__(connector)
         
         self.job_type = pywim.smartslice.job.JobType.optimization
 
+
 class SmartSliceCloudConnector(QObject):
-    token_preference = "smartslice/token"
+    http_protocol_preference = "smartslice/http_protocol"
+    http_hostname_preference = "smartslice/http_hostname"
+    http_port_preference = "smartslice/http_port"
+    http_token_preference = "smartslice/token"
     
     def __init__(self, extension):
         super().__init__()
         self.extension = extension
         
-        # DEMO variables
-        self._demo_was_underdimensioned_before = False
-        self._demo_was_overdimensioned_before = False
-        
         # Variables 
-        self._status = None
         self._job = None
         
         # Proxy
@@ -356,7 +365,11 @@ class SmartSliceCloudConnector(QObject):
         self.doOptimization.connect(self._doOptimization)
         
         # Application stuff
-        Application.getInstance().getPreferences().addPreference(self.token_preference, "")
+        preferences = Application.getInstance().getPreferences()
+        preferences.addPreference(self.http_protocol_preference, "https")
+        preferences.addPreference(self.http_hostname_preference, "api-19.fea.cloud")
+        preferences.addPreference(self.http_port_preference, 443)
+        preferences.addPreference(self.http_token_preference, "")
         Application.getInstance().activityChanged.connect(self._onApplicationActivityChanged)
         
         # Caches
@@ -434,20 +447,20 @@ class SmartSliceCloudConnector(QObject):
         self._proxy.sliceIconImage = current_icon
         
         # Setting icon visibiltiy
-        if self._status in (SmartSliceCloudStatus.Optimized, ) + SmartSliceCloudStatus.Optimizable:
+        if self.status in (SmartSliceCloudStatus.Optimized,) + SmartSliceCloudStatus.Optimizable:
             self._proxy.sliceIconVisible = True
         else:
             self._proxy.sliceIconVisible = False
 
     @property
     def status(self):
-        return self._status
+        return self._proxy.sliceStatusEnum
     
     @status.setter
     def status(self, value):
-        Logger.log("d", "Setting status: {} -> {}".format(self._status, value))
-        if self._status is not value:
-            self._status = value
+        Logger.log("d", "Setting status: {} -> {}".format(self._proxy.sliceStatusEnum, value))
+        if self._proxy.sliceStatusEnum is not value:
+            self._proxy.sliceStatusEnum = value
         self.updateSliceWidget()
     
     @property
@@ -459,8 +472,8 @@ class SmartSliceCloudConnector(QObject):
         Application.getInstance().getPreferences().setValue(self.token_preference, value)
     
     def login(self):
-        #username = self._proxy.loginName()
-        #password = self._proxy.loginPassword()
+        # username = self._proxy.loginName()
+        # password = self._proxy.loginPassword()
         
         if True:
             self.token = "123456789qwertz"
@@ -550,7 +563,7 @@ class SmartSliceCloudConnector(QObject):
 
         extruders = list(active_machine.extruders.values())
         extruders = sorted(extruders,
-                           key = lambda extruder: extruder.getMetaDataEntry("position")
+                           key=lambda extruder: extruder.getMetaDataEntry("position")
                            )
 
         material_guids_per_extruder = []
@@ -604,7 +617,7 @@ class SmartSliceCloudConnector(QObject):
         # When the back-end reads the 3MF it will obtain the mesh
         # from the 3MF object model, therefore, defining it in the 
         # chop object would be redundant.
-        #job.chop.meshes.append( ... ) <-- Not necessary
+        # job.chop.meshes.append( ... ) <-- Not necessary
     
         # Define the load step for the FE analysis
         step = pywim.chop.model.Step(name='default')
@@ -615,7 +628,7 @@ class SmartSliceCloudConnector(QObject):
         # Add the face Ids from the STL mesh that the user selected for
         # this anchor
         anchor1.face.extend(
-            (0, 249, 1, 250)
+            (234, 235)
         )
     
         step.boundary_conditions.append(anchor1)
@@ -635,7 +648,7 @@ class SmartSliceCloudConnector(QObject):
         # Add the face Ids from the STL mesh that the user selected for
         # this force
         force1.face.extend(
-            (255, 256, 248, 247)
+            (226, 225, 227, 224, 223, 222)
         )
     
         step.loads.append(force1)
@@ -663,7 +676,6 @@ class SmartSliceCloudConnector(QObject):
             print_config.skin_orientations.extend(tuple(skin_angles))
         else:
             print_config.skin_orientations.extend((45, 135))
-        
         
         print_config.bottom_layers = mesh_node_stack.getProperty("top_layers", "value")
         print_config.top_layers = mesh_node_stack.getProperty("bottom_layers", "value")
@@ -710,7 +722,7 @@ class SmartSliceCloudConnector(QObject):
             pickled_info = self._buildExtruderMessage(extruder_stack)
             extruder_object.id = pickled_info["id"]
             extruder_object.print_config.auxiliary = pickled_info["settings"]
-            extruders += (extruder_object, )
+            extruders += (extruder_object,)
         
         printer = pywim.chop.machine.Printer(name=active_machine.getName(),
                                              extruders=extruders
@@ -725,11 +737,10 @@ class SmartSliceCloudConnector(QObject):
                               job.to_json()
                               )
         threemf_file.close()
-        
 
         return True
 
-    ##  Check if a node has per object settings and ensure that they are set correctly in the message
+    # #  Check if a node has per object settings and ensure that they are set correctly in the message
     #   \param node Node to check.
     #   \param message object_lists message to put the per object settings in
     def _handlePerObjectSettings(self, node):
@@ -781,7 +792,7 @@ class SmartSliceCloudConnector(QObject):
             extruder_nr = extruder_stack.getProperty("extruder_nr", "value")
             self._all_extruders_settings[str(extruder_nr)] = self._buildReplacementTokens(extruder_stack)
     
-    ##  Creates a dictionary of tokens to replace in g-code pieces.
+    # #  Creates a dictionary of tokens to replace in g-code pieces.
     #
     #   This indicates what should be replaced in the start and end g-codes.
     #   \param stack The stack to get the settings from to replace the tokens
@@ -794,10 +805,10 @@ class SmartSliceCloudConnector(QObject):
             value = stack.getProperty(key, "value")
             result[key] = value
 
-        result["print_bed_temperature"] = result["material_bed_temperature"] # Renamed settings.
+        result["print_bed_temperature"] = result["material_bed_temperature"]  # Renamed settings.
         result["print_temperature"] = result["material_print_temperature"]
         result["travel_speed"] = result["speed_travel"]
-        result["time"] = time.strftime("%H:%M:%S") #Some extra settings.
+        result["time"] = time.strftime("%H:%M:%S")  # Some extra settings.
         result["date"] = time.strftime("%d-%m-%Y")
         result["day"] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][int(time.strftime("%w"))]
 
@@ -807,7 +818,7 @@ class SmartSliceCloudConnector(QObject):
 
         return result
 
-    ##  Replace setting tokens in a piece of g-code.
+    # #  Replace setting tokens in a piece of g-code.
     #   \param value A piece of g-code to replace tokens in.
     #   \param default_extruder_nr Stack nr to use when no stack nr is specified, defaults to the global stack
     def _expandGcodeTokens(self, value, default_extruder_nr) -> str:
@@ -816,7 +827,7 @@ class SmartSliceCloudConnector(QObject):
 
         try:
             # any setting can be used as a token
-            fmt = GcodeStartEndFormatter(default_extruder_nr = default_extruder_nr)
+            fmt = GcodeStartEndFormatter(default_extruder_nr=default_extruder_nr)
             if self._all_extruders_settings is None:
                 return ""
             settings = self._all_extruders_settings.copy()
@@ -838,12 +849,11 @@ class SmartSliceCloudConnector(QObject):
         
         return settings
     
-    
-    ##  Sends all global settings to the engine.
+    # #  Sends all global settings to the engine.
     #
     #   The settings are taken from the global stack. This does not include any
     #   per-extruder settings or per-object settings.
-    def _buildGlobalSettingsMessage(self, stack = None):
+    def _buildGlobalSettingsMessage(self, stack=None):
         if not stack:
             stack = Application.getInstance().getGlobalContainerStack()
         
@@ -861,10 +871,10 @@ class SmartSliceCloudConnector(QObject):
         # Pre-compute material material_bed_temp_prepend and material_print_temp_prepend
         start_gcode = settings["machine_start_gcode"]
         bed_temperature_settings = ["material_bed_temperature", "material_bed_temperature_layer_0"]
-        pattern = r"\{(%s)(,\s?\w+)?\}" % "|".join(bed_temperature_settings) # match {setting} as well as {setting, extruder_nr}
+        pattern = r"\{(%s)(,\s?\w+)?\}" % "|".join(bed_temperature_settings)  # match {setting} as well as {setting, extruder_nr}
         settings["material_bed_temp_prepend"] = re.search(pattern, start_gcode) == None
         print_temperature_settings = ["material_print_temperature", "material_print_temperature_layer_0", "default_material_print_temperature", "material_initial_print_temperature", "material_final_print_temperature", "material_standby_temperature"]
-        pattern = r"\{(%s)(,\s?\w+)?\}" % "|".join(print_temperature_settings) # match {setting} as well as {setting, extruder_nr}
+        pattern = r"\{(%s)(,\s?\w+)?\}" % "|".join(print_temperature_settings)  # match {setting} as well as {setting, extruder_nr}
         settings["material_print_temp_prepend"] = re.search(pattern, start_gcode) == None
 
         # Replace the setting tokens in start and end g-code.
@@ -883,7 +893,7 @@ class SmartSliceCloudConnector(QObject):
 
         return settings
 
-    ##  Sends all global settings to the engine.
+    # #  Sends all global settings to the engine.
     #
     #   The settings are taken from the global stack. This does not include any
     #   per-extruder settings or per-object settings.
@@ -1021,7 +1031,7 @@ class SmartSliceCloudConnector(QObject):
 
         return object_lists_message
 
-    ##  Sends for some settings which extruder they should fallback to if not
+    # #  Sends for some settings which extruder they should fallback to if not
     #   set.
     #
     #   This is only set for settings that have the limit_to_extruder
@@ -1040,7 +1050,7 @@ class SmartSliceCloudConnector(QObject):
                 limit_to_extruder_message.append(setting_extruder)
         return limit_to_extruder_message
             
-    ##  Create extruder message from stack
+    # #  Create extruder message from stack
     def _buildExtruderMessage(self, stack) -> dict:
         extruder_message = {}
         extruder_message["id"] = int(stack.getMetaDataEntry("position"))
@@ -1070,3 +1080,62 @@ class SmartSliceCloudConnector(QObject):
         extruder_message["settings"] = settings
         
         return extruder_message
+    
+    # Mainly taken from : {Cura}/cura/UI/PrintInformation.py@_calculateInformation
+    def _calculateAdditionalMaterialInfo(self, _material_amounts):
+        global_stack = Application.getInstance().getGlobalContainerStack()
+        if global_stack is None:
+            return
+        
+        _material_lengths = []
+        _material_weights = []
+        _material_costs = []
+        _material_names = []
+
+        material_preference_values = json.loads(Application.getInstance().getPreferences().getValue("cura/material_settings"))
+
+        for position, extruder_stack in global_stack.extruders.items():
+            if type(position) is not int:
+                position = int(position)
+            if position >= len(_material_amounts):
+                continue
+            amount = _material_amounts[position]
+            # Find the right extruder stack. As the list isn't sorted because it's a annoying generator, we do some
+            # list comprehension filtering to solve this for us.
+            density = extruder_stack.getMetaDataEntry("properties", {}).get("density", 0)
+            material = extruder_stack.material
+            radius = extruder_stack.getProperty("material_diameter", "value") / 2
+
+            weight = float(amount) * float(density) / 1000
+            cost = 0.
+
+            material_guid = material.getMetaDataEntry("GUID")
+            material_name = material.getName()
+
+            if material_guid in material_preference_values:
+                material_values = material_preference_values[material_guid]
+
+                if material_values and "spool_weight" in material_values:
+                    weight_per_spool = float(material_values["spool_weight"])
+                else:
+                    weight_per_spool = float(extruder_stack.getMetaDataEntry("properties", {}).get("weight", 0))
+
+                cost_per_spool = float(material_values["spool_cost"] if material_values and "spool_cost" in material_values else 0)
+
+                if weight_per_spool != 0:
+                    cost = cost_per_spool * weight / weight_per_spool
+                else:
+                    cost = 0
+
+            # Material amount is sent as an amount of mm^3, so calculate length from that
+            if radius != 0:
+                length = round((amount / (math.pi * radius ** 2)) / 1000, 2)
+            else:
+                length = 0
+
+            _material_weights.append(weight)
+            _material_lengths.append(length)
+            _material_costs.append(cost)
+            _material_names.append(material_name)
+        
+        return _material_lengths, _material_weights, _material_costs, _material_names

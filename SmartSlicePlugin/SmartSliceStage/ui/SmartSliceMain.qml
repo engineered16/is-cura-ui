@@ -203,14 +203,22 @@ Item {
                                         labelResultSafetyFactor.color = smartSlicePopupContents.successColor
                                         labelTargetSafetyFactor.color = smartSlicePopupContents.successColor
                                     }
+                                    
+                                    // Override if our optimization is done
+                                    // --> SmartSliceProxy.SmartSliceCloudStatus
+                                    if (SmartSlice.Cloud.sliceStatusEnum == 9) {
+                                        labelDescriptionSafetyFactor.color = smartSlicePopupContents.successColor
+                                        labelResultSafetyFactor.color = smartSlicePopupContents.successColor
+                                        labelTargetSafetyFactor.color = smartSlicePopupContents.successColor
+                                    }
                                 }
                                 
                                 function updateMaximalDisplacementColor() {
-                                    if (SmartSlice.Cloud.resultMaximalDisplacement > SmartSlice.Cloud.targetMaximalDisplacement) {
+                                    if (SmartSlice.Cloud.resultMaximalDisplacement < SmartSlice.Cloud.targetMaximalDisplacement) {
                                         labelDescriptionMaximumDisplacement.color = smartSlicePopupContents.warningColor
                                         labelResultMaximalDisplacement.color = smartSlicePopupContents.warningColor
                                         labelTargetMaximalDisplacement.color = smartSlicePopupContents.warningColor
-                                    } else if (SmartSlice.Cloud.resultMaximalDisplacement < SmartSlice.Cloud.targetMaximalDisplacement) {
+                                    } else if (SmartSlice.Cloud.resultMaximalDisplacement > SmartSlice.Cloud.targetMaximalDisplacement) {
                                         labelDescriptionMaximumDisplacement.color = smartSlicePopupContents.errorColor
                                         labelResultMaximalDisplacement.color = smartSlicePopupContents.errorColor
                                         labelTargetMaximalDisplacement.color = smartSlicePopupContents.errorColor
@@ -218,6 +226,22 @@ Item {
                                         labelDescriptionMaximumDisplacement.color = smartSlicePopupContents.successColor
                                         labelResultMaximalDisplacement.color = smartSlicePopupContents.successColor
                                         labelTargetMaximalDisplacement.color = smartSlicePopupContents.successColor
+                                    }
+                                    
+                                    // Override if our optimization is done
+                                    // --> SmartSliceProxy.SmartSliceCloudStatus
+                                    if (SmartSlice.Cloud.sliceStatusEnum == 9) {
+                                        labelDescriptionMaximumDisplacement.color = smartSlicePopupContents.successColor
+                                        labelResultMaximalDisplacement.color = smartSlicePopupContents.successColor
+                                        labelTargetMaximalDisplacement.color = smartSlicePopupContents.successColor
+                                    }
+                                }
+                                
+                                Connections {
+                                    target: SmartSlice.Cloud
+                                    onSliceStatusEnumChanged: {
+                                        layoutRequirements.updateSafetyFactorColor()
+                                        layoutRequirements.updateMaximalDisplacementColor()
                                     }
                                 }
 
@@ -561,34 +585,43 @@ Item {
                                 spacing: UM.Theme.getSize("default_margin").width
 
                                 Label {
+                                    id: labelMaterialName
                                     Layout.fillWidth: true
                                     font: UM.Theme.getFont("default")
 
                                     text: SmartSlice.Cloud.materialName
                                 }
 
+                                // TODO: Hiding material lenght. The radius is zero all the time for some reason,
+                                // therefore the value is zero all the time, too. 
+                                /*
                                 Label {
+                                    id: labelMaterialLength
                                     Layout.alignment: Qt.AlignRight
                                     font: smartSlicePopupContents.value_font
                                     color: smartSlicePopupContents.value_color
 
                                     text: SmartSlice.Cloud.materialLength
                                 }
+                                */
 
                                 Label {
+                                    id: labelMaterialWeight
+
                                     Layout.alignment: Qt.AlignRight
                                     font: smartSlicePopupContents.value_font
                                     color: smartSlicePopupContents.value_color
 
-                                    text: SmartSlice.Cloud.materialWeight
+                                    text: SmartSlice.Cloud.materialWeight.toFixed(2) + " kg"
                                 }
 
                                 Label {
+                                    id: labelMaterialCost
                                     Layout.alignment: Qt.AlignRight
                                     font: smartSlicePopupContents.value_font
                                     color: smartSlicePopupContents.value_color
 
-                                    text: SmartSlice.Cloud.materialCost
+                                    text: SmartSlice.Cloud.materialCost.toFixed(2) + " €"
                                 }
                             }
                         }

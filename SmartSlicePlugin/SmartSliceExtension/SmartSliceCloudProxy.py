@@ -46,6 +46,7 @@ class SmartSliceCloudProxy(QObject):
         self._loginPassword = ""
 
         # Properties (mainly) for the sliceinfo popup
+        self._sliceStatusEnum = 0
         self._sliceStatus = "_Status"
         self._sliceHint = "_Hint"
         self._sliceButtonText = "_ButtonText"
@@ -143,6 +144,19 @@ class SmartSliceCloudProxy(QObject):
         return self.connector.login()
     
     # Properties (mainly) for the sliceinfo widget
+
+    sliceStatusEnumChanged = pyqtSignal()
+
+    @pyqtProperty(int, notify=sliceStatusEnumChanged)
+    def sliceStatusEnum(self):
+        return self._sliceStatusEnum
+
+    @sliceStatusEnum.setter
+    def sliceStatusEnum(self, value):
+        if self._sliceStatusEnum is not value:
+            Logger.log("d", "sliceStatusEnum: <{}> -> <{}>".format(self._sliceStatusEnum, value))
+            self._sliceStatusEnum = value
+            self.sliceStatusEnumChanged.emit()
 
     sliceStatusChanged = pyqtSignal()
 
@@ -487,9 +501,9 @@ class SmartSliceCloudProxy(QObject):
     @materialName.setter
     def materialName(self, value):
         if not self._materialName == value:
-            Logger.log("d", "materialName: <{}> -> <{}>".format(self._percentageTimeInnerWalls, value))
+            Logger.log("d", "materialName: <{}> -> <{}>".format(self._materialName, value))
             self._materialName = value
-            self.percentageTimeInnerWallsChanged.emit()
+            self.materialNameChanged.emit()
 
     materialLengthChanged = pyqtSignal()
 
@@ -500,9 +514,9 @@ class SmartSliceCloudProxy(QObject):
     @materialLength.setter
     def materialLength(self, value):
         if not self._materialLength == value:
-            Logger.log("d", "materialLength: <{}> -> <{}>".format(self._percentageTimeInnerWalls, value))
+            Logger.log("d", "materialLength: <{}> -> <{}>".format(self._materialLength, value))
             self._materialLength = value
-            self.percentageTimeInnerWallsChanged.emit()
+            self.materialLengthChanged.emit()
 
     materialWeightChanged = pyqtSignal()
 
@@ -513,9 +527,9 @@ class SmartSliceCloudProxy(QObject):
     @materialWeight.setter
     def materialWeight(self, value):
         if not self._materialWeight == value:
-            Logger.log("d", "materialWeight: <{}> -> <{}>".format(self._percentageTimeInnerWalls, value))
+            Logger.log("d", "materialWeight: <{}> -> <{}>".format(self._materialWeight, value))
             self._materialWeight = value
-            self.percentageTimeInnerWallsChanged.emit()
+            self.materialWeightChanged.emit()
 
     materialCostChanged = pyqtSignal()
 
@@ -526,6 +540,6 @@ class SmartSliceCloudProxy(QObject):
     @materialCost.setter
     def materialCost(self, value):
         if not self._materialCost == value:
-            Logger.log("d", "materialCost: <{}> -> <{}>".format(self._percentageTimeInnerWalls, value))
+            Logger.log("d", "materialCost: <{}> -> <{}>".format(self._materialCost, value))
             self._materialCost = value
-            self.percentageTimeInnerWallsChanged.emit()
+            self.materialCostChanged.emit()
