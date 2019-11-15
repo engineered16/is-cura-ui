@@ -39,6 +39,8 @@ class SmartSliceStage(CuraStage):
 
         #   Set Default Attributes
         self._was_buildvolume_hidden = None
+        self._was_overhang_visible = None
+        self._overhang_visible_preference = "view/show_overhang"
         self._default_toolset = None
         self._default_fallback_tool = None
         self._our_toolset = ("SmartSliceSelectTool",
@@ -53,31 +55,46 @@ class SmartSliceStage(CuraStage):
     #       This transitions the userspace/working environment from
     #       current stage into the Smart Slice User Environment.
     def onStageSelected(self):
-        buildvolume = Application.getInstance().getBuildVolume()
+        application = Application.getInstance()
+        
+        buildvolume = application.getBuildVolume()
         if buildvolume.isVisible():
             buildvolume.setVisible(False)
             self._was_buildvolume_hidden = True
+            
+        # Overhang visiualization
+        self._was_overhang_visible = application.getPreferences().getValue(self._overhang_visible_preference)
+        application.getPreferences().setValue(self._overhang_visible_preference, False)
 
         # Ensure we have tools defined and apply them here
         our_tool = self._our_toolset[0]
         self.setToolVisibility(True)
-        Application.getInstance().getController().setFallbackTool(our_tool)
-        Application.getInstance().getController().setActiveTool(our_tool)
+        application.getController().setFallbackTool(our_tool)
+        self._previous_tool = application.getController().getActiveTool()
+        if self._previous_tool:
+            application.getController().setActiveTool(our_tool)
 
 
     #   onStageDeselected:
     #       Sets attributes that allow the Smart Slice Stage to properly deactivate
     #       This occurs before the next Cura Stage is activated
     def onStageDeselected(self):
+        application = Application.getInstance()
+        
         if self._was_buildvolume_hidden:
-            buildvolume = Application.getInstance().getBuildVolume()
+            buildvolume = application.getBuildVolume()
             buildvolume.setVisible(True)
             self._is_buildvolume_hidden = None
 
+        if self._was_overhang_visible is not None:
+            application.getPreferences().setValue(self._overhang_visible_preference,
+                                                  self._was_overhang_visible)
+
         # Recover if we have tools defined
         self.setToolVisibility(False)
-        Application.getInstance().getController().setFallbackTool(self._default_fallback_tool)
-        Application.getInstance().getController().setActiveTool(self._default_fallback_tool)
+        application.getController().setFallbackTool(self._default_fallback_tool)
+        if self._previous_tool:
+            application.getController().setActiveTool(self._default_fallback_tool)
 
     def getVisibleTools(self):
         visible_tools = []

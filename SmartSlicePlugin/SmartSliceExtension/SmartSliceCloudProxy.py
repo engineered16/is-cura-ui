@@ -4,6 +4,8 @@ Created on 22.10.2019
 @author: thopiekar
 '''
 
+import copy
+
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import pyqtProperty
 from PyQt5.QtCore import QObject
@@ -51,9 +53,14 @@ class SmartSliceCloudProxy(QObject):
         self._sliceIconImage = ""
         self._sliceIconVisible = False
 
+        # Boundary values
+        self._targetFactorOfSafety = 1.0
+        self._targetMaximalDisplacement = 0.17
+
         # Properties (mainly) for the sliceinfo widget
-        self._resultSafetyFactor = 1.0
-        self._resultMaximalDisplacement = 2
+        self._resultSafetyFactor = copy.copy(self._targetFactorOfSafety)
+        self._resultMaximalDisplacement = copy.copy(self._targetMaximalDisplacement)
+        self._resultTimeTotal = QTime(0, 0, 0, 1)
         self._resultTimeInfill = QTime(0, 0, 0, 1)
         self._resultTimeInnerWalls = QTime(0, 0, 0, 1)
         self._resultTimeOuterWalls = QTime(0, 0, 0, 1)
@@ -134,7 +141,7 @@ class SmartSliceCloudProxy(QObject):
     @pyqtProperty(bool, notify=loginPasswordChanged)
     def loginResult(self):
         return self.connector.login()
-
+    
     # Properties (mainly) for the sliceinfo widget
 
     sliceStatusChanged = pyqtSignal()
@@ -217,7 +224,33 @@ class SmartSliceCloudProxy(QObject):
             self._sliceIconVisible = value
             self.sliceIconVisibleChanged.emit()
 
-    # Properties (mainly) for the sliceinfo widget
+    # Properties need to be passed to the cloud
+
+    targetFactorOfSafetyChanged = pyqtSignal()
+
+    @pyqtProperty(float, notify=targetFactorOfSafetyChanged)
+    def targetFactorOfSafety(self):
+        return self._targetFactorOfSafety
+
+    @targetFactorOfSafety.setter
+    def targetFactorOfSafety(self, value):
+        if self._targetFactorOfSafety is not value:
+            self._targetFactorOfSafety = value
+            self.targetFactorOfSafetyChanged.emit()
+
+    targetMaximalDisplacementChanged = pyqtSignal()
+
+    @pyqtProperty(float, notify=targetMaximalDisplacementChanged)
+    def targetMaximalDisplacement(self):
+        return self._targetMaximalDisplacement
+
+    @targetMaximalDisplacement.setter
+    def targetMaximalDisplacement(self, value):
+        if self._targetMaximalDisplacement is not value:
+            self._targetMaximalDisplacement = value
+            self.targetMaximalDisplacementChanged.emit()
+
+    # Properties returned from the cloud and visualized in the UI
 
     resultSafetyFactorChanged = pyqtSignal()
 
@@ -233,7 +266,7 @@ class SmartSliceCloudProxy(QObject):
 
     resultMaximalDisplacementChanged = pyqtSignal()
 
-    @pyqtProperty(int, notify=resultMaximalDisplacementChanged)
+    @pyqtProperty(float, notify=resultMaximalDisplacementChanged)
     def resultMaximalDisplacement(self):
         return self._resultMaximalDisplacement
 
@@ -242,6 +275,18 @@ class SmartSliceCloudProxy(QObject):
         if self._resultMaximalDisplacement is not value:
             self._resultMaximalDisplacement = value
             self.resultMaximalDisplacementChanged.emit()
+
+    resultTimeTotalChanged = pyqtSignal()
+
+    @pyqtProperty(QTime, notify=resultTimeTotalChanged)
+    def resultTimeTotal(self):
+        return self._resultTimeTotal
+
+    @resultTimeTotal.setter
+    def resultTimeTotal(self, value: QTime):
+        if self._resultTimeTotal is not value:
+            self._resultTimeTotal = value
+            self.resultTimeTotalChanged.emit()
 
     resultTimeInfillChanged = pyqtSignal()
 

@@ -73,10 +73,10 @@ Item
             onEditingFinished:
             {
                 var modified_text = text.replace(",", ".") // User convenience. We use dots for decimal values
-                SmartSlice.Variables.safetyFactor = modified_text; // Will be converted from string to the target data type via SmartSliceVariables
+                SmartSlice.Cloud.targetFactorOfSafety = modified_text; // Will be converted from string to the target data type via SmartSliceVariables
             }
 
-            text: SmartSlice.Variables.safetyFactor
+            text: SmartSlice.Cloud.targetFactorOfSafety
             placeholderText: catalog.i18nc("@action:button", "Must be above 1")
             property string unit: "[1]";
         }
@@ -88,17 +88,17 @@ Item
             style: UM.Theme.styles.text_field;
             validator: DoubleValidator
             {
-                bottom: 0.1  // Setting lowest value here
+                bottom: 0.01  // Setting lowest value here
                 decimals: 4
                 locale: "en_US"
             }
             onEditingFinished:
             {
                 var modified_text = text.replace(",", ".") // User convenience. We use dots for decimal values
-                SmartSlice.Variables.maxDeflect = modified_text; // Will be converted from string to the target data type via SmartSliceVariables
+                SmartSlice.Cloud.targetMaximalDisplacement = modified_text; // Will be converted from string to the target data type via SmartSliceVariables
             }
 
-            text: SmartSlice.Variables.maxDeflect
+            text: SmartSlice.Cloud.targetMaximalDisplacement
             placeholderText: ""
             property string unit: "[mm]";
         }

@@ -166,7 +166,7 @@ Item {
                             property var header_font: UM.Theme.getFont("medium")
                             property var header_color: UM.Theme.getColor("text_subtext")
                             property var subheader_font: UM.Theme.getFont("default")
-                            property var subheader_color: UM.Theme.getColor("text_detail")
+                            property var subheader_color: "#A9A9A9"
                             property var description_font: UM.Theme.getFont("default")
                             property var description_color: UM.Theme.getColor("text")
                             property var value_font: UM.Theme.getFont("default")
@@ -190,11 +190,11 @@ Item {
                                 spacing: UM.Theme.getSize("default_margin").width
                                 
                                 function updateSafetyFactorColor() {
-                                    if (SmartSlice.Cloud.resultSafetyFactor > SmartSlice.Variables.safetyFactor) {
+                                    if (SmartSlice.Cloud.resultSafetyFactor > SmartSlice.Cloud.targetFactorOfSafety) {
                                         labelDescriptionSafetyFactor.color = smartSlicePopupContents.warningColor
                                         labelResultSafetyFactor.color = smartSlicePopupContents.warningColor
                                         labelTargetSafetyFactor.color = smartSlicePopupContents.warningColor
-                                    } else if (SmartSlice.Cloud.resultSafetyFactor < SmartSlice.Variables.safetyFactor) {
+                                    } else if (SmartSlice.Cloud.resultSafetyFactor < SmartSlice.Cloud.targetFactorOfSafety) {
                                         labelDescriptionSafetyFactor.color = smartSlicePopupContents.errorColor
                                         labelResultSafetyFactor.color = smartSlicePopupContents.errorColor
                                         labelTargetSafetyFactor.color = smartSlicePopupContents.errorColor
@@ -206,11 +206,11 @@ Item {
                                 }
                                 
                                 function updateMaximalDisplacementColor() {
-                                    if (SmartSlice.Cloud.resultSafetyFactor > SmartSlice.Variables.safetyFactor) {
+                                    if (SmartSlice.Cloud.resultMaximalDisplacement > SmartSlice.Cloud.targetMaximalDisplacement) {
                                         labelDescriptionMaximumDisplacement.color = smartSlicePopupContents.warningColor
                                         labelResultMaximalDisplacement.color = smartSlicePopupContents.warningColor
                                         labelTargetMaximalDisplacement.color = smartSlicePopupContents.warningColor
-                                    } else if (SmartSlice.Cloud.resultSafetyFactor < SmartSlice.Variables.safetyFactor) {
+                                    } else if (SmartSlice.Cloud.resultMaximalDisplacement < SmartSlice.Cloud.targetMaximalDisplacement) {
                                         labelDescriptionMaximumDisplacement.color = smartSlicePopupContents.errorColor
                                         labelResultMaximalDisplacement.color = smartSlicePopupContents.errorColor
                                         labelTargetMaximalDisplacement.color = smartSlicePopupContents.errorColor
@@ -242,7 +242,7 @@ Item {
                                     }
                                     Label {
                                         id: labelDescriptionMaximumDisplacement
-                                        text: "Maximal Displacement:"
+                                        text: "Max Displacement:"
 
                                         font: smartSlicePopupContents.description_font
                                         color: smartSlicePopupContents.description_color
@@ -254,6 +254,7 @@ Item {
                                     spacing: UM.Theme.getSize("default_margin").height
 
                                     Label {
+                                        Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.subheader_font
                                         color: smartSlicePopupContents.subheader_color
 
@@ -266,18 +267,32 @@ Item {
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
-                                        text: SmartSlice.Cloud.resultSafetyFactor
-                                        onTextChanged: layoutRequirements.updateSafetyFactorColor()
+                                        Connections {
+                                            target: SmartSlice.Cloud
+                                            onResultSafetyFactorChanged: {
+                                                labelResultSafetyFactor.text = parseFloat(Math.round(SmartSlice.Cloud.resultSafetyFactor * 1000) / 1000).toFixed(3)
+                                                layoutRequirements.updateSafetyFactorColor()
+                                            }
+                                        }
+
+                                        text: parseFloat(Math.round(SmartSlice.Cloud.resultSafetyFactor * 1000) / 1000).toFixed(3)
                                     }
                                     Label {
                                         id: labelResultMaximalDisplacement
 
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
-                                        color: updateTextColor()
+                                        color: smartSlicePopupContents.value_color
 
-                                        text: SmartSlice.Cloud.resultMaximalDisplacement
-                                        onTextChanged: layoutRequirements.updateMaximalDisplacementColor()
+                                        Connections {
+                                            target: SmartSlice.Cloud
+                                            onResultMaximalDisplacementChanged: {
+                                                labelResultMaximalDisplacement.text = parseFloat(Math.round(SmartSlice.Cloud.resultMaximalDisplacement * 1000) / 1000).toFixed(3)
+                                                layoutRequirements.updateMaximalDisplacementColor()
+                                            }
+                                        }
+
+                                        text: parseFloat(Math.round(SmartSlice.Cloud.resultMaximalDisplacement * 1000) / 1000).toFixed(3)
                                     }
                                 }
                                 ColumnLayout {
@@ -286,8 +301,7 @@ Item {
                                     spacing: UM.Theme.getSize("default_margin").height
 
                                     Label {
-                                        
-                                        
+                                        Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.subheader_font
                                         color: smartSlicePopupContents.subheader_color
 
@@ -300,8 +314,15 @@ Item {
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
-                                        text: SmartSlice.Variables.safetyFactor
-                                        onTextChanged: layoutRequirements.updateSafetyFactorColor()
+                                        Connections {
+                                            target: SmartSlice.Cloud
+                                            onTargetFactorOfSafetyChanged: {
+                                                labelTargetSafetyFactor.text = parseFloat(Math.round(SmartSlice.Cloud.targetFactorOfSafety * 1000) / 1000).toFixed(3)
+                                                layoutRequirements.updateSafetyFactorColor()
+                                            }
+                                        }
+
+                                        text: parseFloat(Math.round(SmartSlice.Cloud.targetFactorOfSafety * 1000) / 1000).toFixed(3)
                                     }
                                     Label {
                                         id: labelTargetMaximalDisplacement
@@ -310,8 +331,15 @@ Item {
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
 
-                                        text: SmartSlice.Variables.maxDeflect
-                                        onTextChanged: layoutRequirements.updateMaximalDisplacementColor()
+                                        Connections {
+                                            target: SmartSlice.Cloud
+                                            onTargetMaximalDisplacementChanged: {
+                                                labelTargetMaximalDisplacement.text = parseFloat(Math.round(SmartSlice.Cloud.targetFactorOfSafety * 1000) / 1000).toFixed(3)
+                                                layoutRequirements.updateMaximalDisplacementColor()
+                                            }
+                                        }
+
+                                        text: parseFloat(Math.round(SmartSlice.Cloud.targetMaximalDisplacement * 1000) / 1000).toFixed(3)
                                     }
                                 }
 
@@ -332,6 +360,15 @@ Item {
                                 ColumnLayout {
                                     spacing: UM.Theme.getSize("default_margin").height
 
+                                    Label {
+                                        Layout.fillWidth: true
+
+                                        text: "Print time:"
+
+                                        font: smartSlicePopupContents.description_font
+                                        color: smartSlicePopupContents.description_color
+                                    }
+                                    /*
                                     Label {
                                         Layout.fillWidth: true
 
@@ -376,6 +413,7 @@ Item {
 
                                         text: "Travel:"
                                     }
+                                    */
                                 }
 
                                 ColumnLayout {
@@ -383,6 +421,16 @@ Item {
 
                                     spacing: UM.Theme.getSize("default_margin").height
 
+                                    Label {
+                                        id: labelResultTimeTotal
+
+                                        Layout.alignment: Qt.AlignRight
+                                        font: smartSlicePopupContents.value_font
+                                        color: smartSlicePopupContents.value_color
+
+                                        text: Qt.formatTime(SmartSlice.Cloud.resultTimeTotal, "hh:mm")
+                                    }
+                                    /*
                                     Label {
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
@@ -432,6 +480,7 @@ Item {
 
                                         text: Qt.formatTime(SmartSlice.Cloud.resultTimeTravel, "hh:mm")
                                     }
+                                    */
                                 }
 
                                 ColumnLayout {
@@ -439,6 +488,14 @@ Item {
 
                                     spacing: UM.Theme.getSize("default_margin").height
 
+                                    Label {
+                                        Layout.alignment: Qt.AlignRight
+                                        font: smartSlicePopupContents.value_font
+                                        color: smartSlicePopupContents.value_color
+
+                                        text: "100 %"
+                                    }
+                                    /*
                                     Label {
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
@@ -488,6 +545,7 @@ Item {
 
                                         text: SmartSlice.Cloud.percentageTimeTravel.toFixed(2) + " %"
                                     }
+                                    */
                                 }
                             }
 

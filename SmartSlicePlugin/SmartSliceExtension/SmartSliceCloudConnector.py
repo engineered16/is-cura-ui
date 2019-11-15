@@ -114,17 +114,16 @@ class SmartSliceCloudJob(Job):
     def __init__(self, connector) -> None:
         super().__init__()
         self.connector = connector
+        self.job_type = None
         
         self.cancled = False
         
         self._job_status = None
         self._wait_time = 0.05
         
-        self.job_type = None
         self.ui_status_per_job_type = {pywim.smartslice.job.JobType.validation : SmartSliceCloudStatus.BusyValidating,
                                        pywim.smartslice.job.JobType.optimization : SmartSliceCloudStatus.BusyOptimizing,
                                        }
-
 
     @property
     def job_status(self):
@@ -135,6 +134,59 @@ class SmartSliceCloudJob(Job):
         if value is not self._job_status:
             self._job_status = value
             Logger.log("d", "Status changed: {}".format(self.job_status))
+
+
+    def determineTempDirectory(self):
+        temporary_directory = tempfile.gettempdir()
+        base_subdirectory_name = "smartslice"
+        private_subdirectory_name = base_subdirectory_name
+        abs_private_subdirectory_name = os.path.join(temporary_directory,
+                                                     private_subdirectory_name)
+        private_subdirectory_suffix_num = 1
+        while os.path.exists(abs_private_subdirectory_name) and not os.path.isdir(abs_private_subdirectory_name):
+            private_subdirectory_name = "{}_{}".format(base_subdirectory_name,
+                                                       private_subdirectory_suffix_num)
+            abs_private_subdirectory_name = os.path.join(temporary_directory,
+                                                         private_subdirectory_name)
+            private_subdirectory_suffix_num += 1
+        
+        if not os.path.exists(abs_private_subdirectory_name):
+            os.makedirs(abs_private_subdirectory_name)
+        
+        return abs_private_subdirectory_name
+        
+    # Sending jobs to AWS
+    # - jtype: Job type to be sent. Can be either:
+    #          > pywim.smartslice.job.JobType.validation
+    #          > pywim.smartslice.job.JobType.optimization
+    def prepareJob(self, jtype):
+        # Using tempfile module to probe for a temporary file path
+        # TODO: We can do this more elegant of course, too.
+        
+        # Setting up file output
+        filename = "{}.3mf".format(uuid.uuid1())
+        filedir = self.determineTempDirectory()
+        filepath = os.path.join(filedir, filename)
+        
+        Logger.log("d", "Saving temporary (and custom!) 3MF file at: {}".format(filepath))
+
+        # Checking whether count of models == 1
+        mesh_nodes = self.connector.getSliceableNodes()
+        if len(mesh_nodes) is not 1:
+            Logger.log("d", "Found {} meshes!".format(["no", "too many"][len(mesh_nodes) > 1]))
+            return None
+
+        Logger.log("d", "Creating initial 3MF file")
+        self.connector.prepareInitial3mf(filepath, mesh_nodes)
+        Logger.log("d", "Adding additional job info")
+        self.connector.extend3mf(filepath,
+                                 mesh_nodes,
+                                 jtype)
+
+        if not os.path.exists(filepath):
+            return None
+        
+        return filepath
 
     def processCloudJob(self, filepath):
         # Read the 3MF file into bytes
@@ -153,32 +205,39 @@ class SmartSliceCloudJob(Job):
         # check the status. This is a naive way of waiting, since this could take
         # a while (minutes).
         while task.status not in (pywim.http.thor.TaskStatus.failed,
-                                  pywim.http.thor.TaskStatus.finished):
+                                  pywim.http.thor.TaskStatus.finished
+                                  ) and not self.cancled:
             self.job_status = task.status
             
             time.sleep(self._wait_time)
             task = client.status.get(id=task.id)
+        
+        if not self.cancled:
+            if task.status == pywim.http.thor.TaskStatus.failed:
+                error_message = Message()
+                error_message.setTitle("SmartSlice plugin")
+                error_message.setText(i18n_catalog.i18nc("@info:status", "Error while processing the job:\n{}".format(task.error)))
+                error_message.show()
     
-        if task.status == pywim.http.thor.TaskStatus.failed:
-            error_message = Message()
-            error_message.setTitle("SmartSlice plugin")
-            error_message.setText(i18n_catalog.i18nc("@info:status", "Error while processing the job:\n{}".format(task.error)))
-            error_message.show()
-
-            Logger.log("e", "An error occured while sending and receiving cloud job: {}".format(task.error))
-            return None
-        elif task.status == pywim.http.thor.TaskStatus.finished:
-            # Get the task again, but this time with the results included
-            task = client.result.get(id=task.id)
-            return task
+                Logger.log("e", "An error occured while sending and receiving cloud job: {}".format(task.error))
+                return None
+            elif task.status == pywim.http.thor.TaskStatus.finished:
+                # Get the task again, but this time with the results included
+                task = client.result.get(id=task.id)
+                return task
+            else:
+                error_message = Message()
+                error_message.setTitle("SmartSlice plugin")
+                error_message.setText(i18n_catalog.i18nc("@info:status", "Unexpected status occured:\n{}".format(task.error)))
+                error_message.show()
+                
+                Logger.log("e", "An unexpected status occured while sending and receiving cloud job: {}".format(task.status))
+                return None
         else:
-            error_message = Message()
-            error_message.setTitle("SmartSlice plugin")
-            error_message.setText(i18n_catalog.i18nc("@info:status", "Unexpected status occured:\n{}".format(task.error)))
-            error_message.show()
-            
-            Logger.log("e", "An unexpected status occured while sending and receiving cloud job: {}".format(task.status))
-            return None
+            notification_message = Message()
+            notification_message.setTitle("SmartSlice plugin")
+            notification_message.setText(i18n_catalog.i18nc("@info:status", "Job has been cancled!".format(task.error)))
+            notification_message.show()
 
     def run(self) -> None:
         if not self.job_type:
@@ -190,9 +249,9 @@ class SmartSliceCloudJob(Job):
         # TODO: Add instructions how to send a verification job here
         previous_connector_status = self.connector.status
         self.connector.status = self.ui_status_per_job_type[self.job_type]
-        Job.yieldThread()
+        Job.yieldThread()  # Should allow the UI to update earlier
         
-        job = self.connector.prepareJob(self.job_type)
+        job = self.prepareJob(self.job_type)
         Logger.log("i", "Job prepared: {}".format(job))
         task = self.processCloudJob(job)
         
@@ -201,19 +260,26 @@ class SmartSliceCloudJob(Job):
             result = task.result
             if result:
                 result_dict = result.to_dict()
-                print(result_dict)
+                Logger.log("d", "result_dict: {}".format(result_dict))
                 analyse = result.analyses[0]
-                print(analyse)
-                print(analyse.mass)
-                print(analyse.print_time)
-                print(analyse.modifier_meshes)
+                Logger.log("d", "analyse: {}".format(analyse))
+                Logger.log("d", "analyse.mass: {}".format(analyse.mass))
+                Logger.log("d", "analyse.print_time: {}".format(analyse.print_time))
+                Logger.log("d", "analyse.modifier_meshes: {}".format(analyse.modifier_meshes))
+
+                self.connector._proxy.resultSafetyFactor = analyse.structural.min_safety_factor
+                self.connector._proxy.resultMaximalDisplacement = analyse.structural.max_displacement
+                
+                qprint_time = QTime(0, 0, 0, 0)
+                qprint_time.addSecs(analyse.print_time)
+                self.connector._proxy.resultTimeTotal = qprint_time
+                Logger.log("d", "resultTimeTotal: {}".format(self.connector._proxy.resultTimeTotal))
             
             if not self.connector._demo_was_underdimensioned_before:
                 self.connector.status = SmartSliceCloudStatus.Underdimensioned
                 self.connector._demo_was_underdimensioned_before = True
                 
-                self.connector._proxy.resultSafetyFactor = 0.5
-                self.connector._proxy.resultMaximalDisplacement = 5
+
                 
                 self.connector._proxy.resultTimeInfill = QTime(1, 0, 0, 0)
                 self.connector._proxy.resultTimeInnerWalls = QTime(0, 20, 0, 0)
@@ -222,13 +288,16 @@ class SmartSliceCloudJob(Job):
                 self.connector._proxy.resultTimeSkin = QTime(0, 10, 0, 0)
                 self.connector._proxy.resultTimeSkirt = QTime(0, 1, 0, 0)
                 self.connector._proxy.resultTimeTravel = QTime(0, 30, 0, 0)
+                
+                #self.connector._proxy.materialName = 
+                #self.connector._proxy.materialLength = 
+                #self.connector._proxy.materialWeight = 
+                #self.connector._proxy.materialCost = 
+                
             
             elif not self.connector._demo_was_overdimensioned_before:
                 self.connector.status = SmartSliceCloudStatus.Overdimensioned
                 self.connector._demo_was_overdimensioned_before = True
-                
-                self.connector._proxy.resultSafetyFactor = 2
-                self.connector._proxy.resultMaximalDisplacement = 1
                 
                 self.connector._proxy.resultTimeInfill = QTime(2, 0, 0, 0)
                 self.connector._proxy.resultTimeInnerWalls = QTime(0, 10, 0, 0)
@@ -240,9 +309,6 @@ class SmartSliceCloudJob(Job):
             else:
                 self.connector.status = SmartSliceCloudStatus.Optimized
                 
-                self.connector._proxy.resultSafetyFactor = 1
-                self.connector._proxy.resultMaximalDisplacement = 2
-                
                 self.connector._proxy.resultTimeInfill = QTime(3, 0, 0, 0)
                 self.connector._proxy.resultTimeInnerWalls = QTime(0, 10, 0, 0)
                 self.connector._proxy.resultTimeOuterWalls = QTime(0, 20, 0, 0)
@@ -252,9 +318,7 @@ class SmartSliceCloudJob(Job):
                 self.connector._proxy.resultTimeTravel = QTime(0, 45, 0, 0)
         else:
             self.connector.status = previous_connector_status
-        
 
-        
 
 class SmartSliceCloudVerificationJob(SmartSliceCloudJob):
     def __init__(self, connector)->None:
@@ -370,7 +434,7 @@ class SmartSliceCloudConnector(QObject):
         self._proxy.sliceIconImage = current_icon
         
         # Setting icon visibiltiy
-        if self.status is SmartSliceCloudStatus.Optimized or self.status in SmartSliceCloudStatus.Optimizable:
+        if self._status in (SmartSliceCloudStatus.Optimized, ) + SmartSliceCloudStatus.Optimizable:
             self._proxy.sliceIconVisible = True
         else:
             self._proxy.sliceIconVisible = False
@@ -381,10 +445,10 @@ class SmartSliceCloudConnector(QObject):
     
     @status.setter
     def status(self, value):
+        Logger.log("d", "Setting status: {} -> {}".format(self._status, value))
         if self._status is not value:
             self._status = value
-            
-            self.updateSliceWidget()
+        self.updateSliceWidget()
     
     @property
     def token(self):
@@ -420,10 +484,12 @@ class SmartSliceCloudConnector(QObject):
         
         # TODO: Add check for anchors and loads here!
         
-        if slicable_nodes_count == 1:
-            self.status = SmartSliceCloudStatus.ReadyToVerify
+        if self.status is SmartSliceCloudStatus.InvalidInput:
+            if slicable_nodes_count == 1:
+                self.status = SmartSliceCloudStatus.ReadyToVerify
         else:
-            self.status = SmartSliceCloudStatus.InvalidInput
+            if slicable_nodes_count != 1:
+                self.status = SmartSliceCloudStatus.InvalidInput
     
     def _onJobFinished(self, job):
         self._job = None
@@ -443,12 +509,16 @@ class SmartSliceCloudConnector(QObject):
         self._job.start()
     
     def onSliceButtonClicked(self):
-        if self.status is SmartSliceCloudStatus.ReadyToVerify:
-            
-            self.doVerification.emit()
-        elif self.status in SmartSliceCloudStatus.Optimizable:
-            self.status = SmartSliceCloudStatus.BusyOptimizing
-            self.doOptimization.emit()
+        if not self._job:
+            if self.status is SmartSliceCloudStatus.ReadyToVerify:
+                self.doVerification.emit()
+            elif self.status in SmartSliceCloudStatus.Optimizable:
+                self.doOptimization.emit()
+        else:
+            error_message = Message()
+            error_message.setTitle("SmartSlice plugin")
+            error_message.setText(i18n_catalog.i18nc("@info:status", "Slice job is already running!"))
+            error_message.show()
 
     @property
     def variables(self):
@@ -522,8 +592,8 @@ class SmartSliceCloudConnector(QObject):
         job.bulk.fracture = pywim.fea.model.Fracture(material_found['fracture']['KIc'])
     
         # Setup optimization configuration
-        job.optimization.min_safety_factor = self.variables.safetyFactor
-        job.optimization.max_displacement = self.variables.maxDeflect
+        job.optimization.min_safety_factor = self._proxy.targetFactorOfSafety
+        job.optimization.max_displacement = self._proxy.targetMaximalDisplacement
     
         # Setup the chop model - chop is responsible for creating an FEA model
         # from the triangulated surface mesh, slicer configuration, and
@@ -659,75 +729,6 @@ class SmartSliceCloudConnector(QObject):
 
         return True
 
-    def determineTempDirectory(self):
-        temporary_directory = tempfile.gettempdir()
-        base_subdirectory_name = "smartslice"
-        private_subdirectory_name = base_subdirectory_name
-        abs_private_subdirectory_name = os.path.join(temporary_directory,
-                                                     private_subdirectory_name)
-        private_subdirectory_suffix_num = 1
-        while os.path.exists(abs_private_subdirectory_name) and not os.path.isdir(abs_private_subdirectory_name):
-            private_subdirectory_name = "{}_{}".format(base_subdirectory_name,
-                                                       private_subdirectory_suffix_num)
-            abs_private_subdirectory_name = os.path.join(temporary_directory,
-                                                         private_subdirectory_name)
-            private_subdirectory_suffix_num += 1
-        
-        if not os.path.exists(abs_private_subdirectory_name):
-            os.makedirs(abs_private_subdirectory_name)
-        
-        return abs_private_subdirectory_name
-        
-
-    # Sending jobs to AWS
-    # - jtype: Job type to be sent. Can be either:
-    #          > pywim.smartslice.job.JobType.validation
-    #          > pywim.smartslice.job.JobType.optimization
-    def prepareJob(self, jtype):
-        # Using tempfile module to probe for a temporary file path
-        # TODO: We can do this more elegant of course, too.
-        
-        # Setting up file output
-        filename = "{}.3mf".format(uuid.uuid1())
-        filedir = self.determineTempDirectory()
-        filepath = os.path.join(filedir, filename)
-        
-        Logger.log("d", "Saving temporary (and custom!) 3MF file at: {}".format(filepath))
-
-        # Checking whether count of models == 1
-        mesh_nodes = self.getSliceableNodes()
-        if len(mesh_nodes) is not 1:
-            Logger.log("d", "Found {} meshes!".format(["no", "too many"][len(mesh_nodes) > 1]))
-            return None
-
-        Logger.log("d", "Creating initial 3MF file")
-        self.prepareInitial3mf(filepath, mesh_nodes)
-        Logger.log("d", "Adding additional job info")
-        self.extend3mf(filepath,
-                       mesh_nodes,
-                       jtype)
-
-        if not os.path.exists(filepath):
-            return None
-        
-        return filepath
-
-    def replicateCuraEngineMessages(self):
-        global_stack = Application.getInstance().getGlobalContainerStack()
-        if not global_stack:
-            return
-        
-        # Build messages for extruder stacks
-        extruders_message = []
-        for extruder_stack in global_stack.extruderList:
-            extruders_message.append(self._buildExtruderMessage(extruder_stack))
-        
-        return {"object_lists": self._buildObjectsListsMessage(global_stack),
-                "global_settings": self._buildGlobalSettingsMessage(global_stack),
-                "limit_to_extruder": self._buildGlobalInheritsStackMessage(global_stack),
-                "extruders": extruders_message,
-                }
-        
     ##  Check if a node has per object settings and ensure that they are set correctly in the message
     #   \param node Node to check.
     #   \param message object_lists message to put the per object settings in
@@ -828,7 +829,6 @@ class SmartSliceCloudConnector(QObject):
     def modifyInfillAnglesInSettingDict(self, settings):
         for key, value in settings.items():
             if key == "infill_angles":
-                Logger.log("d", "Found infill_angles!")
                 if type(value) is str:
                     value = eval(value)
                 if len(value) is 0:
