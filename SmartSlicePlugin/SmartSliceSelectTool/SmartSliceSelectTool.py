@@ -21,6 +21,8 @@ from UM.View.GL.OpenGL import OpenGL
 from UM.Scene.Selection import Selection
 from UM.Scene.SceneNode import SceneNode
 
+from cura.Scene.CuraSceneNode import CuraSceneNode
+
 #  QT / QML Imports
 from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtQml import QQmlComponent, QQmlContext # @UnresolvedImport
@@ -63,18 +65,6 @@ class SmartSliceSelectTool(Tool):
         self._scene = self.getController().getScene()
 
         self._controller.activeToolChanged.connect(self._onActiveStateChanged)
-
-        #  Create new 'Selection Visualizer' with no faces actively selected
-        #  TODO:  Return to this after conference
-        #print("\n")
-        #self._visualizer = SmartSliceSelectionVisualizer()
-        #self.getController().getScene().getRoot().addChild(self._visualizer)
-        #Logger.log("d", "Enabling Selection Vizualizer")
-        
-        #  Create new Normal Arrow for vizualising selected face normal vector
-        #self._normal_arrow = SmartSliceNormalArrow()
-        #Logger.log("d", "Creating Normal Arrow Mesh")
-        #print("\n")
 
 
     ##  Handle mouse and keyboard events
@@ -179,10 +169,10 @@ class SmartSliceSelectTool(Tool):
 
             if self.getLoadSelectionActive():
                 self._handle.drawFaceSelection(draw_arrow=True, other_faces=selectable_faces)
+                
             else:
                 self._handle.drawFaceSelection(other_faces=selectable_faces)
-                
-            
+                self._handle.setScale(scene_node.getScale())
 
 
             '''
@@ -191,6 +181,7 @@ class SmartSliceSelectTool(Tool):
             print("v_c", v_c)
             '''
 
+            self._handle.scale(scene_node.getScale(), transform_space=CuraSceneNode.TransformSpace.World)
 
     def _onActiveStateChanged(self):
         active_tool = Application.getInstance().getController().getActiveTool()
@@ -219,12 +210,14 @@ class SmartSliceSelectTool(Tool):
         return self._selection_mode
 
     def setAnchorSelection(self):
+        self._handle.clearSelection()
         self.setSelectionMode(SelectionMode.AnchorMode)
 
     def getAnchorSelectionActive(self):
         return self._selection_mode is SelectionMode.AnchorMode
 
     def setLoadSelection(self):
+        self._handle.clearSelection()
         self.setSelectionMode(SelectionMode.LoadMode)
 
     def getLoadSelectionActive(self):

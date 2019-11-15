@@ -9,6 +9,8 @@
 #
 
 
+from math import asin
+
 #  UM/Cura Imports
 from UM.Math.Vector import Vector
 

@@ -10,6 +10,7 @@
 
 #  STANDARD IMPORTS
 from UM.Math.Vector import Vector
+import numpy
 
 #  Ultimaker/Cura Imports
 from UM.Math import NumPyUtil
@@ -186,8 +187,8 @@ class SelectableFace:
         cross_x = vec1.y*vec2.z - vec1.z*vec2.y
         cross_y = vec1.z*vec2.x - vec1.x*vec2.z
         cross_z = vec1.x*vec2.y - vec1.y*vec2.x
-        cross   = (cross_x*cross_x) + (cross_y*cross_y) + (cross_z*cross_z)
-        self._normal = Vector(cross_x/cross, cross_y/cross, cross_z/cross)
+        mag   = numpy.sqrt((cross_x*cross_x) + (cross_y*cross_y) + (cross_z*cross_z))
+        self._normal = Vector(cross_x/mag, cross_y/mag, cross_z/mag)
         return self._normal
 
 

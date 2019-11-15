@@ -35,7 +35,7 @@ class SmartSliceSelectHandle(ToolHandle):
         self._edge_length = [] # TODO: GET THIS FROM FACE EDGES
         self._selected_color = self.AllAxisSelectionColor
         self._anchored_color = self._y_axis_color
-        self._applied_color = self._y_axis_color
+        self._loaded_color = self._y_axis_color
 
         #  Selected Face Properties
         self._tri = tri
@@ -45,7 +45,7 @@ class SmartSliceSelectHandle(ToolHandle):
         #  Previously Selected Faces
         self._applied_faces = []
 
-        #
+        #   Arrow Mesh
         self._arrow = None
 
 #  ACCESSORS
@@ -64,7 +64,7 @@ class SmartSliceSelectHandle(ToolHandle):
 
         Uses UM's MeshBuilder to construct 3D Arrow mesh and translates/rotates as to be normal to the selected face
     '''
-    def drawFaceSelection(self, draw_arrow = False, other_faces = [], scale=1):
+    def drawFaceSelection(self, draw_arrow = False, other_faces = []):
         #  Construct Edges using MeshBuilder Cubes
         mb = MeshBuilder()
 
@@ -80,25 +80,30 @@ class SmartSliceSelectHandle(ToolHandle):
         p1 = Vector(p[1].x, p[1].y, p[1].z)
         p2 = Vector(p[2].x, p[2].y, p[2].z)
         norm = Vector(n.x, n.y, n.z)
+    
         mb.addFace(p0, p1, p2, n, self._selected_color)
 
         #if draw_arrow:
         #    self.drawNormalArrow()
         #    self.addChild(self._arrow)
 
+        checked = []
         for _tri in other_faces:
+            added = False
             p = _tri.points
             _tri.generateNormalVector()
             n = _tri.normal
             if isCoplanar(f, _tri) and isJointed(f, _tri):
                 #  Paint Face Selection
-
                 p0 = Vector(p[0].x, p[0].y, p[0].z)
                 p1 = Vector(p[1].x, p[1].y, p[1].z)
                 p2 = Vector(p[2].x, p[2].y, p[2].z)
                 norm = Vector(n.x, n.y, n.z)
                 mb.addFace(p0, p1, p2, n, self._selected_color)
                 self._face.append(_tri)
+                added = True
+                #for _t in checked:
+                    
 
             #  Check if Jointed/Coplanar with already selected face
             for t in self._face:
@@ -106,16 +111,19 @@ class SmartSliceSelectHandle(ToolHandle):
                     1 + 1
                 elif isCoplanar(t, _tri) and isJointed(t, _tri):
                     #  Paint Face Selection
-
                     p0 = Vector(p[0].x, p[0].y, p[0].z)
                     p1 = Vector(p[1].x, p[1].y, p[1].z)
                     p2 = Vector(p[2].x, p[2].y, p[2].z)
                     norm = Vector(n.x, n.y, n.z)
                     mb.addFace(p0, p1, p2, n, self._selected_color)
                     self._face.append(_tri)
+                    added = True
+            if not added:
+                checked.append(_tri)
 
         #  Add to Cura Scene
         self.setSolidMesh(mb.build())  
+
 
 
     '''
@@ -171,3 +179,8 @@ class SmartSliceSelectHandle(ToolHandle):
             i += 1
 
         return [x/i, y/i, z/i]
+
+
+    def clearSelection(self):
+        mb = MeshBuilder()
+        self.setSolidMesh(mb.build())  
