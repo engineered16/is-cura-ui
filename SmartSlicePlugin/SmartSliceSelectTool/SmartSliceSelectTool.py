@@ -28,10 +28,10 @@ from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtQml import QQmlComponent, QQmlContext # @UnresolvedImport
 
 #  Local Imports
-from .SmartSliceSelectHandle import SmartSliceSelectHandle
 from .SmartSliceSelectHandle import SelectionMode
+from .SmartSliceSelectHandle import SmartSliceSelectHandle
 #from .SmartSliceDrawSelection import SmartSliceSelectionVisualizer
-from .FaceSelection import SelectablePoint, SelectableEdge, SelectableFace
+from .FaceSelection import SelectablePoint, SelectableFace
 from .FaceSelection import fromMeshData
 #from .SmartSliceNormalArrow import SmartSliceNormalArrow
 
@@ -156,7 +156,7 @@ class SmartSliceSelectTool(Tool):
             
             #  Construct Selectable Face && Draw Selection in canvas
             sf = SelectableFace([p0, p1, p2],
-                                mesh_data._normals)
+                                mesh_data._normals, face_id)
             self.selected_faces = [sf] # TODO: Rewrite for >1 concurrently selected faces
             #self._visualizer.changeSelection([sf])
 

@@ -30,7 +30,8 @@ from UM.Mesh import MeshData
 '''
 class SelectableFace:
 #  CONSTRUCTOR
-    def __init__(self, points, normals):
+    def __init__(self, points, normals, face_id=0):
+        self._id = face_id
         self._points = points
         self._edges = self.generateEdges()
         self._normal = self.generateNormalVector()

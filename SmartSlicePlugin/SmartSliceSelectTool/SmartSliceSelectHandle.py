@@ -50,6 +50,7 @@ class SmartSliceSelectHandle(ToolHandle):
 
         #  Previously Selected Faces
         self._loaded_faces = []
+        self._load_magnitude = 0
         self._anchored_faces = []
 
         #   Arrow Mesh
@@ -83,6 +84,7 @@ class SmartSliceSelectHandle(ToolHandle):
         checked = []
         if mode == SelectionMode.LoadMode:
             self._loaded_faces = []
+            self._load_magnitude = 10
         if mode == SelectionMode.AnchorMode:
             self._anchored_faces = []
 
@@ -166,6 +168,11 @@ class SmartSliceSelectHandle(ToolHandle):
                 else:
                     self._anchored_faces.append(_tri)
 
+    '''
+      paintAnchoredFaces()
+
+        Repaints the saved selection for applied Anchors
+    '''
     def paintAnchoredFaces(self):
         mb = MeshBuilder()
         for _tri in self._anchored_faces:
@@ -173,6 +180,11 @@ class SmartSliceSelectHandle(ToolHandle):
         #  Add to Cura Scene
         self.setSolidMesh(mb.build())  
 
+    '''
+      paintLoadedFaces()
+
+        Repaints the saved selection for applied Loads
+    '''
     def paintLoadedFaces(self):
         mb = MeshBuilder()
         for _tri in self._loaded_faces:

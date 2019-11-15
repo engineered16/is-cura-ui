@@ -48,7 +48,6 @@ Item
             renderType: Text.NativeRendering
 
             text: catalog.i18nc("@action:button", "Factor of Safety \u2265")
-
         }
 
         Label {
@@ -58,7 +57,6 @@ Item
             renderType: Text.NativeRendering
 
             text: catalog.i18nc("@action:button", "Max Deflection  \u2264")
-
         }
 
         TextField {
