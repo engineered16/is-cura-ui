@@ -37,6 +37,7 @@ class SmartSliceExtension(Extension):
         #self.addMenuItem(i18n_catalog.i18n("Login"),
         #                 self._openLoginDialog)
 
+
     def _openLoginDialog(self):
         if not self._login_dialog:
             self._login_dialog, self._login_context, self._login_component = self._createQmlDialog("SmartSliceCloudLogin.qml")
