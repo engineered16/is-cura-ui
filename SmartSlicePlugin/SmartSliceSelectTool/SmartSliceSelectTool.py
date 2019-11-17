@@ -178,8 +178,17 @@ class SmartSliceSelectTool(Tool):
             self._handle.scale(scene_node.getScale(), transform_space=CuraSceneNode.TransformSpace.World)
 
             # Passing our infos to the CloudConnector
+            
+            # # Direction should only matter here.
+            # # The location is given by the faces I assume
+            load_vector = self._handle.getLoadVector()
+            # -> After clicking on a face, I get a crash below, that my load_vector is None.
+            
             cloud_connector = PluginRegistry.getInstance().getPluginObject("SmartSliceExtension").cloud
-            cloud_connector.setForce0VectorPoc(f_x, f_y, f_z)
+            cloud_connector.setForce0VectorPoc(load_vector.x,
+                                               load_vector.y,
+                                               load_vector.z
+                                               )
             cloud_connector.appendForce0FacesPoc(tuple_of_load_faces)
             cloud_connector.appendAnchor0FacesPoc(tuple_of_anchor_faces)
 
