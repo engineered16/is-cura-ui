@@ -59,7 +59,8 @@ def isJointed(face1, face2):
     matched = 0
     for p in face1.points:
         for q in face2.points:
-            if ((p.x == q.x) and (p.y == q.y) and (p.z == q.z)):
+            #if ((p.x == q.x) and (p.y == q.y) and (p.z == q.z)):
+            if p._id == q._id:
                 matched += 1
                 if (matched >= 2):
                     return True
