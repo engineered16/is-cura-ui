@@ -15,7 +15,7 @@ import numpy
 #  Ultimaker/Cura Imports
 from UM.Math import NumPyUtil
 from UM.Mesh import MeshData
-
+from UM.Logger import Logger
 
 
 ''' 
@@ -30,7 +30,7 @@ from UM.Mesh import MeshData
 '''
 class SelectableFace:
 #  CONSTRUCTOR
-    def __init__(self, points, normals, face_id=0):
+    def __init__(self, face_id, points, normals):
         self._id = face_id
         self._points = points
         self._edges = self.generateEdges()
@@ -42,13 +42,18 @@ class SelectableFace:
     def __str__(self):
         return '{} :: {}, {}, {}'.format(self._id, self._points[0], self._points[1], self._points[2])
 
-    def __hash__(self):
-        return self._id
-
 #  ACCESSORS
 
     def __eq__(self, other):
-        return self._id == other._id
+        '''
+        Face equality is true if both faces have the same point ids, order does not need to be consistent
+        '''
+        pids = [p._id for p in self._points]
+        oids = [p._id for p in other._points]
+        for pid in pids:
+            if pid not in oids:
+                return False
+        return True
 
     '''
       points()
@@ -190,38 +195,7 @@ class SelectableFace:
         mag   = numpy.sqrt((cross_x*cross_x) + (cross_y*cross_y) + (cross_z*cross_z))
         self._normal = Vector(cross_x/mag, cross_y/mag, cross_z/mag)
         return self._normal
-
-
-def fromMeshData(mesh_data: MeshData):
-    _faces = []
-    for face_id in range(0, int(len(mesh_data._vertices)/3)):
-        if (mesh_data._indices is None) or (len(mesh_data._indices) == 0):
-            base_index = face_id * 3
-            v_a = mesh_data._vertices[base_index]
-            n_a = mesh_data._normals[base_index]
-            v_b = mesh_data._vertices[base_index+1]
-            n_b = mesh_data._normals[base_index+1]
-            v_c = mesh_data._vertices[base_index+2]
-            n_c = mesh_data._normals[base_index+2]
-        else:
-            v_a = mesh_data._vertices[mesh_data._indices[face_id][0]]
-            n_a = mesh_data._normals[mesh_data._indices[face_id][0]]
-            v_b = mesh_data._vertices[mesh_data._indices[face_id][1]]
-            n_b = mesh_data._normals[mesh_data._indices[face_id][1]]
-            v_c = mesh_data._vertices[mesh_data._indices[face_id][2]]
-            n_c = mesh_data._normals[mesh_data._indices[face_id][2]]
-
-        p0 = SelectablePoint(float(v_a[0]), float(v_a[1]), float(v_a[2]), n_a)
-        p1 = SelectablePoint(float(v_b[0]), float(v_b[1]), float(v_b[2]), n_b)
-        p2 = SelectablePoint(float(v_c[0]), float(v_c[1]), float(v_c[2]), n_c)
-
-        #  Construct Selectable Face && Draw Selection in canvas
-        sf = SelectableFace([p0, p1, p2],
-                            mesh_data._normals,
-                            face_id=face_id)
-        _faces.append(sf) 
-    return _faces
-        
+     
 
 '''
   SelectableEdge(p1, p2)
@@ -247,15 +221,22 @@ class SelectableEdge:
 '''
 class SelectablePoint:
 #  CONSTRUCTORS
-    def __init__(self, x, y, z, normals):
+    def __init__(self, point_id, x, y, z, normals):
         self._p = Vector(x, y, z)
         self._normals = normals
 
         self._selected = False
 
+        self._id = point_id
+
     def __str__(self):
         return '[{}, {}, {}]'.format(self.x, self.y, self.z)
-        
+
+    def __eq__(self, other):
+        return self.x == other.x and self.y == other.y and self.z == other.z
+
+    def __neq__(self, other):
+        return self.x != other.x or self.y != other.y or self.z != other.z
 
 #  ACCESSORS
 
@@ -323,7 +304,7 @@ class SelectablePoint:
 '''
 def toCalculatablePoint(p):
     n = p._normals
-    return SelectablePoint(p.x, -p.z, p.y, [n[0], -n[2], n[1]])
+    return SelectablePoint(0, p.x, -p.z, p.y, [n[0], -n[2], n[1]])
 
 def toCalculatableFace(f):
     p = f.points
@@ -334,4 +315,61 @@ def toCalculatableFace(f):
 
     ns = [p0._normals, p1._normals, p2._normals]
 
-    return SelectableFace([p0, p1, p2], ns, f._id)
+    return SelectableFace(0, [p0, p1, p2], ns)
+
+
+class SelectableMesh:
+    def __init__(self, mesh_data: MeshData):
+        self.points = dict()
+        self.faces = dict()
+
+        nfaces = int(len(mesh_data._vertices) / 3)
+
+        if mesh_data._indices and len(mesh_data._indices) > 0:
+            indices = mesh_data._indices
+        else:
+            indices = None
+
+        vertices = mesh_data._vertices
+        normals = mesh_data._normals
+
+        for f in range(nfaces):
+            if indices:
+                i, j, k = indices[f][0:3]
+            else:
+                base_index = f * 3
+                i = base_index
+                j = base_index + 1
+                k = base_index + 2
+
+            v_a = vertices[i]
+            v_b = vertices[j]
+            v_c = vertices[k]
+
+            n_a = normals[i]
+            n_b = normals[j]
+            n_c = normals[k]
+
+            p_a = self.getOrAddPoint(v_a, n_a)
+            p_b = self.getOrAddPoint(v_b, n_b)
+            p_c = self.getOrAddPoint(v_c, n_c)
+
+            face = SelectableFace(len(self.faces), [p_a, p_b, p_c], [n_a, n_b, n_c])
+
+            self.faces[face._id] = face
+
+    def getOrAddPoint(self, vertex, normal) -> SelectablePoint:
+        '''
+        Retrieves a point if it already exists, else it is added and returns
+        '''
+        point = SelectablePoint(0, float(vertex[0]), float(vertex[1]), float(vertex[2]), normal)
+
+        for pid in self.points.keys():
+            if self.points[pid] == point: # checks coordinate equality
+                return self.points[pid]
+
+        # does not exist, add it
+        point._id = len(self.points)
+        self.points[point._id] = point
+
+        return point   

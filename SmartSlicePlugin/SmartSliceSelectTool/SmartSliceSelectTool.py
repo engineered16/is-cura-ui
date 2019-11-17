@@ -31,8 +31,7 @@ from PyQt5.QtQml import QQmlComponent, QQmlContext # @UnresolvedImport
 from .SmartSliceSelectHandle import SelectionMode
 from .SmartSliceSelectHandle import SmartSliceSelectHandle
 #from .SmartSliceDrawSelection import SmartSliceSelectionVisualizer
-from .FaceSelection import SelectablePoint, SelectableFace
-from .FaceSelection import fromMeshData
+from .FaceSelection import SelectablePoint, SelectableFace, SelectableMesh
 #from .SmartSliceNormalArrow import SmartSliceNormalArrow
 
 
@@ -58,6 +57,9 @@ class SmartSliceSelectTool(Tool):
         self.selectable_faces = []
 
         self._scene = self.getController().getScene()
+        
+        self._scene_name = None
+        self._selectable_mesh = None
 
         self._controller.activeToolChanged.connect(self._onActiveStateChanged)
 
@@ -123,50 +125,38 @@ class SmartSliceSelectTool(Tool):
 
     def _onSelectedFaceChanged(self):
         curr_sf = Selection.getSelectedFace()
+
         if curr_sf is not None:
 
+            # Check if the selectable mesh hasn't been created yet or if the scene name
+            # has changed. This is probably a crappy way to track mesh/scene changes, but
+            # I need to get something working now that doesn't create the SelectableMesh
+            # on every click
             scene_node, face_id = curr_sf
-            mesh_data = scene_node.getMeshData()
-            selectable_faces = fromMeshData(mesh_data)
 
-            norms = []
+            if self._selectable_mesh is None or scene_node.getName() != self._scene_name:
+                mesh_data = scene_node.getMeshData()
 
-            #print(dir(scene_node.getMeshData()))
-            
-            #if not mesh_data._indices or len(mesh_data._indices) == 0:
-            if (mesh_data._indices is None) or (len(mesh_data._indices) == 0):
-                base_index = face_id * 3
-                v_a = mesh_data._vertices[base_index]
-                n_a = mesh_data._normals[base_index]
-                v_b = mesh_data._vertices[base_index+1]
-                n_b = mesh_data._normals[base_index+1]
-                v_c = mesh_data._vertices[base_index+2]
-                n_c = mesh_data._normals[base_index+2]
-            else:
-                v_a = mesh_data._vertices[mesh_data._indices[face_id][0]]
-                n_a = mesh_data._normals[mesh_data._indices[face_id][0]]
-                v_b = mesh_data._vertices[mesh_data._indices[face_id][1]]
-                n_b = mesh_data._normals[mesh_data._indices[face_id][1]]
-                v_c = mesh_data._vertices[mesh_data._indices[face_id][2]]
-                n_c = mesh_data._normals[mesh_data._indices[face_id][2]]
-            
-            p0 = SelectablePoint(float(v_a[0]), float(v_a[1]), float(v_a[2]), n_a)
-            p1 = SelectablePoint(float(v_b[0]), float(v_b[1]), float(v_b[2]), n_b)
-            p2 = SelectablePoint(float(v_c[0]), float(v_c[1]), float(v_c[2]), n_c)
+                self._scene_name = scene_node.getName()
+                self._selectable_mesh = SelectableMesh(mesh_data)
+
+            selmesh = self._selectable_mesh
             
             #  Construct Selectable Face && Draw Selection in canvas
-            sf = SelectableFace([p0, p1, p2],
-                                mesh_data._normals, face_id)
+            #sf = SelectableFace(tri_pts, mesh_data._normals, face_id)
+
+            # Get the SelectableFace by matching the face Id - is this consistent??
+            sf = selmesh.faces[face_id]
+
             self.selected_faces = [sf] # TODO: Rewrite for >1 concurrently selected faces
             #self._visualizer.changeSelection([sf])
 
             self._handle.setFace(sf)
 
             if self.getLoadSelectionActive():
-                self._handle.drawFaceSelection(SelectionMode.LoadMode, draw_arrow=True, other_faces=selectable_faces)
-                
+                self._handle.drawFaceSelection(SelectionMode.LoadMode, selmesh, draw_arrow=True)
             else:
-                self._handle.drawFaceSelection(SelectionMode.AnchorMode, other_faces=selectable_faces)
+                self._handle.drawFaceSelection(SelectionMode.AnchorMode, selmesh)
 
 
             '''

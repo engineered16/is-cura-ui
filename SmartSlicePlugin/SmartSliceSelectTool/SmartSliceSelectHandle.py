@@ -9,6 +9,7 @@
 #   Contains functionality to be triggered upon face selection
 #
 
+import time
 
 #  UM/Cura Imports
 from UM.Logger import Logger
@@ -23,11 +24,10 @@ from UM.Math.Quaternion import Quaternion
 from UM.Math.Vector import Vector
 
 # Local Imports
-from .FaceSelection import SelectableFace
+from .FaceSelection import SelectableFace, SelectableMesh
 from .FaceSelection import toCalculatableFace
 from .Detessellate import isCoplanar, isJointed
 from .SmartSliceSelectionProxy import SmartSliceSelectionConnector
-
 
 # Provides enums
 class SelectionMode:
@@ -55,9 +55,9 @@ class SmartSliceSelectHandle(ToolHandle):
         self._center = self.findCenter()
 
         #  Previously Selected Faces
-        self._loaded_faces = set()
+        self._loaded_faces = []
         self._load_magnitude = 0
-        self._anchored_faces = set()
+        self._anchored_faces = []
 
         #   Arrow Mesh
         self._arrow = None
@@ -91,13 +91,12 @@ class SmartSliceSelectHandle(ToolHandle):
 
         Uses UM's MeshBuilder to construct 3D Arrow mesh and translates/rotates as to be normal to the selected face
     '''
-    def drawFaceSelection(self, mode, draw_arrow = False, other_faces = []):
+    def drawFaceSelection(self, mode, selmesh : SelectableMesh, draw_arrow = False):
         #  Construct Edges using MeshBuilder Cubes
         mb = MeshBuilder()
 
-        Logger.log("d", "Root Face: {}".format(self._tri))
+        #Logger.log("d", "Root Face: {}".format(self._tri))
 
-        f = self._tri
         self._face = set()
 
         if mode == SelectionMode.LoadMode:
@@ -107,45 +106,59 @@ class SmartSliceSelectHandle(ToolHandle):
         #    self.drawNormalArrow()
         #    self.addChild(self._arrow)
 
-        coplanar_faces = set((f,))
+        coplanar_faces = set((self._tri._id,))
         possible_faces = set()
         checked = set()
 
-        for _tri in other_faces:
-            if _tri in checked:
+        start = time.time()
+
+        for fid in selmesh.faces.keys():
+            if fid in checked:
                 continue
 
-            checked.add(_tri)
+            checked.add(fid)
 
-            #Logger.log('d', '{} ->\n{}\n {}'.format(f, _tri, f.normal.angleToVector(_tri.normal)))
+            #Logger.log('d', '{} ->\n{}\n {}'.format(self._tri, _tri, self._tri.normal.angleToVector(_tri.normal)))
 
-            if isCoplanar(f, _tri):
-                possible_faces.add(_tri)
+            if isCoplanar(self._tri, selmesh.faces[fid]):
+                possible_faces.add(fid)
                 
                 #  Paint Faces that are recursively coplanar/jointed
                 # TODO Brady - commented out
                 #self.paintPossibleFaces(mode, mb, _tri, checked)
 
+        Logger.log('d', 'Found {} possible faces in {}'.format(len(possible_faces), time.time() - start))
+
+        start = time.time()
+
         # now filter possible faces into faces that are only connected to the root face
         faces_added = 1
+        face_combos_checked = set()
         while faces_added > 0:
             connected = set()
             for f1 in possible_faces:
                 for f2 in coplanar_faces:
-                    if isJointed(f1, f2):
-                        connected.add(f1)
+                    combo = (f1, f2)
+                    if combo not in face_combos_checked:
+                        face_combos_checked.add(combo)
+                        if isJointed(selmesh.faces[f1], selmesh.faces[f2]):
+                            connected.add(f1)
             faces_added = len(connected)
             for f in connected:
                 coplanar_faces.add(f)
                 possible_faces.remove(f)
 
-        for _tri in coplanar_faces:
-            self.paintFace(_tri, mb)
+        Logger.log('d', 'Found {} connected faces in {}'.format(len(coplanar_faces), time.time() - start))
+
+        face_list = []
+        for fid in coplanar_faces:
+            face_list.append(selmesh.faces[fid])
+            self.paintFace(selmesh.faces[fid], mb)
 
         if mode == SelectionMode.LoadMode:
-            self._loaded_faces = coplanar_faces
+            self._loaded_faces = face_list
         else:
-            self._anchored_faces = coplanar_faces
+            self._anchored_faces = face_list
 
         #  Add to Cura Scene
         self.setSolidMesh(mb.build())
@@ -153,9 +166,6 @@ class SmartSliceSelectHandle(ToolHandle):
         #Logger.log("d", "Anchor Faces: {}".format([f._id for f in self._anchored_faces]))
         #Logger.log("d", "Load Faces: {}".format([f._id for f in self._loaded_faces]))
         #Logger.log("d", "Load Vector: {}".format(self.getLoadVector()))
-        
-        #lv = self.getLoadVector()
-        #print ("NORMAL FORCE: (" + str(lv.x) + ", " + str(lv.y) + ", " + str(lv.z) + ")")
 
 
     '''
