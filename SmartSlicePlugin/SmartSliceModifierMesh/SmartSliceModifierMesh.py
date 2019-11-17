@@ -8,41 +8,58 @@
 #
 
 
-from .py3mf.threemf.mesh import mesh
 
 #  Cura's Imports
+from UM.Application import Application
+
+from UM.Scene.SceneNode import SceneNode
+
 from UM.Mesh.MeshData import MeshData
 from UM.Mesh.MeshBuilder import MeshBuilder
 
 from UM.Math.Vector import Vector
 
-#  Local Imports
-from .FaceSelection import SelectableFace
-from .FaceSelection import   toCalculatablePoint,   toCalculatableFace
-from .FaceSelection import fromCalculatablePoint, fromCalculatableFace
 
 
-class SmartSliceModifierMesh(MeshData):
+class SmartSliceModifierMesh(SceneNode):
 
 #  CONSTRUCTORS
     
     '''
-      SmartSliceModifierMesh()
+      SmartSliceModifierMesh(result_mesh)
+        result_mesh: PyWim Mesh 
 
         Each SmartSliceModifierMesh is a MeshData with 'ModifierMesh' attributes.
         These are affected by factors such as DENSITY and PATTERN.
     '''
-    def __init__(self):
+    def __init__(self, result_mesh=None):
         super().__init__()
+
+        #   Connect Modifier Mesh to Cura Application
+        Application.getInstance().engineCreatedSignal.connect(self._engineCreated)
+        
+        #   Get Reference to Controller
+        self._controller = Application.getInstance().getController()
+        self._id = 0
+        self._version = 0
+        self._meta_data = None
 
         #  Initialize Modifier Mesh Properties
         self._pattern = None
         self._density = 0.
 
+        #  Lists of Faces/Vertices for Reference
         self._faces = []
         self._verts = []
+        
+
+        #  Build a Cura MeshData object from PyWim Result and set SceneNode's MeshData
+        if result_mesh is not None:
+            self.setMeshData(self.getCuraMesh(result_mesh))
 
 
+    def _engineCreated(self):
+        1 + 1 #  STUB
 
 
 #  ACCESSORS
@@ -84,12 +101,10 @@ class SmartSliceModifierMesh(MeshData):
       getMesh(_mesh)
         _mesh: PyWim Mesh
 
-        Populates SmartSliceModifierMesh (inherits MeshData) data with PyWim result mesh
+        Returns a MeshData object for Cura/UM libraries, which
+            corresponds to the given PyWim Mesh
     '''
-    def getMesh(self, _mesh):
-        '''
-        TODO: Get CalculatablePoints and CalculatableFaces from PyWim
-        '''
+    def getCuraMesh(self, _mesh):
         mb = MeshBuilder()
 
         _tris = _mesh.triangles
@@ -117,7 +132,14 @@ class SmartSliceModifierMesh(MeshData):
         # FOR DEBUGGING: Return Mesh_data
         return mesh_data
         
-        
-        
 
+  #  Cura Plugin Overrides
+    def setVersion(self, ver):
+        self._version = ver
+
+    def setMetaData(self, md):
+        self._meta_data = md
+
+    def setPluginId(self, _id):
+        self._id = _id
 
