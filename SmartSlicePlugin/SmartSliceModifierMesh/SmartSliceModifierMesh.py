@@ -27,6 +27,9 @@ from UM.Mesh.MeshBuilder import MeshBuilder
 
 from UM.Scene.SceneNode import SceneNode
 
+#  Local Imports
+from .PreviewModifierMesh import PreviewModifierMesh
+
 
 class SmartSliceModifierMesh(SceneNode):
 
@@ -54,15 +57,21 @@ class SmartSliceModifierMesh(SceneNode):
         #  Initialize Modifier Mesh Properties
         self._pattern = None
         self._density = 0.
+        self._pmm = PreviewModifierMesh(self)
+        self.addInfillProperty()
 
         #  Lists of Faces/Vertices for Reference
         self._faces = []
         self._verts = []
 
-        #  Signal Connection
+        #  Signal Connections
         #       Emits a Signal when the infill MeshData changes
         self.meshPropertiesChanged = Signal()
-        
+        '''
+            TODO:  connect PreviewModifierMesh to 'Preview' button signal in SmartSliceStage
+
+             ***.connect(self._pmm.preview())
+        '''
 
     def _engineCreated(self):
         1 + 1 #  STUB
@@ -104,6 +113,36 @@ class SmartSliceModifierMesh(SceneNode):
 
 
     '''
+      addInfillProperty()
+
+        Sets this SceneNode's mesh attribute to exclusively 'infill_mesh'
+    '''
+    def addInfillProperty(self):
+        #  Add Settings Override Decorator to this SceneNode
+        #       This can be used to override the infill thread density
+        stack = self.callDecoration("getStack")
+        if not stack:
+            self.addDecorator(SettingOverrideDecorator())
+            stack = self.callDecoration("getStack")
+
+        #  Get Settings for this Modifier Mesh
+        settings = stack.getTop()
+
+        #  Set mesh properties exclusively to 'infill_mesh'
+        for property_key in ["infill_mesh", "cutting_mesh", "support_mesh", "anti_overhang_mesh"]:
+            if property_key != "infill_mesh":
+                if settings.getInstance(property_key):
+                    settings.removeInstance(property_key)
+            else:
+                if not (settings.getInstance(property_key) and settings.getProperty(property_key, "value")):
+                    definition = stack.getSettingDefinition(property_key)
+                    new_instance = SettingInstance(definition, settings)
+                    new_instance.setProperty("value", True)
+                    new_instance.resetState()  # Ensure that the state is not seen as a user state.
+                    settings.addInstance(new_instance)
+
+
+    '''
       getMesh(_mesh)
         _mesh: PyWim Mesh
 
@@ -131,29 +170,6 @@ class SmartSliceModifierMesh(SceneNode):
 
         #  Build meshes into a MeshData Object
         mesh_data = mb.build()
-
-        #  Add Settings Override Decorator to this SceneNode
-        #       This can be used to override the infill thread density
-        stack = self.callDecoration("getStack")
-        if not stack:
-            self.addDecorator(SettingOverrideDecorator())
-            stack = self.callDecoration("getStack")
-
-        #  Get Settings for this Modifier Mesh
-        settings = stack.getTop()
-
-        #  Set mesh properties exclusively to 'infill_mesh'
-        for property_key in ["infill_mesh", "cutting_mesh", "support_mesh", "anti_overhang_mesh"]:
-            if property_key != "infill_mesh":
-                if settings.getInstance(property_key):
-                    settings.removeInstance(property_key)
-            else:
-                if not (settings.getInstance(property_key) and settings.getProperty(property_key, "value")):
-                    definition = stack.getSettingDefinition(property_key)
-                    new_instance = SettingInstance(definition, settings)
-                    new_instance.setProperty("value", True)
-                    new_instance.resetState()  # Ensure that the state is not seen as a user state.
-                    settings.addInstance(new_instance)
 
         #  Build a Cura MeshData object from PyWim Result and set SceneNode's MeshData
         if _mesh is not None:
