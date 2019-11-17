@@ -1,11 +1,16 @@
-# Facet.py
+# FaceSelection.py
 # Teton Simulation
-# Authored on   November 1, 2019
-# Last Modified November 1, 2019
+# Authored on   November  1, 2019
+# Last Modified November 16, 2019
 
 #
 # Contains definitions for Cura Smart Slice Selectable Faces
 #
+
+'''
+    SelectableFace are always in terms of Cura's coordinate system
+    CalculatableFace are always in terms of PyWim's coordinate system
+'''
 
 
 #  STANDARD IMPORTS
@@ -298,6 +303,10 @@ class SelectablePoint:
         self._p.z(new_z)
 
 
+#
+# CONVENIENCE UTILITIES
+#
+
 '''
   toCalculatablePoint(p)
     p: SelectablePoint
@@ -317,6 +326,19 @@ def toCalculatableFace(f):
 
     return SelectableFace(0, [p0, p1, p2], ns)
 
+'''
+  fromCalculatablePoint(x, y,  z)
+    x, y, z : real numbers
+'''
+def fromCalculatablePoint(x, y, z, vnormals=[[],[],[]]):
+    return SelectablePoint(x, z, -y, vnormals)
+
+
+'''
+  fromCalculatableFace(points, normals)
+'''
+def fromCalculatableFace(points, normals=[]):
+    return SelectableFace(points, normals)
 
 class SelectableMesh:
     def __init__(self, mesh_data: MeshData):
