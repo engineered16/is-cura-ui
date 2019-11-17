@@ -29,18 +29,31 @@ from PyQt5.QtNetwork import QNetworkRequest
 from PyQt5.QtNetwork import QNetworkAccessManager
 from PyQt5.QtQml import qmlRegisterSingletonType
 
+# Uranium
 from UM.i18n import i18nCatalog
 from UM.Application import Application
 from UM.Job import Job
 from UM.Logger import Logger
+from UM.Math.Matrix import Matrix
+from UM.Math.Vector import Vector
+from UM.Mesh.MeshBuilder import MeshBuilder
 from UM.Message import Message
+from UM.Operations.AddSceneNodeOperation import AddSceneNodeOperation
+from UM.Operations.GroupedOperation import GroupedOperation
 from UM.PluginRegistry import PluginRegistry
 from UM.Scene.SceneNode import SceneNode
 from UM.Scene.Iterator.DepthFirstIterator import DepthFirstIterator
+from UM.Settings.SettingInstance import SettingInstance
 
+# Cura
 from cura.OneAtATimeIterator import OneAtATimeIterator
+from cura.Operations.SetParentOperation import SetParentOperation
 from cura.Settings.ExtruderManager import ExtruderManager
+from cura.Scene.BuildPlateDecorator import BuildPlateDecorator
+from cura.Scene.CuraSceneNode import CuraSceneNode
+from cura.Scene.SliceableObjectDecorator import SliceableObjectDecorator
 
+# Our extension
 from .SmartSliceCloudProxy import SmartSliceCloudStatus
 from .SmartSliceCloudProxy import SmartSliceCloudProxy
 
@@ -122,12 +135,12 @@ class SmartSliceCloudJob(Job):
         super().__init__()
         self.connector = connector
         self.job_type = None
-        
+
         self.cancled = False
-        
+
         self._job_status = None
         self._wait_time = 1.0
-        
+
         self.ui_status_per_job_type = {pywim.smartslice.job.JobType.validation : SmartSliceCloudStatus.BusyValidating,
                                        pywim.smartslice.job.JobType.optimization : SmartSliceCloudStatus.BusyOptimizing,
                                        }
@@ -172,12 +185,12 @@ class SmartSliceCloudJob(Job):
             abs_private_subdirectory_name = os.path.join(temporary_directory,
                                                          private_subdirectory_name)
             private_subdirectory_suffix_num += 1
-        
+
         if not os.path.exists(abs_private_subdirectory_name):
             os.makedirs(abs_private_subdirectory_name)
-        
+
         return abs_private_subdirectory_name
-        
+
     # Sending jobs to AWS
     # - jtype: Job type to be sent. Can be either:
     #          > pywim.smartslice.job.JobType.validation
@@ -185,12 +198,12 @@ class SmartSliceCloudJob(Job):
     def prepareJob(self, jtype):
         # Using tempfile module to probe for a temporary file path
         # TODO: We can do this more elegant of course, too.
-        
+
         # Setting up file output
         filename = "{}.3mf".format(uuid.uuid1())
         filedir = self.determineTempDirectory()
         filepath = os.path.join(filedir, filename)
-        
+
         Logger.log("d", "Saving temporary (and custom!) 3MF file at: {}".format(filepath))
 
         # Checking whether count of models == 1
@@ -208,7 +221,7 @@ class SmartSliceCloudJob(Job):
 
         if not os.path.exists(filepath):
             return None
-        
+
         return filepath
 
     def processCloudJob(self, filepath):
@@ -216,11 +229,11 @@ class SmartSliceCloudJob(Job):
         threemf_fd = open(filepath, 'rb')
         threemf_data = threemf_fd.read()
         threemf_fd.close()
-    
+
         # Submit the 3MF data for a new task
         task = self._client.submit.post(threemf_data)
         Logger.log("d", "Status after post'ing: {}".format(task.status))
-        
+
         # While the task status is not finished or failed continue to periodically
         # check the status. This is a naive way of waiting, since this could take
         # a while (minutes).
@@ -228,17 +241,17 @@ class SmartSliceCloudJob(Job):
                                   pywim.http.thor.TaskStatus.finished
                                   ) and not self.cancled:
             self.job_status = task.status
-            
+
             time.sleep(self._wait_time)
             task = self._client.status.get(id=task.id)
-        
+
         if not self.cancled:
             if task.status == pywim.http.thor.TaskStatus.failed:
                 error_message = Message()
                 error_message.setTitle("SmartSlice plugin")
                 error_message.setText(i18n_catalog.i18nc("@info:status", "Error while processing the job:\n{}".format(task.error)))
                 error_message.show()
-    
+
                 Logger.log("e", "An error occured while sending and receiving cloud job: {}".format(task.error))
                 return None
             elif task.status == pywim.http.thor.TaskStatus.finished:
@@ -250,7 +263,7 @@ class SmartSliceCloudJob(Job):
                 error_message.setTitle("SmartSlice plugin")
                 error_message.setText(i18n_catalog.i18nc("@info:status", "Unexpected status occured:\n{}".format(task.error)))
                 error_message.show()
-                
+
                 Logger.log("e", "An unexpected status occured while sending and receiving cloud job: {}".format(task.status))
                 return None
         else:
@@ -265,33 +278,103 @@ class SmartSliceCloudJob(Job):
             error_message.setTitle("SmartSlice plugin")
             error_message.setText(i18n_catalog.i18nc("@info:status", "Job type not set for processing:\nDon't know what to do!"))
             error_message.show()
-        
+
         # TODO: Add instructions how to send a verification job here
         previous_connector_status = self.connector.status
         self.connector.status = self.ui_status_per_job_type[self.job_type]
         Job.yieldThread()  # Should allow the UI to update earlier
-        
+
         job = self.prepareJob(self.job_type)
         Logger.log("i", "Job prepared: {}".format(job))
         task = self.processCloudJob(job)
-        
+
         # self.job_type == pywim.smartslice.job.JobType.optimization
         if task:
             result = task.result
             if result:
                 analyse = result.analyses[0]
                 Logger.log("d", "analyse: {}".format(analyse))
-                Logger.log("d", "analyse.mass: {}".format(analyse.mass))
-                Logger.log("d", "analyse.print_time: {}".format(analyse.print_time))
                 Logger.log("d", "analyse.modifier_meshes: {}".format(analyse.modifier_meshes))
+                
+                # MODIFIER MESHES STUFF
+                # TODO: We need a per node solution here as soon as we want to analyse multiple models.
+                our_only_node =  self.connector.getSliceableNodes()[0]
+                #our_only_node_stack = our_only_node.callDecoration("getStack")
+                for modifier_mesh in analyse.modifier_meshes:
+                    # Building the scene node
+                    modifier_mesh_node = CuraSceneNode()
+                    modifier_mesh_node.setName("SmartSliceMeshModifier")
+                    modifier_mesh_node.setSelectable(True)
+                    modifier_mesh_node.setCalculateBoundingBox(True)
+                    
+                    # Building the mesh
+                    
+                    # # Preparing the data from pywim for MeshBuilder
+                    modifier_mesh_vertices = [[v.x, v.y, v.z] for v in modifier_mesh.vertices ]
+                    modifier_mesh_indices = [[triangle.v1, triangle.v2, triangle.v3] for triangle in modifier_mesh.triangles]
+                    
+                    # # Doing the actual build
+                    modifier_mesh_data = MeshBuilder()
+                    modifier_mesh_data.setVertices(numpy.asarray(modifier_mesh_vertices, dtype=numpy.float32))
+                    modifier_mesh_data.setIndices(numpy.asarray(modifier_mesh_indices, dtype=numpy.int32))
+                    modifier_mesh_data.calculateNormals()
+
+                    modifier_mesh_node.setMeshData(modifier_mesh_data.build())
+                    modifier_mesh_node.calculateBoundingBoxMesh()
+                    
+                    active_build_plate = Application.getInstance().getMultiBuildPlateModel().activeBuildPlate
+                    modifier_mesh_node.addDecorator(BuildPlateDecorator(active_build_plate))
+                    modifier_mesh_node.addDecorator(SliceableObjectDecorator())
+                    
+                    stack = modifier_mesh_node.callDecoration("getStack")
+                    settings = stack.getTop()
+                    
+                    modifier_mesh_node_infill_pattern = self.connector.infill_pattern_pywim_to_cura_dict[modifier_mesh.print_config.infill.pattern]
+                    definition_dict = {
+                        "infill_mesh" : True,
+                        "infill_pattern" : modifier_mesh_node_infill_pattern,
+                        "infill_sparse_density": modifier_mesh.print_config.infill.density, 
+                        }
+                    Logger.log("d", "definition_dict: {}".format(definition_dict))
+                    
+                    for key, value in definition_dict.items():
+                        definition = stack.getSettingDefinition(key)
+                        new_instance = SettingInstance(definition, settings)
+                        new_instance.setProperty("value", value)
+                        
+                        new_instance.resetState()  # Ensure that the state is not seen as a user state.
+                        settings.addInstance(new_instance)
+            
+                    op = GroupedOperation()
+                    # First add node to the scene at the correct position/scale, before parenting, so the eraser mesh does not get scaled with the parent
+                    op.addOperation(AddSceneNodeOperation(modifier_mesh_node,
+                                                          Application.getInstance().getController().getScene().getRoot()
+                                                          )
+                                    )
+                    op.addOperation(SetParentOperation(modifier_mesh_node,
+                                                       our_only_node)
+                                    )
+                    op.push()
+                    
+                    # TODO: Not needed during POC. Decision needed whether this is superfluous or not.
+                    #modifier_mesh_transform_matrix = Matrix(modifier_mesh.transform)
+                    #modifier_mesh_node.setTransformation(modifier_mesh_transform_matrix)
+                    
+                    our_only_node_position = our_only_node.getWorldPosition()
+                    modifier_mesh_node.setPosition(our_only_node_position,
+                                                   SceneNode.TransformSpace.World)
+                    Logger.log("d", "Moved modifiers to the global location: {}".format(our_only_node_position))
+
+                    Application.getInstance().getController().getScene().sceneChanged.emit(modifier_mesh_node)
+
 
                 self.connector._proxy.resultSafetyFactor = analyse.structural.min_safety_factor
                 self.connector._proxy.resultMaximalDisplacement = analyse.structural.max_displacement
-                
+
                 qprint_time = QTime(0, 0, 0, 0)
                 qprint_time.addSecs(analyse.print_time)
                 self.connector._proxy.resultTimeTotal = qprint_time
-                
+
                 # TODO: Reactivate the block as soon as we have the single print times again!
                 #self.connector._proxy.resultTimeInfill = QTime(1, 0, 0, 0)
                 #self.connector._proxy.resultTimeInnerWalls = QTime(0, 20, 0, 0)
@@ -300,18 +383,18 @@ class SmartSliceCloudJob(Job):
                 #self.connector._proxy.resultTimeSkin = QTime(0, 10, 0, 0)
                 #self.connector._proxy.resultTimeSkirt = QTime(0, 1, 0, 0)
                 #self.connector._proxy.resultTimeTravel = QTime(0, 30, 0, 0)
-            
+
                 material_volumina = [analyse.mass]  # TODO: rename mass to volume and provide per extruder volume on the future
                 material_extra_info = self.connector._calculateAdditionalMaterialInfo(material_volumina)
                 Logger.log("d", "material_extra_info: {}".format(material_extra_info))
-                
+
                 # for pos in len(material_volumina):
                 pos = 0
                 self.connector._proxy.materialWeight = material_extra_info[0][pos]
                 self.connector._proxy.materialCost = material_extra_info[1][pos]
                 self.connector._proxy.materialLength = material_extra_info[2][pos]
                 self.connector._proxy.materialName = material_extra_info[3][pos]
-                
+
                 # Overriding if our result is going to be optimized...
                 if previous_connector_status in SmartSliceCloudStatus.Optimizable:
                     self.connector.status = SmartSliceCloudStatus.Optimized
@@ -331,7 +414,7 @@ class SmartSliceCloudVerificationJob(SmartSliceCloudJob):
 
     def __init__(self, connector) -> None:
         super().__init__(connector)
-        
+
         self.job_type = pywim.smartslice.job.JobType.validation
 
 
@@ -339,7 +422,7 @@ class SmartSliceCloudOptimizeJob(SmartSliceCloudVerificationJob):
 
     def __init__(self, connector) -> None:
         super().__init__(connector)
-        
+
         self.job_type = pywim.smartslice.job.JobType.optimization
 
 
@@ -348,22 +431,27 @@ class SmartSliceCloudConnector(QObject):
     http_hostname_preference = "smartslice/http_hostname"
     http_port_preference = "smartslice/http_port"
     http_token_preference = "smartslice/token"
-    
+
     def __init__(self, extension):
         super().__init__()
         self.extension = extension
-        
-        # Variables 
+
+        # Variables
         self._job = None
-        
+        self.infill_pattern_cura_to_pywim_dict = {"grid": pywim.am.InfillType.grid,
+                                                  "triangles": pywim.am.InfillType.triangle,
+                                                  "cubic": pywim.am.InfillType.cubic
+                                                  }
+        self.infill_pattern_pywim_to_cura_dict = {value: key for key, value in self.infill_pattern_cura_to_pywim_dict.items()}
+
         # Proxy
         self._proxy = SmartSliceCloudProxy(self)
         self._proxy.sliceButtonClicked.connect(self.onSliceButtonClicked)
-        
+
         # Connecting signals
         self.doVerification.connect(self._doVerfication)
         self.doOptimization.connect(self._doOptimization)
-        
+
         # Application stuff
         preferences = Application.getInstance().getPreferences()
         preferences.addPreference(self.http_protocol_preference, "https")
@@ -371,12 +459,15 @@ class SmartSliceCloudConnector(QObject):
         preferences.addPreference(self.http_port_preference, 443)
         preferences.addPreference(self.http_token_preference, "")
         Application.getInstance().activityChanged.connect(self._onApplicationActivityChanged)
-        
+
         # Caches
         self._all_extruders_settings = None
-        
+
         # POC
         self._poc_default_infill_direction = 45
+        self.resetAnchor0FacesPoc()
+        self.resetForce0FacesPoc()
+        self.resetForce0VectorPoc()
 
     def getProxy(self, engine, script_engine):
         return self._proxy
@@ -388,7 +479,7 @@ class SmartSliceCloudConnector(QObject):
                                  "Cloud",
                                  self.getProxy
                                  )
-        
+
         self.status = SmartSliceCloudStatus.InvalidInput
 
     def updateSliceWidget(self):
@@ -424,15 +515,15 @@ class SmartSliceCloudConnector(QObject):
             self._proxy.sliceButtonEnabled = False
         elif self.status is SmartSliceCloudStatus.Optimized:
             self._proxy.sliceStatus = "Part optimized"
-            self._proxy.sliceHint = "Well done! Now your part suites your needs!"
-            self._proxy.sliceButtonText = "Done"
-            self._proxy.sliceButtonEnabled = False
+            self._proxy.sliceHint = "Well done! You can review the results!"
+            self._proxy.sliceButtonText = "Preview"
+            self._proxy.sliceButtonEnabled = True
         else:
             self._proxy.sliceStatus = "! INTERNAL ERRROR!"
             self._proxy.sliceHint = "! UNKNOWN STATUS ENUM SET!"
             self._proxy.sliceButtonText = "! FOOO !"
             self._proxy.sliceButtonEnabled = False
-    
+
         # Setting icon path
         stage_path = PluginRegistry.getInstance().getPluginPath("SmartSliceStage")
         stage_images_path = os.path.join(stage_path, "images")
@@ -445,7 +536,7 @@ class SmartSliceCloudConnector(QObject):
         elif self.status is SmartSliceCloudStatus.Underdimensioned:
             current_icon = icon_error_red
         self._proxy.sliceIconImage = current_icon
-        
+
         # Setting icon visibiltiy
         if self.status in (SmartSliceCloudStatus.Optimized,) + SmartSliceCloudStatus.Optimizable:
             self._proxy.sliceIconVisible = True
@@ -455,26 +546,26 @@ class SmartSliceCloudConnector(QObject):
     @property
     def status(self):
         return self._proxy.sliceStatusEnum
-    
+
     @status.setter
     def status(self, value):
         Logger.log("d", "Setting status: {} -> {}".format(self._proxy.sliceStatusEnum, value))
         if self._proxy.sliceStatusEnum is not value:
             self._proxy.sliceStatusEnum = value
         self.updateSliceWidget()
-    
+
     @property
     def token(self):
         return Application.getInstance().getPreferences().getValue(self.token_preference)
-    
+
     @token.setter
     def token(self, value):
         Application.getInstance().getPreferences().setValue(self.token_preference, value)
-    
+
     def login(self):
         # username = self._proxy.loginName()
         # password = self._proxy.loginPassword()
-        
+
         if True:
             self.token = "123456789qwertz"
             return True
@@ -494,48 +585,49 @@ class SmartSliceCloudConnector(QObject):
 
     def _onApplicationActivityChanged(self):
         slicable_nodes_count = len(self.getSliceableNodes())
-        
+
         # TODO: Add check for anchors and loads here!
-        
+
         if self.status is SmartSliceCloudStatus.InvalidInput:
             if slicable_nodes_count == 1:
                 self.status = SmartSliceCloudStatus.ReadyToVerify
-        else:
+        elif self.status is SmartSliceCloudStatus.ReadyToVerify:
             if slicable_nodes_count != 1:
                 self.status = SmartSliceCloudStatus.InvalidInput
-    
+        else:
+            # Ignore our infill meshes
+            pass
+
     def _onJobFinished(self, job):
         self._job = None
-    
+
     doVerification = pyqtSignal()
-    
+
     def _doVerfication(self):
         self._job = SmartSliceCloudVerificationJob(self)
         self._job.finished.connect(self._onJobFinished)
         self._job.start()
-    
+
     doOptimization = pyqtSignal()
-    
+
     def _doOptimization(self):
         self._job = SmartSliceCloudOptimizeJob(self)
         self._job.finished.connect(self._onJobFinished)
         self._job.start()
-    
+
     def onSliceButtonClicked(self):
         if not self._job:
             if self.status is SmartSliceCloudStatus.ReadyToVerify:
                 self.doVerification.emit()
             elif self.status in SmartSliceCloudStatus.Optimizable:
                 self.doOptimization.emit()
+            elif self.status is SmartSliceCloudStatus.Optimized:
+                Application.getInstance().getController().setActiveStage("PreviewStage")
         else:
             error_message = Message()
             error_message.setTitle("SmartSlice plugin")
             error_message.setText(i18n_catalog.i18nc("@info:status", "Slice job is already running!"))
             error_message.show()
-
-    @property
-    def variables(self):
-        return self.extension.getVariables(None, None)
 
     def prepareInitial3mf(self, threemf_path, mesh_nodes):
         # Getting 3MF writer and write our file
@@ -548,13 +640,13 @@ class SmartSliceCloudConnector(QObject):
         global_stack = Application.getInstance().getGlobalContainerStack()
         machine_manager = Application.getInstance().getMachineManager()
         active_machine = machine_manager.activeMachine
-        
+
         # NOTE: As agreed during the POC, we want to analyse and optimize only one model at the moment.
         #       The lines below will partly need to be executed as "for model in models: bla bla.."
         mesh_node = mesh_nodes[0]
-        
+
         mesh_node_stack = mesh_node.callDecoration("getStack")
-        
+
         active_extruder_position = mesh_node.callDecoration("getActiveExtruderPosition")
         if active_extruder_position is None:
             active_extruder_position = 0
@@ -572,7 +664,7 @@ class SmartSliceCloudConnector(QObject):
 
         # TODO: Needs to be determined from the used model
         guid = material_guids_per_extruder[active_extruder_position]
-        
+
         # Determine material properties from material database
         this_dir = os.path.split(__file__)[0]
         database_location = os.path.join(this_dir, "data", "POC_material_database.json")
@@ -584,15 +676,15 @@ class SmartSliceCloudConnector(QObject):
             if guid in material["cura-guid"]:
                 material_found = material
                 break
-        
+
         if not material_found:
             # TODO: Alternatively just raise an exception here
             return False
-        
+
         job = pywim.smartslice.job.Job()
 
         job.type = job_type
-    
+
         # Create the bulk material definition. This likely will be pre-defined
         # in a materials database or file somewhere
         job.bulk = pywim.fea.model.Material(name=material_found["name"])
@@ -603,72 +695,72 @@ class SmartSliceCloudConnector(QObject):
                                                        properties={'Sy': material_found['failure_yield']['Sy']}
                                                        )
         job.bulk.fracture = pywim.fea.model.Fracture(material_found['fracture']['KIc'])
-    
+
         # Setup optimization configuration
         job.optimization.min_safety_factor = self._proxy.targetFactorOfSafety
         job.optimization.max_displacement = self._proxy.targetMaximalDisplacement
-    
+
         # Setup the chop model - chop is responsible for creating an FEA model
         # from the triangulated surface mesh, slicer configuration, and
         # the prescribed boundary conditions
-        
+
         # The chop.model.Model class has an attribute for defining
         # the mesh, however, it's not necessary that we do so.
         # When the back-end reads the 3MF it will obtain the mesh
-        # from the 3MF object model, therefore, defining it in the 
+        # from the 3MF object model, therefore, defining it in the
         # chop object would be redundant.
         # job.chop.meshes.append( ... ) <-- Not necessary
-    
+
         # Define the load step for the FE analysis
         step = pywim.chop.model.Step(name='default')
-    
+
         # Create the fixed boundary conditions (anchor points)
         anchor1 = pywim.chop.model.FixedBoundaryCondition(name='anchor1')
-    
+
         # Add the face Ids from the STL mesh that the user selected for
         # this anchor
         anchor1.face.extend(
-            (234, 235)
+            self.getAnchor0FacesPoc()
         )
-    
+
         step.boundary_conditions.append(anchor1)
-    
+
         # Add any other boundary conditions in a similar manner...
-    
+
         # Create an applied force
         force1 = pywim.chop.model.Force(name='force1')
-    
+
         # Set the components on the force vector. In this example
         # we have 100 N, 200 N, and 50 N in the x, y, and z
         # directions respectfully.
         force1.force.set(
-            (2., 0., 0.)
+            self.getForce0VectorPoc()
         )
-    
+
         # Add the face Ids from the STL mesh that the user selected for
         # this force
         force1.face.extend(
-            (226, 225, 227, 224, 223, 222)
+            self.getForce0FacesPoc()
         )
-    
+
         step.loads.append(force1)
-    
+
         # Add any other loads in a similar manner...
-    
+
         # Append the step definition to the chop model. Smart Slice only
         # supports one step right now. In the future we may allow multiple
         # loading steps.
         job.chop.steps.append(step)
-    
+
         # Now we need to setup the print/slicer configuration
-        
+
         print_config = pywim.am.Config()
         print_config.layer_width = active_machine.getProperty("line_width", "value")
         print_config.layer_height = active_machine.getProperty("layer_height", "value")
         print_config.walls = mesh_node_stack.getProperty("wall_line_count", "value")
-        
+
         # skin angles - CuraEngine vs. pywim
-        # > https://github.com/Ultimaker/CuraEngine/blob/master/src/FffGcodeWriter.cpp#L402 
+        # > https://github.com/Ultimaker/CuraEngine/blob/master/src/FffGcodeWriter.cpp#L402
         skin_angles = active_machine.getProperty("skin_angles", "value")
         if type(skin_angles) is str:
             skin_angles = eval(skin_angles)
@@ -676,23 +768,19 @@ class SmartSliceCloudConnector(QObject):
             print_config.skin_orientations.extend(tuple(skin_angles))
         else:
             print_config.skin_orientations.extend((45, 135))
-        
+
         print_config.bottom_layers = mesh_node_stack.getProperty("top_layers", "value")
         print_config.top_layers = mesh_node_stack.getProperty("bottom_layers", "value")
-        
-        # infill pattern - Cura vs. pywim 
+
+        # infill pattern - Cura vs. pywim
         infill_pattern = mesh_node_stack.getProperty("infill_pattern", "value")
-        infill_pattern_to_pywim_dict = {"grid": pywim.am.InfillType.grid,
-                                        "triangles": pywim.am.InfillType.triangle,
-                                        "cubic": pywim.am.InfillType.cubic
-                                        }
-        if infill_pattern in infill_pattern_to_pywim_dict.keys():
-            print_config.infill.pattern = infill_pattern_to_pywim_dict[infill_pattern]
+        if infill_pattern in self.infill_pattern_cura_to_pywim_dict.keys():
+            print_config.infill.pattern = self.infill_pattern_cura_to_pywim_dict[infill_pattern]
         else:
             print_config.infill.pattern = pywim.am.InfillType.unknown
-        
+
         print_config.infill.density = mesh_node_stack.getProperty("infill_sparse_density", "value")
-        
+
         # infill_angles - Setting defaults from the CuraEngine
         # > https://github.com/Ultimaker/CuraEngine/blob/master/src/FffGcodeWriter.cpp#L366
         infill_angles = mesh_node_stack.getProperty("infill_angles", "value")
@@ -707,12 +795,12 @@ class SmartSliceCloudConnector(QObject):
                 Logger.log("d", "Ignoring the angles: {}".format(infill_angles[1:]))
             print_config.infill.orientation = infill_angles[0]
         # ... and so on, check pywim.am.Config for full definition
-    
+
         # The am.Config contains an "auxiliary" dictionary which should
         # be used to define the slicer specific settings. These will be
         # passed on directly to the slicer (CuraEngine).
         print_config.auxiliary = self._buildGlobalSettingsMessage()
-    
+
         # Setup the slicer configuration. See each class for more
         # information.
         extruders = ()
@@ -723,15 +811,15 @@ class SmartSliceCloudConnector(QObject):
             extruder_object.id = pickled_info["id"]
             extruder_object.print_config.auxiliary = pickled_info["settings"]
             extruders += (extruder_object,)
-        
+
         printer = pywim.chop.machine.Printer(name=active_machine.getName(),
                                              extruders=extruders
                                              )
-    
+
         # And finally set the slicer to the Cura Engine with the config and printer defined above
         job.chop.slicer = pywim.chop.slicer.CuraEngine(config=print_config,
                                                        printer=printer)
-    
+
         threemf_file = zipfile.ZipFile(filepath, 'a')
         threemf_file.writestr('SmartSlice/job.json',
                               job.to_json()
@@ -740,7 +828,50 @@ class SmartSliceCloudConnector(QObject):
 
         return True
 
-    # #  Check if a node has per object settings and ensure that they are set correctly in the message
+    def setForce0VectorPoc(self, x, y, z):
+        load_vector = (x, y, z)
+        if load_vector != self._poc_force0_vector:
+            Logger.log("d", "Changing load vector to: {}".format(load_vector))
+            self._poc_force0_vector = load_vector
+
+    def resetForce0VectorPoc(self):
+        self._poc_force0_vector = (0, 0, 0)
+
+    def getForce0VectorPoc(self):
+        native_vector = ()
+        for component in self._poc_force0_vector:
+            if type(component) is numpy.float64:
+                component = component.item()
+            native_vector += (component, )
+        return native_vector
+
+    def appendForce0FacesPoc(self, face_ids):
+        face_ids = tuple(face_ids)
+        for face_id in face_ids:
+            if face_id not in self._poc_force0_faces:
+                Logger.log("d", "Adding new face to force0: {}".format(face_id))
+                self._poc_force0_faces += (face_id, )
+
+    def resetForce0FacesPoc(self):
+        self._poc_force0_faces = ()
+
+    def getForce0FacesPoc(self):
+        return self._poc_force0_faces
+
+    def appendAnchor0FacesPoc(self, face_ids):
+        face_ids = tuple(face_ids)
+        for face_id in face_ids:
+            if face_id not in self._poc_anchor0_faces:
+                Logger.log("d", "Adding new face to anchor0: {}".format(face_id))
+                self._poc_anchor0_faces += (face_id, )
+
+    def resetAnchor0FacesPoc(self):
+        self._poc_anchor0_faces = ()
+
+    def getAnchor0FacesPoc(self):
+        return self._poc_anchor0_faces
+
+    ##  Check if a node has per object settings and ensure that they are set correctly in the message
     #   \param node Node to check.
     #   \param message object_lists message to put the per object settings in
     def _handlePerObjectSettings(self, node):
@@ -776,11 +907,11 @@ class SmartSliceCloudConnector(QObject):
                 limited_stack = stack
 
             setting["value"] = str(limited_stack.getProperty(key, "value"))
-            
+
             settings.append(setting)
-        
+
         return settings
-    
+
     def _cacheAllExtruderSettings(self):
         global_stack = Application.getInstance().getGlobalContainerStack()
 
@@ -791,7 +922,7 @@ class SmartSliceCloudConnector(QObject):
         for extruder_stack in ExtruderManager.getInstance().getActiveExtruderStacks():
             extruder_nr = extruder_stack.getProperty("extruder_nr", "value")
             self._all_extruders_settings[str(extruder_nr)] = self._buildReplacementTokens(extruder_stack)
-    
+
     # #  Creates a dictionary of tokens to replace in g-code pieces.
     #
     #   This indicates what should be replaced in the start and end g-codes.
@@ -846,9 +977,9 @@ class SmartSliceCloudConnector(QObject):
                     settings[key] = [self._poc_default_infill_direction]
                 else:
                     settings[key] = [value[0]]
-        
+
         return settings
-    
+
     # #  Sends all global settings to the engine.
     #
     #   The settings are taken from the global stack. This does not include any
@@ -856,10 +987,10 @@ class SmartSliceCloudConnector(QObject):
     def _buildGlobalSettingsMessage(self, stack=None):
         if not stack:
             stack = Application.getInstance().getGlobalContainerStack()
-        
+
         if not stack:
             return
-        
+
         if not self._all_extruders_settings:
             self._cacheAllExtruderSettings()
 
@@ -899,9 +1030,9 @@ class SmartSliceCloudConnector(QObject):
     #   per-extruder settings or per-object settings.
     def _buildObjectsListsMessage(self, global_stack):
         scene = Application.getInstance().getController().getScene()
-        
+
         active_buildplate = Application.getInstance().getMultiBuildPlateModel().activeBuildPlate
-        
+
         with scene.getSceneLock():
             # Remove old layer data.
             for node in DepthFirstIterator(scene.getRoot()):
@@ -964,7 +1095,7 @@ class SmartSliceCloudConnector(QObject):
 
                 if temp_list:
                     object_groups.append(temp_list)
-        
+
         extruders_enabled = {position: stack.isEnabled for position, stack in global_stack.extruders.items()}
         filtered_object_groups = []
         has_model_with_disabled_extruders = False
@@ -982,19 +1113,19 @@ class SmartSliceCloudConnector(QObject):
                     associated_disabled_extruders.add(extruder_position)
             if not skip_group:
                 filtered_object_groups.append(group)
-        
+
         if has_model_with_disabled_extruders:
                 associated_disabled_extruders = {str(c) for c in sorted([int(p) + 1 for p in associated_disabled_extruders])}
                 self.setMessage(", ".join(associated_disabled_extruders))
                 return
-    
+
         object_lists_message = []
         for group in filtered_object_groups:
             group_message_message = {}
             parent = group[0].getParent()
             if parent is not None and parent.callDecoration("isGroup"):
                 group_message_message["settings"] = self._handlePerObjectSettings(parent)
-    
+
             group_message_message["objects"] = []
             for _object in group:
                 mesh_data = object.getMeshData()
@@ -1002,16 +1133,16 @@ class SmartSliceCloudConnector(QObject):
                     continue
                 rot_scale = _object.getWorldTransformation().getTransposed().getData()[0:3, 0:3]
                 translate = _object.getWorldTransformation().getData()[:3, 3]
-    
+
                 # This effectively performs a limited form of MeshData.getTransformed that ignores normals.
                 verts = mesh_data.getVertices()
                 verts = verts.dot(rot_scale)
                 verts += translate
-    
+
                 # Convert from Y up axes to Z up axes. Equals a 90 degree rotation.
                 verts[:, [1, 2]] = verts[:, [2, 1]]
                 verts[:, 1] *= -1
-    
+
                 obj = {}
                 obj["id"] = id(_object)
                 obj["name"] = _object.getName()
@@ -1020,13 +1151,13 @@ class SmartSliceCloudConnector(QObject):
                     flat_verts = numpy.take(verts, indices.flatten(), axis=0)
                 else:
                     flat_verts = numpy.array(verts)
-    
+
                 obj["vertices"] = flat_verts.tolist()
-    
+
                 obj["settings"] = self._handlePerObjectSettings(_object)
-                
+
                 group_message_message["objects"].append(obj)
-            
+
             object_lists_message.append(group_message_message)
 
         return object_lists_message
@@ -1049,7 +1180,7 @@ class SmartSliceCloudConnector(QObject):
                 setting_extruder["extruder"] = extruder_position
                 limit_to_extruder_message.append(setting_extruder)
         return limit_to_extruder_message
-            
+
     # #  Create extruder message from stack
     def _buildExtruderMessage(self, stack) -> dict:
         extruder_message = {}
@@ -1078,15 +1209,15 @@ class SmartSliceCloudConnector(QObject):
                 settings[key] = str(value)
 
         extruder_message["settings"] = settings
-        
+
         return extruder_message
-    
+
     # Mainly taken from : {Cura}/cura/UI/PrintInformation.py@_calculateInformation
     def _calculateAdditionalMaterialInfo(self, _material_amounts):
         global_stack = Application.getInstance().getGlobalContainerStack()
         if global_stack is None:
             return
-        
+
         _material_lengths = []
         _material_weights = []
         _material_costs = []
@@ -1137,5 +1268,5 @@ class SmartSliceCloudConnector(QObject):
             _material_lengths.append(length)
             _material_costs.append(cost)
             _material_names.append(material_name)
-        
+
         return _material_lengths, _material_weights, _material_costs, _material_names
