@@ -8,6 +8,10 @@
 #
 
 
+#  PyWim Imports
+from pywim.smartslice.result import Result
+from pywim.chop import mesh
+
 
 #  Cura's Imports
 from UM.Application import Application
@@ -104,7 +108,7 @@ class SmartSliceModifierMesh(SceneNode):
         Returns a MeshData object for Cura/UM libraries, which
             corresponds to the given PyWim Mesh
     '''
-    def getCuraMesh(self, _mesh):
+    def getCuraMesh(self, _mesh: mesh.Mesh):
         mb = MeshBuilder()
 
         _tris = _mesh.triangles
