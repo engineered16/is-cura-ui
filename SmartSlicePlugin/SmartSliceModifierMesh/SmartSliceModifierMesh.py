@@ -50,6 +50,7 @@ class SmartSliceModifierMesh(SceneNode):
         
         #   Get Reference to Controller
         self._controller = Application.getInstance().getController()
+        self._preview_stage = self._controller.getStage("Preview")
         self._id = 0
         self._version = 0
         self._meta_data = None
@@ -94,6 +95,39 @@ class SmartSliceModifierMesh(SceneNode):
     @property
     def density(self):
         return self._density
+
+    
+    '''
+      preview()
+
+        *  Create mod meshes
+        *  Place them on the build plate 
+        *  Reslice Component 
+        *  Push the user to "Preview" stage
+    '''
+    def preview(self):
+
+        #  Create Modifier Mesh
+        self.drawModifierMesh(stage=self._preview_stage)
+
+        #  TODO: Place Mesh on build plate
+        #        Translate onto (x, y, 0), within x, y boundaries
+        mod_mesh_left   = self.getBoundingBox().left    # X-AXIS: Ensure left/right are in printing area
+        mod_mesh_right  = self.getBoundingBox().right
+        mod_mesh_front  = self.getBoundingBox().front   # Y-AXIS: Ensure front/back are in printing area
+        mod_mesh_back   = self.getBoundingBox().back
+        mod_mesh_bottom = self.getBoundingBox().bottom  # Z-AXIS: Translate difference between this and 0
+
+        #  TODO: Ensure mod_mesh coordinates/scale mirror Solid Mesh
+
+
+        #  TODO: Reslice Component
+        #        Emit Signal to Smart Slice Engine
+
+        #  Push user to "Preview" stage
+        self._controller.setActiveStage("Preview")
+
+
 
 
 #  MUTATORS
@@ -141,6 +175,8 @@ class SmartSliceModifierMesh(SceneNode):
                     new_instance.resetState()  # Ensure that the state is not seen as a user state.
                     settings.addInstance(new_instance)
 
+        #  Notify listeners that the infill MeshData has changed
+        self.meshPropertiesChanged.emit()
 
     '''
       getMesh(_mesh)
@@ -171,17 +207,44 @@ class SmartSliceModifierMesh(SceneNode):
         #  Build meshes into a MeshData Object
         mesh_data = mb.build()
 
-        #  Build a Cura MeshData object from PyWim Result and set SceneNode's MeshData
-        if _mesh is not None:
-            md = self.getCuraMesh(_mesh)
-            self.setMeshData(md)
-
-        #  Notify listeners that the infill MeshData has changed
-        self.meshPropertiesChanged.emit()
 
         # FOR DEBUGGING: Return Mesh_data
         return mesh_data
         
+
+    '''
+      drawModifierMesh(_mesh, _stage)
+        _mesh: OPTIONAL pywim.chop.mesh.Mesh
+        _stage: OPTIONAL CuraStage
+
+        If _mesh is provided, it builds a new MeshData object for the
+            ModifierMesh.  If _mesh is 'None', it instead draws the stored
+            MeshData as a ModifierMesh.
+        If _stage is provided, it builds the MeshData object in the given
+            CuraStage.  If _stage is 'None', it draws it in the Active Stage
+    '''
+    def drawModifierMesh(self, _mesh=None, stage=None):
+        
+        #  Build a Cura MeshData object from PyWim Result and set SceneNode's MeshData
+        if _mesh is not None:
+            md = self.getCuraMesh(_mesh)
+            self.setMeshData(md)
+        else:
+            md = self._mesh_data
+
+        # If no MeshData to draw, conclude early
+        if md is None:
+            return
+
+        #  Draw Modifier Mesh in Scene
+        if stage is not None:
+            _stage = self._controller.getStage(stage)
+        else: 
+            _stage = self._controller.getActiveStage()
+
+        
+
+
 
   #  Cura Plugin Overrides
     def setVersion(self, ver):
@@ -192,4 +255,6 @@ class SmartSliceModifierMesh(SceneNode):
 
     def setPluginId(self, _id):
         self._id = _id
+
+
 
