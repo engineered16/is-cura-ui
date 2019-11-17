@@ -146,7 +146,8 @@ class SmartSliceSelectHandle(ToolHandle):
         self.setSolidMesh(mb.build())  
         
         lv = self.getLoadVector()
-        print ("NORMAL FORCE: (" + str(lv.x) + ", " + str(lv.y) + ", " + str(lv.z) + ")")
+        if self.getLoadVector() is not None:
+            print ("NORMAL FORCE: (" + str(lv.x) + ", " + str(lv.y) + ", " + str(lv.z) + ")")
 
 
     '''

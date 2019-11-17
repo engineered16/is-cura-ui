@@ -15,14 +15,15 @@ from pywim.chop import mesh
 
 #  Cura's Imports
 from UM.Application import Application
+from UM.Settings.SettingInstance import SettingInstance
+from cura.Settings.SettingOverrideDecorator import SettingOverrideDecorator
 
-from UM.Scene.SceneNode import SceneNode
+from UM.Math.Vector import Vector
 
 from UM.Mesh.MeshData import MeshData
 from UM.Mesh.MeshBuilder import MeshBuilder
 
-from UM.Math.Vector import Vector
-
+from UM.Scene.SceneNode import SceneNode
 
 
 class SmartSliceModifierMesh(SceneNode):
@@ -55,11 +56,6 @@ class SmartSliceModifierMesh(SceneNode):
         #  Lists of Faces/Vertices for Reference
         self._faces = []
         self._verts = []
-        
-
-        #  Build a Cura MeshData object from PyWim Result and set SceneNode's MeshData
-        if result_mesh is not None:
-            self.setMeshData(self.getCuraMesh(result_mesh))
 
 
     def _engineCreated(self):
@@ -129,9 +125,34 @@ class SmartSliceModifierMesh(SceneNode):
 
         #  Build meshes into a MeshData Object
         mesh_data = mb.build()
-        
-        #  TODO: Add 'Modifier Mesh' attribute
 
+        #  Add Settings Override Decorator to this SceneNode
+        #       This can be used to override the infill thread density
+        stack = self.callDecoration("getStack")
+        if not stack:
+            self.addDecorator(SettingOverrideDecorator())
+            stack = self.callDecoration("getStack")
+
+        #  Get Settings for this Modifier Mesh
+        settings = stack.getTop()
+
+        #  Set mesh properties exclusively to 'infill_mesh'
+        for property_key in ["infill_mesh", "cutting_mesh", "support_mesh", "anti_overhang_mesh"]:
+            if property_key != "infill_mesh":
+                if settings.getInstance(property_key):
+                    settings.removeInstance(property_key)
+            else:
+                if not (settings.getInstance(property_key) and settings.getProperty(property_key, "value")):
+                    definition = stack.getSettingDefinition(property_key)
+                    new_instance = SettingInstance(definition, settings)
+                    new_instance.setProperty("value", True)
+                    new_instance.resetState()  # Ensure that the state is not seen as a user state.
+                    settings.addInstance(new_instance)
+
+        #  Build a Cura MeshData object from PyWim Result and set SceneNode's MeshData
+        if _mesh is not None:
+            md = self.getCuraMesh(_mesh)
+            self.setMeshData(md)
 
         # FOR DEBUGGING: Return Mesh_data
         return mesh_data
