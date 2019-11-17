@@ -15,6 +15,8 @@ from pywim.chop import mesh
 
 #  Cura's Imports
 from UM.Application import Application
+from UM.Signal import Signal
+
 from UM.Settings.SettingInstance import SettingInstance
 from cura.Settings.SettingOverrideDecorator import SettingOverrideDecorator
 
@@ -57,6 +59,10 @@ class SmartSliceModifierMesh(SceneNode):
         self._faces = []
         self._verts = []
 
+        #  Signal Connection
+        #       Emits a Signal when the infill MeshData changes
+        self.meshPropertiesChanged = Signal()
+        
 
     def _engineCreated(self):
         1 + 1 #  STUB
@@ -153,6 +159,9 @@ class SmartSliceModifierMesh(SceneNode):
         if _mesh is not None:
             md = self.getCuraMesh(_mesh)
             self.setMeshData(md)
+
+        #  Notify listeners that the infill MeshData has changed
+        self.meshPropertiesChanged.emit()
 
         # FOR DEBUGGING: Return Mesh_data
         return mesh_data
