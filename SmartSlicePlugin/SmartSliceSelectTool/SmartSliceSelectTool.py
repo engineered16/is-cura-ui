@@ -187,6 +187,13 @@ class SmartSliceSelectTool(Tool):
             if load_vector and self._handle._connector._proxy.loadMagnitudeInverted:
                 load_vector = load_vector * -1
             
+            loaded_faces = self._handle._loaded_faces
+            loaded_faces = [face._id for face in loaded_faces]
+            anchored_faces = self._handle._anchored_faces
+            anchored_faces = [face._id for face in anchored_faces]
+            Logger.log("d", "loaded_faces: {}".format(loaded_faces))
+            Logger.log("d", "anchored_faces: {}".format(anchored_faces))
+            
             cloud_connector = PluginRegistry.getInstance().getPluginObject("SmartSliceExtension").cloud
             if self._selection_mode is SelectionMode.AnchorMode:
                 cloud_connector.appendAnchor0FacesPoc((face_id, ))
