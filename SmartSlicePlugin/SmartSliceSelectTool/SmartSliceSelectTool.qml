@@ -136,6 +136,9 @@ Item {
             anchors.leftMargin: UM.Theme.getSize("default_margin").width
 
             text: "Flip Direction"
+            
+            checked: SmartSlice.Selection.loadMagnitudeInverted
+            onCheckedChanged: SmartSlice.Selection.loadMagnitudeInverted = checked
         }
 
         Label {

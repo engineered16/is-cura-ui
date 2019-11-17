@@ -377,9 +377,9 @@ class SmartSliceCloudConnector(QObject):
 
         # POC
         self._poc_default_infill_direction = 45
-        self._poc_force0_vector = (2., 0., 0.)
-        self._poc_force0_faces = (255, 256, 248, 247)
-        self._poc_anchor0_faces = (0, 249, 1, 250)
+        self.resetAnchor0FacesPoc()
+        self.resetForce0FacesPoc()
+        self.resetForce0VectorPoc()
 
     def getProxy(self, engine, script_engine):
         return self._proxy
@@ -742,17 +742,28 @@ class SmartSliceCloudConnector(QObject):
         return True
 
     def setForce0VectorPoc(self, x, y, z):
-        self._poc_force0_vector = (x, y, z)
+        load_vector = (x, y, z)
+        if load_vector != self._poc_force0_vector:
+            Logger.log("d", "Changing load vector to: {}".format(load_vector))
+            self._poc_force0_vector = load_vector
 
     def resetForce0VectorPoc(self):
-        self._poc_force0_vector = ()
+        self._poc_force0_vector = (0, 0, 0)
 
     def getForce0VectorPoc(self):
-        return self._poc_force0_vector
+        native_vector = ()
+        for component in self._poc_force0_vector:
+            if type(component) is numpy.float64:
+                component = component.item()
+            native_vector += (component, )
+        return native_vector
 
     def appendForce0FacesPoc(self, face_ids):
         face_ids = tuple(face_ids)
-        self._poc_force0_faces += face_ids
+        for face_id in face_ids:
+            if face_id not in self._poc_force0_faces:
+                Logger.log("d", "Adding new face to force0: {}".format(face_id))
+                self._poc_force0_faces += (face_id, )
 
     def resetForce0FacesPoc(self):
         self._poc_force0_faces = ()
@@ -762,7 +773,10 @@ class SmartSliceCloudConnector(QObject):
 
     def appendAnchor0FacesPoc(self, face_ids):
         face_ids = tuple(face_ids)
-        self._poc_anchor0_faces += face_ids
+        for face_id in face_ids:
+            if face_id not in self._poc_anchor0_faces:
+                Logger.log("d", "Adding new face to anchor0: {}".format(face_id))
+                self._poc_anchor0_faces += (face_id, )
 
     def resetAnchor0FacesPoc(self):
         self._poc_anchor0_faces = ()

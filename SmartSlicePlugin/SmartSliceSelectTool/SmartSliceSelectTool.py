@@ -184,13 +184,22 @@ class SmartSliceSelectTool(Tool):
             load_vector = self._handle.getLoadVector()
             # -> After clicking on a face, I get a crash below, that my load_vector is None.
             
+            if load_vector and self._handle._connector._proxy.loadMagnitudeInverted:
+                load_vector = load_vector * -1
+            
             cloud_connector = PluginRegistry.getInstance().getPluginObject("SmartSliceExtension").cloud
-            cloud_connector.setForce0VectorPoc(load_vector.x,
-                                               load_vector.y,
-                                               load_vector.z
-                                               )
-            cloud_connector.appendForce0FacesPoc(tuple_of_load_faces)
-            cloud_connector.appendAnchor0FacesPoc(tuple_of_anchor_faces)
+            if self._selection_mode is SelectionMode.AnchorMode:
+                cloud_connector.appendAnchor0FacesPoc((face_id, ))
+                Logger.log("d", "cloud_connector.getAnchor0FacesPoc(): {}".format(cloud_connector.getAnchor0FacesPoc()))
+            else:
+                cloud_connector.setForce0VectorPoc(load_vector.x,
+                                                   load_vector.y,
+                                                   load_vector.z
+                                                   )
+                cloud_connector.appendForce0FacesPoc((face_id, ))
+                Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(cloud_connector.getForce0VectorPoc()))
+                Logger.log("d", "cloud_connector.getForce0FacesPoc(): {}".format(cloud_connector.getForce0FacesPoc()))
+            
 
     def _onActiveStateChanged(self):
         active_tool = Application.getInstance().getController().getActiveTool()
