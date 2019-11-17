@@ -7,7 +7,6 @@ import os.path
 
 #  Ultimaker Imports
 from UM.i18n import i18nCatalog
-i18n_catalog = i18nCatalog("smartslice")
 
 from UM.Application import Application
 from UM.Version import Version
@@ -35,6 +34,7 @@ from .FaceSelection import SelectablePoint, SelectableFace
 from .FaceSelection import fromMeshData
 #from .SmartSliceNormalArrow import SmartSliceNormalArrow
 
+i18n_catalog = i18nCatalog("smartslice")
 
 ##  Provides the tool to rotate meshes and groups
 #
@@ -76,7 +76,7 @@ class SmartSliceSelectTool(Tool):
             Logger.log("d", "Disabling faceSelectMode!")
             #Selection.setFaceSelectMode(False)
         """
-        
+
         if event.type == Event.MousePressEvent:
             if MouseEvent.LeftButton not in event.buttons:
                 return False
@@ -85,7 +85,7 @@ class SmartSliceSelectTool(Tool):
             #if not id:
             #    return False
 
-        
+
             """
             if self._handle.isAxis(id):
                 self.setLockedAxis(id)
@@ -103,12 +103,12 @@ class SmartSliceSelectTool(Tool):
                 Selection.setFaceSelectMode(False)
                 Logger.log("d", "Disabled faceSelectMode!")
             """
-        
+
             if Selection.getSelectedFace() is not None:
                 Logger.log("d", "Selection.getSelectedFace(): {}".format(Selection.getSelectedFace()[0]))
 
             return True
-            
+
 
         if event.type == Event.MouseReleaseEvent:
             # Finish a rotate operation
@@ -132,7 +132,7 @@ class SmartSliceSelectTool(Tool):
             norms = []
 
             #print(dir(scene_node.getMeshData()))
-            
+
             #if not mesh_data._indices or len(mesh_data._indices) == 0:
             if (mesh_data._indices is None) or (len(mesh_data._indices) == 0):
                 base_index = face_id * 3
@@ -149,11 +149,11 @@ class SmartSliceSelectTool(Tool):
                 n_b = mesh_data._normals[mesh_data._indices[face_id][1]]
                 v_c = mesh_data._vertices[mesh_data._indices[face_id][2]]
                 n_c = mesh_data._normals[mesh_data._indices[face_id][2]]
-            
+
             p0 = SelectablePoint(float(v_a[0]), float(v_a[1]), float(v_a[2]), n_a)
             p1 = SelectablePoint(float(v_b[0]), float(v_b[1]), float(v_b[2]), n_b)
             p2 = SelectablePoint(float(v_c[0]), float(v_c[1]), float(v_c[2]), n_c)
-            
+
             #  Construct Selectable Face && Draw Selection in canvas
             sf = SelectableFace([p0, p1, p2],
                                 mesh_data._normals, face_id)
@@ -164,7 +164,7 @@ class SmartSliceSelectTool(Tool):
 
             if self.getLoadSelectionActive():
                 self._handle.drawFaceSelection(SelectionMode.LoadMode, draw_arrow=True, other_faces=selectable_faces)
-                
+
             else:
                 self._handle.drawFaceSelection(SelectionMode.AnchorMode, other_faces=selectable_faces)
 
@@ -176,6 +176,37 @@ class SmartSliceSelectTool(Tool):
             '''
 
             self._handle.scale(scene_node.getScale(), transform_space=CuraSceneNode.TransformSpace.World)
+
+            # Passing our infos to the CloudConnector
+            
+            # # Direction should only matter here.
+            # # The location is given by the faces I assume
+            load_vector = self._handle.getLoadVector()
+            # -> After clicking on a face, I get a crash below, that my load_vector is None.
+            
+            if load_vector and self._handle._connector._proxy.loadMagnitudeInverted:
+                load_vector = load_vector * -1
+            
+            loaded_faces = self._handle._loaded_faces
+            loaded_faces = [face._id for face in loaded_faces]
+            anchored_faces = self._handle._anchored_faces
+            anchored_faces = [face._id for face in anchored_faces]
+            Logger.log("d", "loaded_faces: {}".format(loaded_faces))
+            Logger.log("d", "anchored_faces: {}".format(anchored_faces))
+            
+            cloud_connector = PluginRegistry.getInstance().getPluginObject("SmartSliceExtension").cloud
+            if self._selection_mode is SelectionMode.AnchorMode:
+                cloud_connector.appendAnchor0FacesPoc((face_id, ))
+                Logger.log("d", "cloud_connector.getAnchor0FacesPoc(): {}".format(cloud_connector.getAnchor0FacesPoc()))
+            else:
+                cloud_connector.setForce0VectorPoc(load_vector.x,
+                                                   load_vector.y,
+                                                   load_vector.z
+                                                   )
+                cloud_connector.appendForce0FacesPoc((face_id, ))
+                Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(cloud_connector.getForce0VectorPoc()))
+                Logger.log("d", "cloud_connector.getForce0FacesPoc(): {}".format(cloud_connector.getForce0FacesPoc()))
+            
 
     def _onActiveStateChanged(self):
         active_tool = Application.getInstance().getController().getActiveTool()
@@ -193,11 +224,11 @@ class SmartSliceSelectTool(Tool):
     def getSelectFaceSupported(self) -> bool:
         # Use a dummy postfix, since an equal version with a postfix is considered smaller normally.
         return Version(OpenGL.getInstance().getOpenGLVersion()) >= Version("4.1 dummy-postfix")
-    
+
     def setSelectionMode(self, mode):
         if self._selection_mode is not mode:
             self._selection_mode = mode
-            
+
             Logger.log("d", "Changed selection mode to enum: {}".format(mode))
 
     def getSelectionMode(self):
