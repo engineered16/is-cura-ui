@@ -9,7 +9,7 @@
 #
 
 
-from math import asin
+import math
 
 #  UM/Cura Imports
 from UM.Math.Vector import Vector
@@ -70,8 +70,10 @@ def isJointed(face1, face2):
     Returns TRUE if 'face1' and 'face2' share the same normal vector
 '''
 def isCoplanar(face1, face2):
-    if ((face1.normal.x == face2.normal.x) and (face1.normal.y == face2.normal.y) and (face1.normal.z == face2.normal.z)):
-        return True
-    return False
+    return face1.normal.angleToVector(face2.normal) < 0.01 # roughly 0.57 degrees
+        
+    #if ((face1.normal.x == face2.normal.x) and (face1.normal.y == face2.normal.y) and (face1.normal.z == face2.normal.z)):
+    #    return True
+    #return False
 
 

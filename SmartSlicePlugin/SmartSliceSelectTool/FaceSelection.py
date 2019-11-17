@@ -39,17 +39,16 @@ class SelectableFace:
         self._vert_normals = normals
         self._selected = False
 
+    def __str__(self):
+        return '{} :: {}, {}, {}'.format(self._id, self._points[0], self._points[1], self._points[2])
+
+    def __hash__(self):
+        return self._id
 
 #  ACCESSORS
 
     def __eq__(self, other):
-        p1 = self.points
-        p2 = other.points
-        if (p1[0].x == p2[0].x) and (p1[0].y == p2[0].y) and (p1[0].z == p2[0].z):
-            if (p1[1].x == p2[1].x) and (p1[1].y == p2[1].y) and (p1[1].z == p2[1].z):
-                if (p1[2].x == p2[2].x) and (p1[2].y == p2[2].y) and (p1[2].z == p2[2].z):
-                    return True
-        return False
+        return self._id == other._id
 
     '''
       points()
@@ -218,7 +217,8 @@ def fromMeshData(mesh_data: MeshData):
 
         #  Construct Selectable Face && Draw Selection in canvas
         sf = SelectableFace([p0, p1, p2],
-                            mesh_data._normals)
+                            mesh_data._normals,
+                            face_id=face_id)
         _faces.append(sf) 
     return _faces
         
@@ -252,6 +252,9 @@ class SelectablePoint:
         self._normals = normals
 
         self._selected = False
+
+    def __str__(self):
+        return '[{}, {}, {}]'.format(self.x, self.y, self.z)
         
 
 #  ACCESSORS
