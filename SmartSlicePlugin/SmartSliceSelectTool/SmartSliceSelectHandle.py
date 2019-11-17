@@ -78,9 +78,11 @@ class SmartSliceSelectHandle(ToolHandle):
 
     def getLoadVector(self):
         load_mag = self._connector._proxy._loadMagnitude
-        lf = toCalculatableFace(self._loaded_faces[0])
-        n = lf.normal
-        return Vector(load_mag*n.x, load_mag*n.y, load_mag*n.z)
+        if len(self._loaded_faces) > 0:
+            lf = toCalculatableFace(self._loaded_faces[0])
+            n = lf.normal
+            return Vector(load_mag*n.x, load_mag*n.y, load_mag*n.z)
+        return None
 
 
     '''
@@ -144,7 +146,8 @@ class SmartSliceSelectHandle(ToolHandle):
         self.setSolidMesh(mb.build())  
         
         lv = self.getLoadVector()
-        print ("NORMAL FORCE: (" + str(lv.x) + ", " + str(lv.y) + ", " + str(lv.z) + ")")
+        if self.getLoadVector() is not None:
+            print ("NORMAL FORCE: (" + str(lv.x) + ", " + str(lv.y) + ", " + str(lv.z) + ")")
 
 
     '''

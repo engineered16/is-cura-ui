@@ -153,6 +153,7 @@ Item {
 
         TextField {
             id: textLoadDialogMagnitude
+            style: UM.Theme.styles.text_field;
 
             anchors.top: labelLoadDialogMagnitude.bottom
             anchors.topMargin: UM.Theme.getSize("default_margin").width
@@ -166,6 +167,7 @@ Item {
 
             text: SmartSlice.Selection.loadMagnitude
             placeholderText: "kN"
+            property string unit: "[kN]";
         }
     }
 }
