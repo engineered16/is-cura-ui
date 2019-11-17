@@ -150,12 +150,12 @@ class SmartSliceSelectHandle(ToolHandle):
         #  Add to Cura Scene
         self.setSolidMesh(mb.build())
 
-        Logger.log("d", "Anchor Faces: {}".format([f._id for f in self._anchored_faces]))
-        Logger.log("d", "Load Faces: {}".format([f._id for f in self._loaded_faces]))
-        Logger.log("d", "Load Vector: {}".format(self.getLoadVector()))
+        #Logger.log("d", "Anchor Faces: {}".format([f._id for f in self._anchored_faces]))
+        #Logger.log("d", "Load Faces: {}".format([f._id for f in self._loaded_faces]))
+        #Logger.log("d", "Load Vector: {}".format(self.getLoadVector()))
         
-        lv = self.getLoadVector()
-        print ("NORMAL FORCE: (" + str(lv.x) + ", " + str(lv.y) + ", " + str(lv.z) + ")")
+        #lv = self.getLoadVector()
+        #print ("NORMAL FORCE: (" + str(lv.x) + ", " + str(lv.y) + ", " + str(lv.z) + ")")
 
 
     '''
