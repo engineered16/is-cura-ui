@@ -29,18 +29,31 @@ from PyQt5.QtNetwork import QNetworkRequest
 from PyQt5.QtNetwork import QNetworkAccessManager
 from PyQt5.QtQml import qmlRegisterSingletonType
 
+# Uranium
 from UM.i18n import i18nCatalog
 from UM.Application import Application
 from UM.Job import Job
 from UM.Logger import Logger
+from UM.Math.Matrix import Matrix
+from UM.Math.Vector import Vector
+from UM.Mesh.MeshBuilder import MeshBuilder
 from UM.Message import Message
+from UM.Operations.AddSceneNodeOperation import AddSceneNodeOperation
+from UM.Operations.GroupedOperation import GroupedOperation
 from UM.PluginRegistry import PluginRegistry
 from UM.Scene.SceneNode import SceneNode
 from UM.Scene.Iterator.DepthFirstIterator import DepthFirstIterator
+from UM.Settings.SettingInstance import SettingInstance
 
+# Cura
 from cura.OneAtATimeIterator import OneAtATimeIterator
+from cura.Operations.SetParentOperation import SetParentOperation
 from cura.Settings.ExtruderManager import ExtruderManager
+from cura.Scene.BuildPlateDecorator import BuildPlateDecorator
+from cura.Scene.CuraSceneNode import CuraSceneNode
+from cura.Scene.SliceableObjectDecorator import SliceableObjectDecorator
 
+# Our extension
 from .SmartSliceCloudProxy import SmartSliceCloudStatus
 from .SmartSliceCloudProxy import SmartSliceCloudProxy
 
@@ -281,9 +294,79 @@ class SmartSliceCloudJob(Job):
             if result:
                 analyse = result.analyses[0]
                 Logger.log("d", "analyse: {}".format(analyse))
-                Logger.log("d", "analyse.mass: {}".format(analyse.mass))
-                Logger.log("d", "analyse.print_time: {}".format(analyse.print_time))
                 Logger.log("d", "analyse.modifier_meshes: {}".format(analyse.modifier_meshes))
+                
+                # MODIFIER MESHES STUFF
+                # TODO: We need a per node solution here as soon as we want to analyse multiple models.
+                our_only_node =  self.connector.getSliceableNodes()[0]
+                #our_only_node_stack = our_only_node.callDecoration("getStack")
+                for modifier_mesh in analyse.modifier_meshes:
+                    # Building the scene node
+                    modifier_mesh_node = CuraSceneNode()
+                    modifier_mesh_node.setName("SmartSliceMeshModifier")
+                    modifier_mesh_node.setSelectable(True)
+                    modifier_mesh_node.setCalculateBoundingBox(True)
+                    
+                    # Building the mesh
+                    
+                    # # Preparing the data from pywim for MeshBuilder
+                    modifier_mesh_vertices = [[v.x, v.y, v.z] for v in modifier_mesh.vertices ]
+                    modifier_mesh_indices = [[triangle.v1, triangle.v2, triangle.v3] for triangle in modifier_mesh.triangles]
+                    
+                    # # Doing the actual build
+                    modifier_mesh_data = MeshBuilder()
+                    modifier_mesh_data.setVertices(numpy.asarray(modifier_mesh_vertices, dtype=numpy.float32))
+                    modifier_mesh_data.setIndices(numpy.asarray(modifier_mesh_indices, dtype=numpy.int32))
+                    modifier_mesh_data.calculateNormals()
+
+                    modifier_mesh_node.setMeshData(modifier_mesh_data.build())
+                    modifier_mesh_node.calculateBoundingBoxMesh()
+                    
+                    active_build_plate = Application.getInstance().getMultiBuildPlateModel().activeBuildPlate
+                    modifier_mesh_node.addDecorator(BuildPlateDecorator(active_build_plate))
+                    modifier_mesh_node.addDecorator(SliceableObjectDecorator())
+                    
+                    stack = modifier_mesh_node.callDecoration("getStack")
+                    settings = stack.getTop()
+                    
+                    modifier_mesh_node_infill_pattern = self.connector.infill_pattern_pywim_to_cura_dict[modifier_mesh.print_config.infill.pattern]
+                    definition_dict = {
+                        "infill_mesh" : True,
+                        "infill_pattern" : modifier_mesh_node_infill_pattern,
+                        "infill_sparse_density": modifier_mesh.print_config.infill.density, 
+                        }
+                    Logger.log("d", "definition_dict: {}".format(definition_dict))
+                    
+                    for key, value in definition_dict.items():
+                        definition = stack.getSettingDefinition(key)
+                        new_instance = SettingInstance(definition, settings)
+                        new_instance.setProperty("value", value)
+                        
+                        new_instance.resetState()  # Ensure that the state is not seen as a user state.
+                        settings.addInstance(new_instance)
+            
+                    op = GroupedOperation()
+                    # First add node to the scene at the correct position/scale, before parenting, so the eraser mesh does not get scaled with the parent
+                    op.addOperation(AddSceneNodeOperation(modifier_mesh_node,
+                                                          Application.getInstance().getController().getScene().getRoot()
+                                                          )
+                                    )
+                    op.addOperation(SetParentOperation(modifier_mesh_node,
+                                                       our_only_node)
+                                    )
+                    op.push()
+                    
+                    # TODO: Not needed during POC. Decision needed whether this is superfluous or not.
+                    #modifier_mesh_transform_matrix = Matrix(modifier_mesh.transform)
+                    #modifier_mesh_node.setTransformation(modifier_mesh_transform_matrix)
+                    
+                    our_only_node_position = our_only_node.getWorldPosition()
+                    modifier_mesh_node.setPosition(our_only_node_position,
+                                                   SceneNode.TransformSpace.World)
+                    Logger.log("d", "Moved modifiers to the global location: {}".format(our_only_node_position))
+
+                    Application.getInstance().getController().getScene().sceneChanged.emit(modifier_mesh_node)
+
 
                 self.connector._proxy.resultSafetyFactor = analyse.structural.min_safety_factor
                 self.connector._proxy.resultMaximalDisplacement = analyse.structural.max_displacement
@@ -355,6 +438,11 @@ class SmartSliceCloudConnector(QObject):
 
         # Variables
         self._job = None
+        self.infill_pattern_cura_to_pywim_dict = {"grid": pywim.am.InfillType.grid,
+                                                  "triangles": pywim.am.InfillType.triangle,
+                                                  "cubic": pywim.am.InfillType.cubic
+                                                  }
+        self.infill_pattern_pywim_to_cura_dict = {value: key for key, value in self.infill_pattern_cura_to_pywim_dict.items()}
 
         # Proxy
         self._proxy = SmartSliceCloudProxy(self)
@@ -503,9 +591,12 @@ class SmartSliceCloudConnector(QObject):
         if self.status is SmartSliceCloudStatus.InvalidInput:
             if slicable_nodes_count == 1:
                 self.status = SmartSliceCloudStatus.ReadyToVerify
-        else:
+        elif self.status is SmartSliceCloudStatus.ReadyToVerify:
             if slicable_nodes_count != 1:
                 self.status = SmartSliceCloudStatus.InvalidInput
+        else:
+            # Ignore our infill meshes
+            pass
 
     def _onJobFinished(self, job):
         self._job = None
@@ -683,12 +774,8 @@ class SmartSliceCloudConnector(QObject):
 
         # infill pattern - Cura vs. pywim
         infill_pattern = mesh_node_stack.getProperty("infill_pattern", "value")
-        infill_pattern_to_pywim_dict = {"grid": pywim.am.InfillType.grid,
-                                        "triangles": pywim.am.InfillType.triangle,
-                                        "cubic": pywim.am.InfillType.cubic
-                                        }
-        if infill_pattern in infill_pattern_to_pywim_dict.keys():
-            print_config.infill.pattern = infill_pattern_to_pywim_dict[infill_pattern]
+        if infill_pattern in self.infill_pattern_cura_to_pywim_dict.keys():
+            print_config.infill.pattern = self.infill_pattern_cura_to_pywim_dict[infill_pattern]
         else:
             print_config.infill.pattern = pywim.am.InfillType.unknown
 
