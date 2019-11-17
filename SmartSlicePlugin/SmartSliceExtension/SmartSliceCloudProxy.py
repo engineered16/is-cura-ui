@@ -55,8 +55,8 @@ class SmartSliceCloudProxy(QObject):
         self._sliceIconVisible = False
 
         # Boundary values
-        self._targetFactorOfSafety = 1.0
-        self._targetMaximalDisplacement = 0.17
+        self._targetFactorOfSafety = 1.5
+        self._targetMaximalDisplacement = 1.0
 
         # Properties (mainly) for the sliceinfo widget
         self._resultSafetyFactor = copy.copy(self._targetFactorOfSafety)
