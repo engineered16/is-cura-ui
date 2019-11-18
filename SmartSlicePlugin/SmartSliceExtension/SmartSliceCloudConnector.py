@@ -527,9 +527,9 @@ class SmartSliceCloudConnector(QObject):
         # Setting icon path
         stage_path = PluginRegistry.getInstance().getPluginPath("SmartSliceStage")
         stage_images_path = os.path.join(stage_path, "images")
-        icon_done_green = os.path.join(stage_images_path, "done_green.svg")
-        icon_error_red = os.path.join(stage_images_path, "error_red.svg")
-        icon_warning_yellow = os.path.join(stage_images_path, "warning_yellow.svg")
+        icon_done_green = os.path.join(stage_images_path, "done_green.png")
+        icon_error_red = os.path.join(stage_images_path, "error_red.png")
+        icon_warning_yellow = os.path.join(stage_images_path, "warning_yellow.png")
         current_icon = icon_done_green
         if self.status is SmartSliceCloudStatus.Overdimensioned:
             current_icon = icon_warning_yellow
