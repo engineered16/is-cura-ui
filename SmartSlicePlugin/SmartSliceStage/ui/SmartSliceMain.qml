@@ -106,13 +106,13 @@ Item {
                 // Status indicator
                 Row{
                 Layout.alignment: Qt.AlignTop
-                
+
                 Image {
                     id: smartSliceInfoIcon
 
                     width: UM.Theme.getSize("section_icon").width
                     height: UM.Theme.getSize("section_icon").height
-                    
+
                     fillMode: Image.PreserveAspectFit
                     mipmap: true
 
@@ -171,7 +171,7 @@ Item {
                             property var description_color: UM.Theme.getColor("text")
                             property var value_font: UM.Theme.getFont("default")
                             property var value_color: UM.Theme.getColor("text")
-                            
+
                             property color warningColor: "#F3BA1A"
                             property color errorColor: "#F15F63"
                             property color successColor: "#5DBA47"
@@ -188,7 +188,7 @@ Item {
                                 id: layoutRequirements
                                 Layout.fillWidth: true
                                 spacing: UM.Theme.getSize("default_margin").width
-                                
+
                                 function updateSafetyFactorColor() {
                                     if (SmartSlice.Cloud.resultSafetyFactor > SmartSlice.Cloud.targetFactorOfSafety) {
                                         labelDescriptionSafetyFactor.color = smartSlicePopupContents.warningColor
@@ -203,7 +203,7 @@ Item {
                                         labelResultSafetyFactor.color = smartSlicePopupContents.successColor
                                         labelTargetSafetyFactor.color = smartSlicePopupContents.successColor
                                     }
-                                    
+
                                     // Override if our optimization is done
                                     // --> SmartSliceProxy.SmartSliceCloudStatus
                                     if (SmartSlice.Cloud.sliceStatusEnum == 9) {
@@ -212,7 +212,7 @@ Item {
                                         labelTargetSafetyFactor.color = smartSlicePopupContents.successColor
                                     }
                                 }
-                                
+
                                 function updateMaximalDisplacementColor() {
                                     if (SmartSlice.Cloud.resultMaximalDisplacement < SmartSlice.Cloud.targetMaximalDisplacement) {
                                         labelDescriptionMaximumDisplacement.color = smartSlicePopupContents.warningColor
@@ -227,7 +227,7 @@ Item {
                                         labelResultMaximalDisplacement.color = smartSlicePopupContents.successColor
                                         labelTargetMaximalDisplacement.color = smartSlicePopupContents.successColor
                                     }
-                                    
+
                                     // Override if our optimization is done
                                     // --> SmartSliceProxy.SmartSliceCloudStatus
                                     if (SmartSlice.Cloud.sliceStatusEnum == 9) {
@@ -236,7 +236,7 @@ Item {
                                         labelTargetMaximalDisplacement.color = smartSlicePopupContents.successColor
                                     }
                                 }
-                                
+
                                 Connections {
                                     target: SmartSlice.Cloud
                                     onSliceStatusEnumChanged: {
@@ -286,7 +286,7 @@ Item {
                                     }
                                     Label {
                                         id: labelResultSafetyFactor
-                                        
+
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
@@ -333,7 +333,7 @@ Item {
                                     }
                                     Label {
                                         id: labelTargetSafetyFactor
-                                        
+
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
@@ -350,7 +350,7 @@ Item {
                                     }
                                     Label {
                                         id: labelTargetMaximalDisplacement
-                                        
+
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
                                         color: smartSlicePopupContents.value_color
@@ -358,7 +358,7 @@ Item {
                                         Connections {
                                             target: SmartSlice.Cloud
                                             onTargetMaximalDisplacementChanged: {
-                                                labelTargetMaximalDisplacement.text = parseFloat(Math.round(SmartSlice.Cloud.targetFactorOfSafety * 1000) / 1000).toFixed(3)
+                                                labelTargetMaximalDisplacement.text = parseFloat(Math.round(SmartSlice.Cloud.targetMaximalDisplacement * 1000) / 1000).toFixed(3)
                                                 layoutRequirements.updateMaximalDisplacementColor()
                                             }
                                         }
@@ -593,7 +593,7 @@ Item {
                                 }
 
                                 // TODO: Hiding material lenght. The radius is zero all the time for some reason,
-                                // therefore the value is zero all the time, too. 
+                                // therefore the value is zero all the time, too.
                                 /*
                                 Label {
                                     id: labelMaterialLength
