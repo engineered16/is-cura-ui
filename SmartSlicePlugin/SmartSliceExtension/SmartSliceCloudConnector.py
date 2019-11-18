@@ -293,7 +293,7 @@ class SmartSliceCloudJob(Job):
             result = task.result
             if result:
                 analyse = result.analyses[0]
-                Logger.log("d", "analyse: {}".format(analyse))
+                Logger.log("d", "analyse: {}".format(analyse.to_json()))
                 Logger.log("d", "analyse.modifier_meshes: {}".format(analyse.modifier_meshes))
 
                 # MODIFIER MESHES STUFF
@@ -372,7 +372,7 @@ class SmartSliceCloudJob(Job):
                 self.connector._proxy.resultMaximalDisplacement = analyse.structural.max_displacement
 
                 qprint_time = QTime(0, 0, 0, 0)
-                qprint_time.addSecs(analyse.print_time)
+                qprint_time = qprint_time.addSecs(analyse.print_time)
                 self.connector._proxy.resultTimeTotal = qprint_time
 
                 # TODO: Reactivate the block as soon as we have the single print times again!
@@ -390,10 +390,11 @@ class SmartSliceCloudJob(Job):
 
                 # for pos in len(material_volumina):
                 pos = 0
-                self.connector._proxy.materialWeight = material_extra_info[0][pos]
-                self.connector._proxy.materialCost = material_extra_info[1][pos]
-                self.connector._proxy.materialLength = material_extra_info[2][pos]
+                self.connector._proxy.materialLength = material_extra_info[0][pos]
+                self.connector._proxy.materialWeight = material_extra_info[1][pos]
+                self.connector._proxy.materialCost = material_extra_info[2][pos]
                 self.connector._proxy.materialName = material_extra_info[3][pos]
+                
 
                 # Overriding if our result is going to be optimized...
                 if previous_connector_status in SmartSliceCloudStatus.Optimizable:
@@ -1214,7 +1215,7 @@ class SmartSliceCloudConnector(QObject):
         return extruder_message
 
     # Mainly taken from : {Cura}/cura/UI/PrintInformation.py@_calculateInformation
-    def _calculateAdditionalMaterialInfo(self, _material_amounts):
+    def _calculateAdditionalMaterialInfo(self, _material_volumina):
         global_stack = Application.getInstance().getGlobalContainerStack()
         if global_stack is None:
             return
@@ -1226,12 +1227,14 @@ class SmartSliceCloudConnector(QObject):
 
         material_preference_values = json.loads(Application.getInstance().getPreferences().getValue("cura/material_settings"))
 
+        Logger.log("d", "global_stack.extruders.items(): {}".format(global_stack.extruders.items()))
+
         for position, extruder_stack in global_stack.extruders.items():
             if type(position) is not int:
                 position = int(position)
-            if position >= len(_material_amounts):
+            if position >= len(_material_volumina):
                 continue
-            amount = _material_amounts[position]
+            amount = _material_volumina[position]
             # Find the right extruder stack. As the list isn't sorted because it's a annoying generator, we do some
             # list comprehension filtering to solve this for us.
             density = extruder_stack.getMetaDataEntry("properties", {}).get("density", 0)

@@ -594,16 +594,14 @@ Item {
 
                                 // TODO: Hiding material lenght. The radius is zero all the time for some reason,
                                 // therefore the value is zero all the time, too.
-                                /*
                                 Label {
                                     id: labelMaterialLength
                                     Layout.alignment: Qt.AlignRight
                                     font: smartSlicePopupContents.value_font
                                     color: smartSlicePopupContents.value_color
 
-                                    text: SmartSlice.Cloud.materialLength
+                                    text: SmartSlice.Cloud.materialLength + " m"
                                 }
-                                */
 
                                 Label {
                                     id: labelMaterialWeight
@@ -612,7 +610,7 @@ Item {
                                     font: smartSlicePopupContents.value_font
                                     color: smartSlicePopupContents.value_color
 
-                                    text: SmartSlice.Cloud.materialWeight.toFixed(2) + " kg"
+                                    text: SmartSlice.Cloud.materialWeight.toFixed(2) + " g"
                                 }
 
                                 Label {
