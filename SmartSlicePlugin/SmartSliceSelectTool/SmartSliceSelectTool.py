@@ -13,8 +13,8 @@ from UM.Version import Version
 from UM.PluginRegistry import PluginRegistry
 from UM.Logger import Logger
 from UM.Event import Event, MouseEvent, KeyEvent
-
 from UM.Tool import Tool
+from UM.Math.Vector import Vector
 
 from UM.View.GL.OpenGL import OpenGL
 from UM.Scene.Selection import Selection
@@ -57,8 +57,7 @@ class SmartSliceSelectTool(Tool):
         self.selectable_faces = []
 
         self._scene = self.getController().getScene()
-        
-        self._scene_name = None
+        self._scene_node_name = None
         self._selectable_mesh = None
 
         self._controller.activeToolChanged.connect(self._onActiveStateChanged)
@@ -68,77 +67,33 @@ class SmartSliceSelectTool(Tool):
     #
     #   \param event type(Event)
     def event(self, event):
-        super().event(event)
+        return super().event(event)
 
-        """
-        if event.type == Event.KeyPressEvent and event.key == KeyEvent.ShiftKey:
-            Logger.log("d", "Enabling faceSelectMode!")
-            #Selection.setFaceSelectMode(True)
-        if event.type == Event.KeyReleaseEvent and event.key == KeyEvent.ShiftKey:
-            Logger.log("d", "Disabling faceSelectMode!")
-            #Selection.setFaceSelectMode(False)
-        """
+    def _calculateMesh(self):
+        nodes = Selection.getAllSelectedObjects()
 
-        if event.type == Event.MousePressEvent:
-            if MouseEvent.LeftButton not in event.buttons:
-                return False
+        if len(nodes) > 0:
+            sn = nodes[0]
 
-            #id = self._selection_pass.getIdAtPosition(event.x, event.y)
-            #if not id:
-            #    return False
+            if self._scene_node_name is None or sn.getName() != self._scene_node_name:
 
+                mesh_data = nodes[0].getMeshData()
 
-            """
-            if self._handle.isAxis(id):
-                self.setLockedAxis(id)
-            else:
-                # Not clicked on an axis: do nothing.
-                return False
-            handle_position = self._handle.getWorldPosition()
-            """
+                if mesh_data:
+                    Logger.log('d', 'Compute SelectableMesh from SceneNode {}'.format(sn.getName()))
+                    
+                    self._scene_node_name = sn.getName()
+                    self._selectable_mesh = SelectableMesh(mesh_data)
 
-            """
-            if Selection.hasSelection() and not Selection.getFaceSelectMode():
-                Selection.setFaceSelectMode(True)
-                Logger.log("d", "Enabled faceSelectMode!")
-            elif not Selection.getSelectedFace() and Selection.getFaceSelectMode():
-                Selection.setFaceSelectMode(False)
-                Logger.log("d", "Disabled faceSelectMode!")
-            """
-
-            if Selection.getSelectedFace() is not None:
-                Logger.log("d", "Selection.getSelectedFace(): {}".format(Selection.getSelectedFace()[0]))
-
-            return True
-
-
-        if event.type == Event.MouseReleaseEvent:
-            # Finish a rotate operation
-            if len(self.selected_faces) > 0:
-                '''Application.getInstance().messageBox("SmartSlice",
-                                                     "You selected face: {}\ngetFaceSelectMode={}".format(self.selected_face,
-                                                                                                          Selection.getFaceSelectMode()
-                                                                                                          )
-                                                     )'''
-
-            return True
+                    controller = Application.getInstance().getController()
+                    camTool = controller.getCameraTool()
+                    camTool.setOrigin(self._selectable_mesh.box.center)
 
     def _onSelectedFaceChanged(self):
         curr_sf = Selection.getSelectedFace()
 
-        if curr_sf is not None:
-
-            # Check if the selectable mesh hasn't been created yet or if the scene name
-            # has changed. This is probably a crappy way to track mesh/scene changes, but
-            # I need to get something working now that doesn't create the SelectableMesh
-            # on every click
+        if curr_sf is not None and self._selectable_mesh is not None:
             scene_node, face_id = curr_sf
-
-            if self._selectable_mesh is None or scene_node.getName() != self._scene_name:
-                mesh_data = scene_node.getMeshData()
-
-                self._scene_name = scene_node.getName()
-                self._selectable_mesh = SelectableMesh(mesh_data)
 
             selmesh = self._selectable_mesh
             
@@ -197,8 +152,9 @@ class SmartSliceSelectTool(Tool):
             
 
     def _onActiveStateChanged(self):
-        active_tool = Application.getInstance().getController().getActiveTool()
-        Logger.log("d", "Application.getInstance().getController().getActiveTool(): {}".format(Application.getInstance().getController().getActiveTool()))
+        controller = Application.getInstance().getController()
+        active_tool = controller.getActiveTool()
+        Logger.log("d", "Application.getInstance().getController().getActiveTool(): {}".format(active_tool))
 
         if active_tool == self and Selection.hasSelection():
             Selection.setFaceSelectMode(True)
@@ -206,6 +162,8 @@ class SmartSliceSelectTool(Tool):
         else:
             Selection.setFaceSelectMode(False)
             Logger.log("d", "Disabled faceSelectMode!")
+
+        self._calculateMesh()
 
     ##  Get whether the select face feature is supported.
     #   \return True if it is supported, or False otherwise.

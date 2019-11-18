@@ -12,9 +12,11 @@
     CalculatableFace are always in terms of PyWim's coordinate system
 '''
 
+from sys import float_info
 
 #  STANDARD IMPORTS
 from UM.Math.Vector import Vector
+from UM.Math.AxisAlignedBox import AxisAlignedBox
 import numpy
 
 #  Ultimaker/Cura Imports
@@ -345,6 +347,8 @@ class SelectableMesh:
         self.points = dict()
         self.faces = dict()
 
+        
+
         nfaces = int(len(mesh_data._vertices) / 3)
 
         if mesh_data._indices and len(mesh_data._indices) > 0:
@@ -354,6 +358,18 @@ class SelectableMesh:
 
         vertices = mesh_data._vertices
         normals = mesh_data._normals
+
+        v0 = vertices[0]
+
+        minv = Vector(v0[0], v0[1], v0[2])
+        maxv = Vector(v0[0], v0[1], v0[2])
+
+        for v in vertices:
+            x, y, z = v[0:3]
+            minv = minv.set(min(x, minv.x), min(y, minv.y), min(z, minv.z))
+            maxv = maxv.set(max(x, maxv.x), max(y, maxv.y), max(z, maxv.z))
+
+        self.box = AxisAlignedBox(minimum=minv, maximum=maxv)
 
         for f in range(nfaces):
             if indices:
