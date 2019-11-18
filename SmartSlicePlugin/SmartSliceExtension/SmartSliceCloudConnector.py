@@ -293,7 +293,7 @@ class SmartSliceCloudJob(Job):
             result = task.result
             if result:
                 analyse = result.analyses[0]
-                Logger.log("d", "analyse: {}".format(analyse))
+                Logger.log("d", "analyse: {}".format(analyse.to_json()))
                 Logger.log("d", "analyse.modifier_meshes: {}".format(analyse.modifier_meshes))
 
                 # MODIFIER MESHES STUFF
@@ -372,7 +372,7 @@ class SmartSliceCloudJob(Job):
                 self.connector._proxy.resultMaximalDisplacement = analyse.structural.max_displacement
 
                 qprint_time = QTime(0, 0, 0, 0)
-                qprint_time.addSecs(analyse.print_time)
+                qprint_time = qprint_time.addSecs(analyse.print_time)
                 self.connector._proxy.resultTimeTotal = qprint_time
 
                 # TODO: Reactivate the block as soon as we have the single print times again!
