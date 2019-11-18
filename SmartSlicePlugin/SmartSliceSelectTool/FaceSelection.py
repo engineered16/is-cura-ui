@@ -351,7 +351,7 @@ class SelectableMesh:
 
         nfaces = int(len(mesh_data._vertices) / 3)
 
-        if mesh_data._indices and len(mesh_data._indices) > 0:
+        if mesh_data._indices is not None and len(mesh_data._indices) > 0:
             indices = mesh_data._indices
         else:
             indices = None
@@ -372,7 +372,7 @@ class SelectableMesh:
         self.box = AxisAlignedBox(minimum=minv, maximum=maxv)
 
         for f in range(nfaces):
-            if indices:
+            if indices is not None:
                 i, j, k = indices[f][0:3]
             else:
                 base_index = f * 3
