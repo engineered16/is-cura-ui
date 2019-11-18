@@ -169,8 +169,8 @@ Item {
             }
 
             text: SmartSlice.Selection.loadMagnitude
-            placeholderText: "kN"
-            property string unit: "[kN]";
+            placeholderText: "Type in your load"
+            property string unit: "[N]";
         }
     }
 }
