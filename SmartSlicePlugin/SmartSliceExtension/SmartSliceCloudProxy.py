@@ -10,6 +10,7 @@ from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import pyqtProperty
 from PyQt5.QtCore import QObject
 from PyQt5.QtCore import QTime
+from PyQt5.QtCore import QUrl
 
 from UM.Logger import Logger
 
@@ -214,7 +215,7 @@ class SmartSliceCloudProxy(QObject):
 
     sliceIconImageChanged = pyqtSignal()
 
-    @pyqtProperty(str, notify=sliceIconImageChanged)
+    @pyqtProperty(QUrl, notify=sliceIconImageChanged)
     def sliceIconImage(self):
         return self._sliceIconImage
 

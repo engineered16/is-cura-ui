@@ -535,6 +535,7 @@ class SmartSliceCloudConnector(QObject):
             current_icon = icon_warning_yellow
         elif self.status is SmartSliceCloudStatus.Underdimensioned:
             current_icon = icon_error_red
+        current_icon = QUrl.fromLocalFile(current_icon)
         self._proxy.sliceIconImage = current_icon
 
         # Setting icon visibiltiy
