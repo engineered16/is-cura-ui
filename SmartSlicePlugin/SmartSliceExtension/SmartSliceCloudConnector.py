@@ -295,7 +295,7 @@ class SmartSliceCloudJob(Job):
                 analyse = result.analyses[0]
                 Logger.log("d", "analyse: {}".format(analyse))
                 Logger.log("d", "analyse.modifier_meshes: {}".format(analyse.modifier_meshes))
-                
+
                 # MODIFIER MESHES STUFF
                 # TODO: We need a per node solution here as soon as we want to analyse multiple models.
                 our_only_node =  self.connector.getSliceableNodes()[0]
@@ -306,13 +306,13 @@ class SmartSliceCloudJob(Job):
                     modifier_mesh_node.setName("SmartSliceMeshModifier")
                     modifier_mesh_node.setSelectable(True)
                     modifier_mesh_node.setCalculateBoundingBox(True)
-                    
+
                     # Building the mesh
-                    
+
                     # # Preparing the data from pywim for MeshBuilder
                     modifier_mesh_vertices = [[v.x, v.y, v.z] for v in modifier_mesh.vertices ]
                     modifier_mesh_indices = [[triangle.v1, triangle.v2, triangle.v3] for triangle in modifier_mesh.triangles]
-                    
+
                     # # Doing the actual build
                     modifier_mesh_data = MeshBuilder()
                     modifier_mesh_data.setVertices(numpy.asarray(modifier_mesh_vertices, dtype=numpy.float32))
@@ -321,30 +321,30 @@ class SmartSliceCloudJob(Job):
 
                     modifier_mesh_node.setMeshData(modifier_mesh_data.build())
                     modifier_mesh_node.calculateBoundingBoxMesh()
-                    
+
                     active_build_plate = Application.getInstance().getMultiBuildPlateModel().activeBuildPlate
                     modifier_mesh_node.addDecorator(BuildPlateDecorator(active_build_plate))
                     modifier_mesh_node.addDecorator(SliceableObjectDecorator())
-                    
+
                     stack = modifier_mesh_node.callDecoration("getStack")
                     settings = stack.getTop()
-                    
+
                     modifier_mesh_node_infill_pattern = self.connector.infill_pattern_pywim_to_cura_dict[modifier_mesh.print_config.infill.pattern]
                     definition_dict = {
                         "infill_mesh" : True,
                         "infill_pattern" : modifier_mesh_node_infill_pattern,
-                        "infill_sparse_density": modifier_mesh.print_config.infill.density, 
+                        "infill_sparse_density": modifier_mesh.print_config.infill.density,
                         }
                     Logger.log("d", "definition_dict: {}".format(definition_dict))
-                    
+
                     for key, value in definition_dict.items():
                         definition = stack.getSettingDefinition(key)
                         new_instance = SettingInstance(definition, settings)
                         new_instance.setProperty("value", value)
-                        
+
                         new_instance.resetState()  # Ensure that the state is not seen as a user state.
                         settings.addInstance(new_instance)
-            
+
                     op = GroupedOperation()
                     # First add node to the scene at the correct position/scale, before parenting, so the eraser mesh does not get scaled with the parent
                     op.addOperation(AddSceneNodeOperation(modifier_mesh_node,
@@ -355,11 +355,11 @@ class SmartSliceCloudJob(Job):
                                                        our_only_node)
                                     )
                     op.push()
-                    
+
                     # TODO: Not needed during POC. Decision needed whether this is superfluous or not.
                     #modifier_mesh_transform_matrix = Matrix(modifier_mesh.transform)
                     #modifier_mesh_node.setTransformation(modifier_mesh_transform_matrix)
-                    
+
                     our_only_node_position = our_only_node.getWorldPosition()
                     modifier_mesh_node.setPosition(our_only_node_position,
                                                    SceneNode.TransformSpace.World)

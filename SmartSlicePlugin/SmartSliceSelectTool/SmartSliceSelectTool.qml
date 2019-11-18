@@ -35,19 +35,19 @@ Item {
         id: catalog;
         name: "smartslice"
     }
-    
+
     Component.onCompleted: {
         selectAnchorButton.checked = UM.ActiveTool.properties.getValue("AnchorSelectionActive")
         selectLoadButton.checked = UM.ActiveTool.properties.getValue("LoadSelectionActive")
     }
-      
+
     Button
     {
         id: selectAnchorButton
-        
+
         anchors.left: parent.left
         z: 2
-    
+
         text: catalog.i18nc("@action:button", "Anchor (Mount)")
         iconSource: "./anchor_icon.svg"
         property bool needBorder: true
@@ -67,7 +67,7 @@ Item {
         anchors.left: selectAnchorButton.right;
         anchors.leftMargin: UM.Theme.getSize("default_margin").width;
         z: 1
-        
+
         text: catalog.i18nc("@action:button", "Load (Directed force)")
         iconSource: "./load_icon.svg"
         property bool needBorder: true
@@ -90,7 +90,7 @@ Item {
 
         width: UM.Theme.getSize("action_panel_widget").width/2 + UM.Theme.getSize("default_margin").width
         height: 100 + 2 * UM.Theme.getSize("thick_margin").width
-        
+
         anchors.bottom: selectAnchorButton.top
         anchors.bottomMargin: UM.Theme.getSize("default_margin").width * 2
         anchors.left: selectAnchorButton.left
@@ -136,7 +136,7 @@ Item {
             anchors.leftMargin: UM.Theme.getSize("default_margin").width
 
             text: "Flip Direction"
-            
+
             checked: SmartSlice.Selection.loadMagnitudeInverted
             onCheckedChanged: SmartSlice.Selection.loadMagnitudeInverted = checked
         }
@@ -174,5 +174,3 @@ Item {
         }
     }
 }
-
-

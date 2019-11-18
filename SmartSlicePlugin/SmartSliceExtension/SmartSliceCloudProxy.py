@@ -143,7 +143,7 @@ class SmartSliceCloudProxy(QObject):
     @pyqtProperty(bool, notify=loginPasswordChanged)
     def loginResult(self):
         return self.connector.login()
-    
+
     # Properties (mainly) for the sliceinfo widget
 
     sliceStatusEnumChanged = pyqtSignal()
