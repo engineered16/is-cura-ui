@@ -18,13 +18,14 @@ from UM.Logger import Logger
 class SmartSliceCloudStatus:
     NoConnection = 1
     BadLogin = 2
-    InvalidInput = 3
-    ReadyToVerify = 4
-    Underdimensioned = 5
-    Overdimensioned = 6
-    BusyValidating = 7
-    BusyOptimizing = 8
-    Optimized = 9
+    NoModel = 3
+    NoConditions = 4
+    ReadyToVerify = 5
+    Underdimensioned = 6
+    Overdimensioned = 7
+    BusyValidating = 8
+    BusyOptimizing = 9
+    Optimized = 10
 
     Busy = (BusyValidating,
             BusyOptimizing,
@@ -58,6 +59,8 @@ class SmartSliceCloudProxy(QObject):
         # Boundary values
         self._targetFactorOfSafety = 1.5
         self._targetMaximalDisplacement = 1.0
+        self._loadsApplied = 0
+        self._anchorsApplied = 0
 
         # Properties (mainly) for the sliceinfo widget
         self._resultSafetyFactor = copy.copy(self._targetFactorOfSafety)

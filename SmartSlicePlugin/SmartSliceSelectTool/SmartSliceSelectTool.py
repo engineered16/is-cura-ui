@@ -15,6 +15,7 @@ from UM.Logger import Logger
 from UM.Event import Event, MouseEvent, KeyEvent
 from UM.Tool import Tool
 from UM.Math.Vector import Vector
+from UM.Signal import Signal
 
 from UM.View.GL.OpenGL import OpenGL
 from UM.Scene.Selection import Selection
@@ -91,6 +92,7 @@ class SmartSliceSelectTool(Tool):
 
     def _onSelectedFaceChanged(self):
         curr_sf = Selection.getSelectedFace()
+        cloud_connector = PluginRegistry.getInstance().getPluginObject("SmartSliceExtension").cloud
 
         if curr_sf is not None and self._selectable_mesh is not None:
             scene_node, face_id = curr_sf
@@ -108,17 +110,15 @@ class SmartSliceSelectTool(Tool):
 
             self._handle.setFace(sf)
 
+            #  If Load Mode is Active
             if self.getLoadSelectionActive():
+                #  Set/Draw Load Selection in Scene
                 self._handle.drawFaceSelection(SelectionMode.LoadMode, selmesh, draw_arrow=True)
+
+            #  If Anchor Mode is Active
             else:
+                #  Set/Draw Anchor Selection in Scene
                 self._handle.drawFaceSelection(SelectionMode.AnchorMode, selmesh)
-
-
-            '''
-            print("v_a", v_a)
-            print("v_b", v_b)
-            print("v_c", v_c)
-            '''
 
             self._handle.scale(scene_node.getScale(), transform_space=CuraSceneNode.TransformSpace.World)
 
@@ -137,11 +137,28 @@ class SmartSliceSelectTool(Tool):
             Logger.log("d", "loaded_faces: {}".format(loaded_faces))
             Logger.log("d", "anchored_faces: {}".format(anchored_faces))
             
-            cloud_connector = PluginRegistry.getInstance().getPluginObject("SmartSliceExtension").cloud
             if self._selection_mode is SelectionMode.AnchorMode:
+                print ("\n\nANCHOR APPLIED RIGHT HERE\n\n")
+                cloud_connector._proxy._anchorsApplied = 1
+
+                #
+                #   TODO: Change _anchorsApplied from ' = 1' to arbitrary # of loads
+                #           * Check for multiple selection key, e.g. Shift
+                #
+                
                 cloud_connector.appendAnchor0FacesPoc(anchored_faces)
                 Logger.log("d", "cloud_connector.getAnchor0FacesPoc(): {}".format(cloud_connector.getAnchor0FacesPoc()))
+
+                Application.getInstance().activityChanged.emit()
             else:
+                print ("\nLOAD APPLIED RIGHT HERE\n\n")
+                cloud_connector._proxy._loadsApplied = 1
+
+                #
+                #   TODO: Change _loadsApplied from ' = 1' to arbitrary # of loads
+                #           * Check for multiple selection key, e.g. Shift
+                #
+
                 cloud_connector.setForce0VectorPoc(load_vector.x,
                                                    load_vector.y,
                                                    load_vector.z
@@ -149,6 +166,8 @@ class SmartSliceSelectTool(Tool):
                 cloud_connector.appendForce0FacesPoc(loaded_faces)
                 Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(cloud_connector.getForce0VectorPoc()))
                 Logger.log("d", "cloud_connector.getForce0FacesPoc(): {}".format(cloud_connector.getForce0FacesPoc()))
+
+                Application.getInstance().activityChanged.emit()
             
 
     def _onActiveStateChanged(self):

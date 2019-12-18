@@ -481,14 +481,18 @@ class SmartSliceCloudConnector(QObject):
                                  self.getProxy
                                  )
 
-        self.status = SmartSliceCloudStatus.InvalidInput
+        self.status = SmartSliceCloudStatus.NoModel
 
     def updateSliceWidget(self):
-        if self.status is SmartSliceCloudStatus.InvalidInput:
+        if self.status is SmartSliceCloudStatus.NoModel:
             self._proxy.sliceStatus = "Amount of loaded models is incorrect"
             self._proxy.sliceHint = "Make sure only one model is loaded!"
             self._proxy.sliceButtonText = "Waiting for model"
             self._proxy.sliceButtonEnabled = False
+        elif self.status is SmartSliceCloudStatus.NoConditions:
+            self._proxy.sliceStatus = "Need boundary conditions"
+            self._proxy.sliceHint = "Both a load and anchor must be applied"
+            self._proxy.sliceButtonText = "Need boundary conditions"
         elif self.status is SmartSliceCloudStatus.ReadyToVerify:
             self._proxy.sliceStatus = "Ready to validate"
             self._proxy.sliceHint = "Press on the button below to validate your part."
@@ -587,15 +591,23 @@ class SmartSliceCloudConnector(QObject):
 
     def _onApplicationActivityChanged(self):
         slicable_nodes_count = len(self.getSliceableNodes())
+        
+        #  If no model is reported... 
+        #   This needs to be reported *first*
+        if slicable_nodes_count != 1:
+            self.status = SmartSliceCloudStatus.NoModel
 
-        # TODO: Add check for anchors and loads here!
+        #  Check for Anchors and Loads
+        elif self._proxy._anchorsApplied == 0:
+            self.status = SmartSliceCloudStatus.NoConditions
+        elif self._proxy._loadsApplied == 0:
+            self.status = SmartSliceCloudStatus.NoConditions
 
-        if self.status is SmartSliceCloudStatus.InvalidInput:
+        #  If it is ready to Verify
+        elif (self.status is SmartSliceCloudStatus.NoConditions) or (self.status is SmartSliceCloudStatus.NoModel):
             if slicable_nodes_count == 1:
                 self.status = SmartSliceCloudStatus.ReadyToVerify
-        elif self.status is SmartSliceCloudStatus.ReadyToVerify:
-            if slicable_nodes_count != 1:
-                self.status = SmartSliceCloudStatus.InvalidInput
+        #  If it is NOT ready to Verify
         else:
             # Ignore our infill meshes
             pass
