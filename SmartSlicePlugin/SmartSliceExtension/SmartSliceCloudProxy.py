@@ -94,7 +94,6 @@ class SmartSliceCloudProxy(QObject):
         self._loadedMesh = None
         self._loadedFaces = None
         self._selection_mode = 1 # Default to AnchorMode
-        
 
         # Default Boundary values
         self._targetFactorOfSafety = 1.5
@@ -103,6 +102,27 @@ class SmartSliceCloudProxy(QObject):
         self._anchorsApplied = 0
         self._loadMagnitude = 10.0
         self._loadDirection = SmartSliceLoadDirection.Pull
+
+
+        #  UI/Validation Signals
+        self.activeMaterialChanged.connect(self._onMaterialChanged)
+
+        self.meshScaleChanged.connect(self._onMeshScaleChangd)
+        self.meshRotationChanged.connect(self._onMeshRotationChanged)
+
+        self.infillDensityChanged.connect(self._onInfillDensityChanged)
+        self.infillPatternChanged.connect(self._onInfillPatternChanged)
+        self.infillLineDistanceChanged.connect(self._onInfillLineDistanceChanged)
+        self.infillLineDirectionChanged.connect(self._onInfillLineDirectionChanged)
+
+        self.wallThicknessChanged.connect(self._onWallThicknessChanged)
+        self.wallLineCountChanged.connect(self._onWallLineCountChanged)
+        self.topLayersChanged.connect(self._onTopLayersChanged)
+        self.bottomLayersChanged.connect(self._onBottomLayersChanged)
+        self.topLineDirectionChanged.connect(self._onTopLineDirectionChanged)
+        self.bottomLineDirectionChanged.connect(self._onBottomLineDirectionChanged)
+        self.alternateExtraWallChanged.connect(self._onAlternateExtraWallChanged)
+
 
         # Properties (mainly) for the sliceinfo widget
         self._resultSafetyFactor = copy.copy(self._targetFactorOfSafety)
@@ -138,8 +158,6 @@ class SmartSliceCloudProxy(QObject):
         self.resultTimeSkinChanged.connect(self._onResultTimeChanged)
         self.resultTimeSkirtChanged.connect(self._onResultTimeChanged)
         self.resultTimeTravelChanged.connect(self._onResultTimeChanged)
-
-        self.activeMaterialChanged.connect(self._onMaterialChanged)
 
         self._material = None #  Cura Material Node
         self._materialName = None
@@ -395,14 +413,9 @@ class SmartSliceCloudProxy(QObject):
 
     @targetFactorOfSafety.setter
     def targetFactorOfSafety(self, value):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
-            self._propertyChanged = SmartSliceValidationProperty.FactorOfSafety
-            self._changedValue = value
-            self.connector._confirmValidation()
-        elif self._targetFactorOfSafety is not value:
+        if self._targetFactorOfSafety is not value:
             self._targetFactorOfSafety = value
             self.targetFactorOfSafetyChanged.emit()
-            self.connector._prepareValidation()
 
     @pyqtProperty(float, notify=resultSafetyFactorChanged)
     def resultSafetyFactor(self):
@@ -425,14 +438,9 @@ class SmartSliceCloudProxy(QObject):
 
     @targetMaximalDisplacement.setter
     def targetMaximalDisplacement(self, value):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
-            self._propertyChanged = SmartSliceValidationProperty.MaxDisplacement
-            self._changedValue = value
-            self.connector._confirmValidation()
-        elif self._targetMaximalDisplacement is not value:
+        if self._targetMaximalDisplacement is not value:
             self._targetMaximalDisplacement = value
             self.targetMaximalDisplacementChanged.emit()
-            self.connector._prepareValidation()
 
     @pyqtProperty(float, notify=resultMaximalDisplacementChanged)
     def resultMaximalDisplacement(self):
@@ -491,10 +499,8 @@ class SmartSliceCloudProxy(QObject):
             self.connector._prepareValidation()
         self.loadMagnitudeInvertedChanged.emit()
 
-    #
-    #   FACE DRAWING/SELECTION
-    #
 
+    #   FACE DRAWING/SELECTION
     selectedFacesChanged = pyqtSignal() 
 
     def confirmFaceDraw(self):
@@ -523,18 +529,15 @@ class SmartSliceCloudProxy(QObject):
             self._loadedMesh = self._changedMesh
             self._loadedFaces = self._changedFaces
 
-    #
-    #   MATERIAL CHANGES
-    #
 
+    #   MATERIAL CHANGES
     activeMaterialChanged = pyqtSignal()
 
     def setMaterial(self):
-            self._activeMachineManager._global_container_stack.setMetaDataEntry("material", self._material)
-            
+        self._activeMachineManager._global_container_stack.setMetaDataEntry("material", self._material)
 
     def _onMaterialChanged(self):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self._material == None):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating and (self._material != None):
             print("\n\nMATERIAL CHANGE CONFIRMED HERE\n\n")
             self._propertyChanged = SmartSliceValidationProperty.Material
             self._changedMaterial = self._activeMachineManager._global_container_stack.extruderList[0].material
@@ -543,6 +546,84 @@ class SmartSliceCloudProxy(QObject):
             print("\n\nMATERIAL CHANGED HERE\n\n")
             self._material = self._activeMachineManager._global_container_stack.extruderList[0].material
             self.setMaterial()
+
+
+    #  INFILL CHANGES
+    infillDensityChanged        = pyqtSignal()
+    infillPatternChanged        = pyqtSignal()
+    infillLineDistanceChanged   = pyqtSignal()
+    infillLineDirectionChanged  = pyqtSignal()
+
+    def _onInfillDensityChanged(self):
+        #  STUB
+        1 + 1
+
+    def _onInfillPatternChanged(self):
+        #  STUB
+        1 + 1
+
+    def _onInfillLineDistanceChanged(self):
+        #  STUB 
+        1 + 1
+
+    def _onInfillLineDirectionChanged(self):
+        #  STUB
+        1 + 1
+
+
+    #  SHELL/STRUCTURE CHANGES
+    wallThicknessChanged        = pyqtSignal()
+    wallLineCountChanged        = pyqtSignal()
+    topLayersChanged            = pyqtSignal()
+    bottomLayersChanged         = pyqtSignal()
+    topLineDirectionChanged     = pyqtSignal()
+    bottomLineDirectionChanged  = pyqtSignal()
+    alternateExtraWallChanged   = pyqtSignal()
+
+    def _onWallThicknessChanged(self):
+        #  STUB
+        1 + 1
+
+    def _onWallLineCountChanged(self):
+        #  STUB
+        1 + 1
+
+    def _onTopLayersChanged(self):
+        #  STUB 
+        1 + 1
+
+    def _onBottomLayersChanged(self):
+        #  STUB 
+        1 + 1
+    
+    def _onTopLineDirectionChanged(self):
+        #  STUB 
+        1 + 1
+
+    def _onBottomLineDirectionChanged(self):
+        #  STUB 
+        1 + 1
+
+    def _onAlternateExtraWallChanged(self):
+        #  STUB
+        1 + 1
+
+
+    #   MESH TRANSFORMATION CHANGES
+    meshScaleChanged    = pyqtSignal()
+    meshRotationChanged = pyqtSignal()
+
+    def _onMeshScaleChangd(self):
+        #  STUB
+        1 + 1
+
+    def _onMeshRotationChanged(self):
+        #  STUB 
+        1 + 1
+
+    #
+    #   SMART SLICE RESULTS
+    #
 
     resultTimeTotalChanged = pyqtSignal()
 
