@@ -108,7 +108,7 @@ class SmartSliceCloudProxy(QObject):
         self.activeMaterialChanged.connect(self._onMaterialChanged)
 
         self.meshScaleChanged.connect(self._onMeshScaleChangd)
-        self.meshRotationChanged.connect(self._onMeshRotationChanged)
+        self.meshRotationChanged.connect(self._onMeshRotationChanged)   #  Only if X, Y
 
         self.infillDensityChanged.connect(self._onInfillDensityChanged)
         self.infillPatternChanged.connect(self._onInfillPatternChanged)
@@ -122,6 +122,23 @@ class SmartSliceCloudProxy(QObject):
         self.topLineDirectionChanged.connect(self._onTopLineDirectionChanged)
         self.bottomLineDirectionChanged.connect(self._onBottomLineDirectionChanged)
         self.alternateExtraWallChanged.connect(self._onAlternateExtraWallChanged)
+
+        self.layerHeightChanged.connect(self._onLayerHeightChanged)
+        self.layerHeightInitialChanged.connect(self._onLayerHeightIntialChanged)
+        self.lineWidthChanged.connect(self._onLineWidthChanged)
+        self.lineWidthWallChanged.connect(self._onLineWidthWallChanged)
+        self.lineWidthWallOuterChanged.connect(self._onLineWidthWallOuterChanged)
+        self.lineWidthWallInnerChanged.connect(self._onLineWidthWallInnerChanged)
+        self.lineWidthTopChanged.connect(self._onLineWidthTopChanged)
+        self.lineWidthBottomChanged.connect(self._onLineWidthBottomChanged)
+        self.lineWidthInfillChanged.connect(self._onLineWidthInfillChanged)
+        self.lineWidthSkirtChanged.connect(self._onLineWidthSkirtChanged)
+        self.lineWidthBrimChanged.connect(self._onLineWidthBrimChanged)
+        self.lineWidthSupportChanged.connect(self._onLineWidthSupportChanged)
+        self.lineWidthSupportInterfaceChanged.connect(self._onLineWidthSupportInterfaceChanged)
+        self.lineWidthSupportRoofChanged.connect(self._onLineWidthSupportRoofChanged)
+        self.lineWidthSupportFloorChanged.connect(self._onLineWidthSupportFloorChanged)
+        self.lineWidthPrimeTowerChanged.connect(self._onLineWidthPrimeTowerChanged)
 
 
         # Properties (mainly) for the sliceinfo widget
@@ -620,6 +637,102 @@ class SmartSliceCloudProxy(QObject):
     def _onMeshRotationChanged(self):
         #  STUB 
         1 + 1
+
+
+    #  SLICER SETTINGS
+    layerHeightChanged          = pyqtSignal()
+    layerHeightInitialChanged   = pyqtSignal()
+
+    lineWidthChanged            = pyqtSignal() 
+    lineWidthInitialLayerChanged = pyqtSignal()
+
+    lineWidthWallChanged        = pyqtSignal()
+    lineWidthWallOuterChanged   = pyqtSignal()
+    lineWidthWallInnerChanged   = pyqtSignal()
+
+    lineWidthInfillChanged      = pyqtSignal()
+
+    lineWidthTopChanged         = pyqtSignal()
+    lineWidthBottomChanged      = pyqtSignal()
+
+    lineWidthSkirtChanged       = pyqtSignal()
+    lineWidthBrimChanged        = pyqtSignal()
+
+    lineWidthSupportChanged     = pyqtSignal()
+    lineWidthSupportInterfaceChanged = pyqtSignal()
+    lineWidthSupportRoofChanged = pyqtSignal()
+    lineWidthSupportFloorChanged = pyqtSignal()
+
+    lineWidthPrimeTowerChanged  = pyqtSignal()
+
+    def _onLayerHeightChanged(self):
+        # STUB
+        1 + 1
+
+    def _onLayerHeightInitialChanged(self):
+        # STUB
+        1 + 1
+
+    def _onLineWidthChanged(self):
+        # STUB
+        1 + 1
+    
+    def _onLineWidthInitialChanged(self):
+        # STUB
+        1 + 1
+
+    def _onLineWidthWallChanged(self):
+        # STUB
+        1
+    
+    def _onLineWidthWallOuterChanged(self):
+        #  STUB
+        1
+
+    def _onLineWidthWallInnerChanged(self):
+        #  STUB
+        1
+    
+    def _onLineWidthInfillChanged(self):
+        # STUB
+        1
+
+    def _onLineWidthTopChanged(self):
+        # STUB
+        1
+
+    def _onLineWidthBottomChanged(self):
+        # STUB
+        1
+    
+    def _onLineWidthSkirtChanged(self):
+        # STUB
+        1
+
+    def _onLineWidthBrimChanged(self):
+        #  STUB
+        1
+
+    def _onLineWidthSupportChanged(self):
+        #  STUB
+        1
+
+    def _onLineWidthSupportInterfaceChanged(self):
+        # STUB
+        1
+
+    def _onLineWidthSupportRoofChanged(self):
+        # STUB
+        1
+
+    def _onLineWidthSupportFloorChanged(self):
+        # STUB
+        1
+
+    def _onLineWidthPrimeTowerChanged(self):
+        # STUB
+        1
+
 
     #
     #   SMART SLICE RESULTS
