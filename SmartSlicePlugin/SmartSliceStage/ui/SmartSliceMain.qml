@@ -640,25 +640,25 @@ Item {
                 }
                 }
             }
-            Cura.PrimaryButton
-            {
-
+            Cura.PrimaryButton {
                 id: smartSliceButton
-                Layout.fillWidth: true
 
-                height: UM.Theme.getSize("action_button").height
+                Layout.fillWidth: SmartSlice.Cloud.sliceButtonFillWidth
+                Layout.preferredWidth: UM.Theme.getSize("action_panel_widget").width * 2/3 - UM.Theme.getSize("thick_margin").width
+
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
 
                 text: SmartSlice.Cloud.sliceButtonText
 
                 enabled: SmartSlice.Cloud.sliceButtonEnabled
+                visible: SmartSlice.Cloud.sliceButtonVisible
 
                 Connections {
                     target: SmartSlice.Cloud
-                    onSliceButtonEnabledChanged: {
-                        smartSliceButton.enabled = SmartSlice.Cloud.sliceButtonEnabled
-                    }
+                    onSliceButtonEnabledChanged: { smartSliceButton.enabled = SmartSlice.Cloud.sliceButtonEnabled }
+                    onSliceButtonFillWidthChanged: { smartSliceButton.Layout.fillWidth = smartSlice.Cloud.sliceButtonFillWidth }
                 }
-
 
                 /*
                     Smart Slice Button Click Event
@@ -668,6 +668,112 @@ Item {
                     SmartSlice.Cloud.sliceButtonClicked()
                 }
             }
+            Cura.SecondaryButton {
+                id: smartSliceSecondaryButton
+
+                //width: UM.Theme.getSize("thick_margin").width
+                Layout.fillWidth: SmartSlice.Cloud.secondaryButtonFillWidth
+
+                anchors.left: parent.left
+                anchors.bottom: parent.bottom
+
+                text: SmartSlice.Cloud.secondaryButtonText
+                
+                visible: SmartSlice.Cloud.secondaryButtonVisible
+
+                Connections {
+                    target: SmartSlice.Cloud
+                    onSecondaryButtonVisibleChanged: { smartSliceSecondaryButton.visible = SmartSlice.Cloud.secondaryButtonVisible }
+                    onSecondaryButtonFillWidthChanged: { smartSliceSecondaryButton.Layout.fillWidth = SmartSlice.Cloud.secondaryButtonFillWidth }
+                }
+
+                /*
+                    Smart Slice Button Click Event
+                */
+                onClicked: {
+                    //  Show Validation Dialog
+                    SmartSlice.Cloud.secondaryButtonClicked()
+                }
+            }
         }
     }
+
+    /*
+        CONFIRMATION PROMPTS
+    */
+    Rectangle {
+        id: smartSliceConfirm
+
+        width: UM.Theme.getSize("action_panel_widget").width
+        height: myColumn.height + 2 * UM.Theme.getSize("thick_margin").width
+
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenter: parent.verticalCenter
+
+        color: UM.Theme.getColor("main_background")
+        border.width: UM.Theme.getSize("default_lining").width
+        border.color: UM.Theme.getColor("lining")
+        radius: UM.Theme.getSize("default_radius").width
+
+        visible: SmartSlice.Cloud.confirmationWindowEnabled
+
+        Connections {
+            target: SmartSlice.Cloud
+            onConfirmationWindowEnabledChanged: { smartSliceConfirm.visible = SmartSlice.Cloud.confirmationWindowEnabled }
+            onConfirmationWindowTextChanged: { smartSliceConfirmText.text = SmartSlice.Cloud.confirmationWindowText }
+        }
+
+        Label {
+            id: smartSliceConfirmText
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.topMargin: UM.Theme.getSize("thick_margin").width
+            text: SmartSlice.Cloud.confirmationWindowText
+        }
+        
+        Cura.PrimaryButton {
+            id: smartSliceConfirmContinue
+
+            anchors.bottom: parent.bottom
+            anchors.right: parent.right
+
+            anchors.bottomMargin: UM.Theme.getSize("thick_margin").height
+            anchors.rightMargin: UM.Theme.getSize("thick_margin").width
+
+            enabled: true
+            text: "Continue"
+
+            /*
+                Re-optimize Continue Button Click Event
+            */
+            onClicked: {
+                //  Show Validation Dialog
+                //  TODO: Generalize this reoptimize cancellation for validation as well
+                SmartSlice.Cloud.confirmationConfirmClicked()
+            }
+        }
+
+        Cura.SecondaryButton {
+            id: smartSliceConfirmCancel
+
+            anchors.right: smartSliceConfirmContinue.left
+            anchors.bottom: parent.bottom
+
+            anchors.rightMargin: UM.Theme.getSize("thick_margin").width
+            anchors.bottomMargin: UM.Theme.getSize("thick_margin").height
+
+            enabled: true
+            text: "Cancel"
+
+            /*
+                Re-optimize Cancel Button Click Event
+            */
+            onClicked: {
+                //  Show Validation Dialog
+                //  TODO: Generalize this reoptimize cancellation for validation as well
+                SmartSlice.Cloud.confirmationCancelClicked()
+            }
+        }
+    }
+
 }

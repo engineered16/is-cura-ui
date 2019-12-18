@@ -26,6 +26,7 @@ from UM.Application import Application
 from UM.PluginRegistry import PluginRegistry
 
 from cura.Stages.CuraStage import CuraStage
+from cura.CuraApplication import CuraApplication
 
 #
 #   Stage Class Definition
@@ -36,6 +37,7 @@ class SmartSliceStage(CuraStage):
 
         #   Connect Stage to Cura Application
         Application.getInstance().engineCreatedSignal.connect(self._engineCreated)
+        self._connector = PluginRegistry.getInstance().getPluginObject("SmartSliceExtension").cloud
 
         #   Set Default Attributes
         self._was_buildvolume_hidden = None
@@ -73,6 +75,10 @@ class SmartSliceStage(CuraStage):
         self._previous_tool = application.getController().getActiveTool()
         if self._previous_tool:
             application.getController().setActiveTool(our_tool)
+
+        #  Set the Active Extruder for the Cloud interactions
+        self._connector._proxy._activeMachineManager = CuraApplication.getInstance().getMachineManager()
+        self._connector._proxy._activeMachineManager.activeMaterialChanged.connect(self._connector._proxy._onMaterialChanged)
 
 
     #   onStageDeselected:

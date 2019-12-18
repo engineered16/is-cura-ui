@@ -46,7 +46,6 @@ class SmartSliceSelectTool(Tool):
 
         #self._shortcut_key = Qt.Key_S
 
-        self._selection_mode = SelectionMode.AnchorMode
         self.setExposedProperties("AnchorSelectionActive",
                                   "LoadSelectionActive",
                                   "SelectionMode",
@@ -75,6 +74,7 @@ class SmartSliceSelectTool(Tool):
 
         if len(nodes) > 0:
             sn = nodes[0]
+            self._handle._connector._proxy._activeExtruderStack = nodes[0].callDecoration("getExtruderStack")
 
             if self._scene_node_name is None or sn.getName() != self._scene_node_name:
 
@@ -94,10 +94,10 @@ class SmartSliceSelectTool(Tool):
         curr_sf = Selection.getSelectedFace()
         cloud_connector = PluginRegistry.getInstance().getPluginObject("SmartSliceExtension").cloud
 
-        if curr_sf is not None and self._selectable_mesh is not None:
+        if curr_sf is not None:
             scene_node, face_id = curr_sf
 
-            selmesh = self._selectable_mesh
+            selmesh = SelectableMesh( scene_node.getMeshData() )
             
             #  Construct Selectable Face && Draw Selection in canvas
             #sf = SelectableFace(tri_pts, mesh_data._normals, face_id)
@@ -105,20 +105,10 @@ class SmartSliceSelectTool(Tool):
             # Get the SelectableFace by matching the face Id - is this consistent??
             sf = selmesh.faces[face_id]
 
-            self.selected_faces = [sf] # TODO: Rewrite for >1 concurrently selected faces
+            selected_faces = [sf] # TODO: Rewrite for >1 concurrently selected faces
             #self._visualizer.changeSelection([sf])
 
             self._handle.setFace(sf)
-
-            #  If Load Mode is Active
-            if self.getLoadSelectionActive():
-                #  Set/Draw Load Selection in Scene
-                self._handle.drawFaceSelection(SelectionMode.LoadMode, selmesh, draw_arrow=True)
-
-            #  If Anchor Mode is Active
-            else:
-                #  Set/Draw Anchor Selection in Scene
-                self._handle.drawFaceSelection(SelectionMode.AnchorMode, selmesh)
 
             self._handle.scale(scene_node.getScale(), transform_space=CuraSceneNode.TransformSpace.World)
 
@@ -137,9 +127,17 @@ class SmartSliceSelectTool(Tool):
             Logger.log("d", "loaded_faces: {}".format(loaded_faces))
             Logger.log("d", "anchored_faces: {}".format(anchored_faces))
             
-            if self._selection_mode is SelectionMode.AnchorMode:
-                print ("\n\nANCHOR APPLIED RIGHT HERE\n\n")
+            if self.getAnchorSelectionActive():
+                #  Set/Draw Anchor Selection in Scene
                 cloud_connector._proxy._anchorsApplied = 1
+                self._handle._arrow = False
+                
+                #  Set mesh
+                self._handle._connector._proxy._changedMesh = selmesh
+                self._handle._connector._proxy._changedFaces = selected_faces
+
+                #  Draw Selection
+                self._handle._connector._proxy.confirmFaceDraw()
 
                 #
                 #   TODO: Change _anchorsApplied from ' = 1' to arbitrary # of loads
@@ -151,8 +149,16 @@ class SmartSliceSelectTool(Tool):
 
                 Application.getInstance().activityChanged.emit()
             else:
-                print ("\nLOAD APPLIED RIGHT HERE\n\n")
+                #  Set/Draw Scene Properties
                 cloud_connector._proxy._loadsApplied = 1
+                self._handle._arrow = True
+
+                #  Set Mesh
+                self._handle._connector._proxy._changedMesh = selmesh
+                self._handle._connector._proxy._changedFaces = selected_faces
+
+                #  Draw Selection
+                self._handle._connector._proxy.confirmFaceDraw()
 
                 #
                 #   TODO: Change _loadsApplied from ' = 1' to arbitrary # of loads
@@ -191,26 +197,26 @@ class SmartSliceSelectTool(Tool):
         return Version(OpenGL.getInstance().getOpenGLVersion()) >= Version("4.1 dummy-postfix")
 
     def setSelectionMode(self, mode):
-        if self._selection_mode is not mode:
-            self._selection_mode = mode
-
-            Logger.log("d", "Changed selection mode to enum: {}".format(mode))
+        self._handle._connector._proxy._selection_mode = mode
+        Logger.log("d", "Changed selection mode to enum: {}".format(mode))
 
     def getSelectionMode(self):
-        return self._selection_mode
+        return self._handle._connector._proxy._selection_mode
 
     def setAnchorSelection(self):
         self._handle.clearSelection()
-        self._handle.paintAnchoredFaces()
         self.setSelectionMode(SelectionMode.AnchorMode)
+        if self._handle._connector._proxy._anchorsApplied > 0:
+            self._handle._connector._proxy.selectedFacesChanged.emit()
 
     def getAnchorSelectionActive(self):
-        return self._selection_mode is SelectionMode.AnchorMode
+        return self._handle._connector._proxy._selection_mode is SelectionMode.AnchorMode
 
     def setLoadSelection(self):
         self._handle.clearSelection()
-        self._handle.paintLoadedFaces()
         self.setSelectionMode(SelectionMode.LoadMode)
+        if self._handle._connector._proxy._loadsApplied > 0:
+            self._handle._connector._proxy.selectedFacesChanged.emit()
 
     def getLoadSelectionActive(self):
-        return self._selection_mode is SelectionMode.LoadMode
+        return self._handle._connector._proxy._selection_mode is SelectionMode.LoadMode

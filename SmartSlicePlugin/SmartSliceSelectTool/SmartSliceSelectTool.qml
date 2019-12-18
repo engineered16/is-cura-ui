@@ -137,8 +137,9 @@ Item {
 
             text: "Flip Direction"
 
-            checked: SmartSlice.Selection.loadMagnitudeInverted
-            onCheckedChanged: SmartSlice.Selection.loadMagnitudeInverted = checked
+            checked: SmartSlice.Cloud.loadMagnitudeInverted
+            onCheckedChanged: SmartSlice.Cloud.loadMagnitudeInverted = checked
+            
         }
 
         Label {
@@ -165,10 +166,10 @@ Item {
 
             onEditingFinished:
             {
-                SmartSlice.Selection.loadMagnitude = text; // Will be converted from string to the target data type via SmartSliceVariables
+                SmartSlice.Cloud.loadMagnitude = text; // Will be converted from string to the target data type via SmartSliceVariables
             }
 
-            text: SmartSlice.Selection.loadMagnitude
+            text: SmartSlice.Cloud.loadMagnitude
             placeholderText: "Type in your load"
             property string unit: "[N]";
         }

@@ -44,6 +44,7 @@ from UM.PluginRegistry import PluginRegistry
 from UM.Scene.SceneNode import SceneNode
 from UM.Scene.Iterator.DepthFirstIterator import DepthFirstIterator
 from UM.Settings.SettingInstance import SettingInstance
+from UM.Signal import Signal
 
 # Cura
 from cura.OneAtATimeIterator import OneAtATimeIterator
@@ -56,6 +57,7 @@ from cura.Scene.SliceableObjectDecorator import SliceableObjectDecorator
 # Our extension
 from .SmartSliceCloudProxy import SmartSliceCloudStatus
 from .SmartSliceCloudProxy import SmartSliceCloudProxy
+from .SmartSliceValidationProperty import SmartSliceValidationProperty
 
 i18n_catalog = i18nCatalog("smartslice")
 
@@ -296,6 +298,8 @@ class SmartSliceCloudJob(Job):
                 Logger.log("d", "analyse: {}".format(analyse.to_json()))
                 Logger.log("d", "analyse.modifier_meshes: {}".format(analyse.modifier_meshes))
 
+                self.connector._proxy._hasModMesh = True
+
                 # MODIFIER MESHES STUFF
                 # TODO: We need a per node solution here as soon as we want to analyse multiple models.
                 our_only_node =  self.connector.getSliceableNodes()[0]
@@ -446,11 +450,17 @@ class SmartSliceCloudConnector(QObject):
         self.infill_pattern_pywim_to_cura_dict = {value: key for key, value in self.infill_pattern_cura_to_pywim_dict.items()}
 
         # Proxy
+        #General
         self._proxy = SmartSliceCloudProxy(self)
         self._proxy.sliceButtonClicked.connect(self.onSliceButtonClicked)
-
+        self._proxy.secondaryButtonClicked.connect(self.onSecondaryButtonClicked)
+        #Re-Optimize
+        self._proxy.confirmationConfirmClicked.connect(self.onConfirmationConfirmClicked)
+        self._proxy.confirmationCancelClicked.connect(self.onConfirmationCancelClicked)
+        
         # Connecting signals
         self.doVerification.connect(self._doVerfication)
+        self.confirmOptimization.connect(self._confirmOptimization)
         self.doOptimization.connect(self._doOptimization)
 
         # Application stuff
@@ -489,45 +499,67 @@ class SmartSliceCloudConnector(QObject):
             self._proxy.sliceHint = "Make sure only one model is loaded!"
             self._proxy.sliceButtonText = "Waiting for model"
             self._proxy.sliceButtonEnabled = False
+            self._proxy.sliceButtonFillWidth = True
+            self._proxy.secondaryButtonVisible = False
         elif self.status is SmartSliceCloudStatus.NoConditions:
             self._proxy.sliceStatus = "Need boundary conditions"
             self._proxy.sliceHint = "Both a load and anchor must be applied"
             self._proxy.sliceButtonText = "Need boundary conditions"
+            self._proxy.sliceButtonEnabled = False
+            self._proxy.sliceButtonFillWidth = True
+            self._proxy.secondaryButtonVisible = False
         elif self.status is SmartSliceCloudStatus.ReadyToVerify:
             self._proxy.sliceStatus = "Ready to validate"
             self._proxy.sliceHint = "Press on the button below to validate your part."
             self._proxy.sliceButtonText = "Validate"
             self._proxy.sliceButtonEnabled = True
+            self._proxy.sliceButtonFillWidth = True
+            self._proxy.secondaryButtonVisible = False
         elif self.status is SmartSliceCloudStatus.BusyValidating:
-            self._proxy.sliceStatus = "Validating your part"
-            self._proxy.sliceHint = "Please wait until the validation is done."
-            self._proxy.sliceButtonText = "Busy..."
-            self._proxy.sliceButtonEnabled = False
+            self._proxy.sliceStatus = "Validating requirements..."
+            self._proxy.sliceHint = ""
+            self._proxy.secondaryButtonText = "Cancel"
+            self._proxy.secondaryButtonVisible = True
+            self._proxy.secondaryButtonFillWidth = True
         elif self.status is SmartSliceCloudStatus.Underdimensioned:
-            self._proxy.sliceStatus = "Your part is underdesigned!"
-            self._proxy.sliceHint = "Optimize to meet requirements."
+            self._proxy.sliceStatus = "Requirements not met!"
+            self._proxy.sliceHint = "Optimize to meet requirements?"
             self._proxy.sliceButtonText = "Optimize"
+            self._proxy.secondaryButtonText = "Preview"
             self._proxy.sliceButtonEnabled = True
+            self._proxy.sliceButtonFillWidth = False
+            self._proxy.secondaryButtonVisible = True
+            self._proxy.secondaryButtonFillWidth = False
         elif self.status is SmartSliceCloudStatus.Overdimensioned:
-            self._proxy.sliceStatus = "Your part may be overdesigned!"
-            self._proxy.sliceHint = "Optimize to improve your part."
+            self._proxy.sliceStatus = "Part appears overdesigned"
+            self._proxy.sliceHint = "Optimize to reduce material?"
             self._proxy.sliceButtonText = "Optimize"
+            self._proxy.secondaryButtonText = "Preview"
             self._proxy.sliceButtonEnabled = True
+            self._proxy.sliceButtonFillWidth = False
+            self._proxy.secondaryButtonVisible = True
+            self._proxy.secondaryButtonFillWidth = False
         elif self.status is SmartSliceCloudStatus.BusyOptimizing:
-            self._proxy.sliceStatus = "Optimizing your part"
-            self._proxy.sliceHint = "Please wait until the optimization is done."
-            self._proxy.sliceButtonText = "Busy..."
-            self._proxy.sliceButtonEnabled = False
+            self._proxy.sliceStatus = "Optimizing..."
+            self._proxy.sliceHint = ""
+            self._proxy.secondaryButtonText = "Cancel"
+            self._proxy.secondaryButtonVisible = True
+            self._proxy.secondaryButtonFillWidth = True
         elif self.status is SmartSliceCloudStatus.Optimized:
             self._proxy.sliceStatus = "Part optimized"
             self._proxy.sliceHint = "Well done! You can review the results!"
             self._proxy.sliceButtonText = "Preview"
             self._proxy.sliceButtonEnabled = True
+            self._proxy.sliceButtonFillWidth = False
+            self._proxy.secondaryButtonVisible = True
+            self._proxy.secondaryButtonFillWidth = False
         else:
             self._proxy.sliceStatus = "! INTERNAL ERRROR!"
             self._proxy.sliceHint = "! UNKNOWN STATUS ENUM SET!"
             self._proxy.sliceButtonText = "! FOOO !"
             self._proxy.sliceButtonEnabled = False
+            self._proxy.secondaryButtonVisible = False
+            self._proxy.secondaryButtonFillWidth = False
 
         # Setting icon path
         stage_path = PluginRegistry.getInstance().getPluginPath("SmartSliceStage")
@@ -591,7 +623,7 @@ class SmartSliceCloudConnector(QObject):
 
     def _onApplicationActivityChanged(self):
         slicable_nodes_count = len(self.getSliceableNodes())
-        
+
         #  If no model is reported... 
         #   This needs to be reported *first*
         if slicable_nodes_count != 1:
@@ -613,36 +645,155 @@ class SmartSliceCloudConnector(QObject):
             pass
 
     def _onJobFinished(self, job):
+        if self._job is SmartSliceCloudVerificationJob:
+            self._proxy._hasActiveValidate = True
         self._job = None
 
+    confirmValidation = pyqtSignal()
     doVerification = pyqtSignal()
 
+    def _prepareValidation(self):
+        self._proxy._hasActiveValidate = False
+        self.status = SmartSliceCloudStatus.ReadyToVerify
+        Application.getInstance().activityChanged.emit()
+
+    def _confirmValidation(self):
+        self._proxy.confirmationWindowEnabled = True
+        self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose the current\n validation results?"
+        self._proxy.confirmationWindowEnabledChanged.emit()
+
     def _doVerfication(self):
-        self._job = SmartSliceCloudVerificationJob(self)
-        self._job.finished.connect(self._onJobFinished)
-        self._job.start()
+        if self._proxy._validate_confirmed:
+            self._job = SmartSliceCloudVerificationJob(self)
+            self._job.finished.connect(self._onJobFinished)
+            self._job.start()
+
+    confirmOptimization = pyqtSignal()
+
+    def _confirmOptimization(self):
+        #  If a modifier mesh has already been applied,
+        #   Display confirmation prompt before optimizing
+        if self._proxy._hasModMesh:
+            self._proxy.confirmationWindowEnabled = True
+            self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to cancel the current optimization?"
+            self._proxy.confirmationWindowEnabledChanged.emit()
 
     doOptimization = pyqtSignal()
 
     def _doOptimization(self):
-        self._job = SmartSliceCloudOptimizeJob(self)
-        self._job.finished.connect(self._onJobFinished)
-        self._job.start()
+        if self._proxy._optimize_confirmed:
+            # TODO:  Move the `if` from _doVerification HERE
+            self._job = SmartSliceCloudOptimizeJob(self)
+            self._job.finished.connect(self._onJobFinished)
+            self._proxy._hasModMesh = True
+            self._job.start()
+        else:
+            return # Do Nothing
 
+    '''
+      Primary Button Actions:
+        * Validate
+        * Optimize
+        * Slice
+    '''
     def onSliceButtonClicked(self):
         if not self._job:
             if self.status is SmartSliceCloudStatus.ReadyToVerify:
                 self.doVerification.emit()
             elif self.status in SmartSliceCloudStatus.Optimizable:
                 self.doOptimization.emit()
-            elif self.status is SmartSliceCloudStatus.Optimized:
-                Application.getInstance().getController().setActiveStage("PreviewStage")
         else:
             error_message = Message()
             error_message.setTitle("SmartSlice plugin")
             error_message.setText(i18n_catalog.i18nc("@info:status", "Slice job is already running!"))
             error_message.show()
 
+    '''
+      Secondary Button Actions:
+        * Cancel  (Validating / Optimizing)
+        * Preview
+    '''
+    def onSecondaryButtonClicked(self):
+        if self.status is SmartSliceCloudStatus.BusyOptimizing:
+            #
+            #  CANCEL SMART SLICE JOB HERE
+            #    Any connection to AWS server should be severed here
+            #
+            self._job = None
+            self.status = SmartSliceCloudStatus.ReadyToVerify
+            Application.getInstance().activityChanged.emit()
+        elif self.status is SmartSliceCloudStatus.BusyValidating:
+            #
+            #  CANCEL SMART SLICE JOB HERE
+            #    Any connection to AWS server should be severed here
+            #
+            self._job = None
+            self.status = SmartSliceCloudStatus.ReadyToVerify
+            Application.getInstance().activityChanged.emit()
+        else:
+            Application.getInstance().getController().setActiveStage("PreviewStage")
+
+
+    def onConfirmationConfirmClicked(self):
+        # Forget current Validation
+        self._proxy._hasActiveValidate = False
+        self.status = SmartSliceCloudStatus.ReadyToVerify
+        Application.getInstance().activityChanged.emit()
+
+        # Store changes to use case
+        if self._proxy._propertyChanged is SmartSliceValidationProperty.FactorOfSafety:
+            self._proxy._targetFactorOfSafety = self._proxy._changedValue
+        elif self._proxy._propertyChanged is SmartSliceValidationProperty.MaxDisplacement:
+            self._proxy._targetMaximalDisplacement = self._proxy._changedValue
+        elif self._proxy._propertyChanged is SmartSliceValidationProperty.LoadMagnitude:
+            self._proxy._loadMagnitude = self._proxy._changedValue
+        elif self._proxy._propertyChanged is SmartSliceValidationProperty.LoadDirection:
+            self._proxy._loadDirection = self._proxy._changedValue
+        elif self._proxy._propertyChanged is SmartSliceValidationProperty.SelectedFace:
+            self._proxy.updateMeshes()
+            self._proxy.selectedFacesChanged.emit()
+        elif self._proxy._propertyChanged is SmartSliceValidationProperty.Material:
+            self._proxy._material = self._proxy._changedMaterial
+
+        # Close Dialog
+        self._proxy.confirmationWindowEnabled = False
+        self._proxy.confirmationWindowEnabledChanged.emit()
+
+    '''
+      onConfirmationCancelClicked()
+        * Cancel Change to Validated Property
+        * Signal to UI to refresh with previous Validation Property Value
+    '''
+    def onConfirmationCancelClicked(self):
+        #  Factor of Safety
+        if self._proxy._propertyChanged == SmartSliceValidationProperty.FactorOfSafety:
+            self._proxy._changedValue = None
+            self._proxy.targetFactorOfSafetyChanged.emit()
+        #  Max Displacement
+        elif self._proxy._propertyChanged == SmartSliceValidationProperty.MaxDisplacement:
+            self._proxy._changedValue = None
+            self._proxy.targetMaximalDisplacementChanged.emit()
+        #  Load Magnitude
+        elif self._proxy._propertyChanged == SmartSliceValidationProperty.LoadMagnitude:
+            self._proxy._changedValue = None
+            self._proxy.loadMagnitudeChanged.emit()
+        #  Load Direction
+        elif self._proxy._propertyChanged == SmartSliceValidationProperty.LoadDirection:
+            self._proxy.loadMagnitudeInvertedChanged.emit()
+        #  Selected Face(s)
+            # Do Nothing
+        #  Material Properties
+        elif self._proxy._propertyChanged == SmartSliceValidationProperty.Material:
+            print("\nChange reverted here!!!\n")
+            self._proxy.setMaterial()
+        # Close Dialog
+        self._proxy.confirmationWindowEnabled = False
+        self._proxy.confirmationWindowEnabledChanged.emit()
+
+
+    #
+    #   3MF READER
+    #
     def prepareInitial3mf(self, threemf_path, mesh_nodes):
         # Getting 3MF writer and write our file
         threeMF_Writer = PluginRegistry.getInstance().getPluginObject("3MFWriter")
@@ -652,8 +803,6 @@ class SmartSliceCloudConnector(QObject):
 
     def extend3mf(self, filepath, mesh_nodes, job_type):
         global_stack = Application.getInstance().getGlobalContainerStack()
-        machine_manager = Application.getInstance().getMachineManager()
-        active_machine = machine_manager.activeMachine
 
         # NOTE: As agreed during the POC, we want to analyse and optimize only one model at the moment.
         #       The lines below will partly need to be executed as "for model in models: bla bla.."
@@ -667,7 +816,7 @@ class SmartSliceCloudConnector(QObject):
         else:
             active_extruder_position = int(active_extruder_position)
 
-        extruders = list(active_machine.extruders.values())
+        extruders = list(self.active_machine.extruders.values())
         extruders = sorted(extruders,
                            key=lambda extruder: extruder.getMetaDataEntry("position")
                            )
@@ -769,13 +918,13 @@ class SmartSliceCloudConnector(QObject):
         # Now we need to setup the print/slicer configuration
 
         print_config = pywim.am.Config()
-        print_config.layer_width = active_machine.getProperty("line_width", "value")
-        print_config.layer_height = active_machine.getProperty("layer_height", "value")
+        print_config.layer_width = self.active_machine.getProperty("line_width", "value")
+        print_config.layer_height = self.active_machine.getProperty("layer_height", "value")
         print_config.walls = mesh_node_stack.getProperty("wall_line_count", "value")
 
         # skin angles - CuraEngine vs. pywim
         # > https://github.com/Ultimaker/CuraEngine/blob/master/src/FffGcodeWriter.cpp#L402
-        skin_angles = active_machine.getProperty("skin_angles", "value")
+        skin_angles = self.active_machine.getProperty("skin_angles", "value")
         if type(skin_angles) is str:
             skin_angles = eval(skin_angles)
         if len(skin_angles) > 0:
@@ -826,7 +975,7 @@ class SmartSliceCloudConnector(QObject):
             extruder_object.print_config.auxiliary = pickled_info["settings"]
             extruders += (extruder_object,)
 
-        printer = pywim.chop.machine.Printer(name=active_machine.getName(),
+        printer = pywim.chop.machine.Printer(name=self.active_machine.getName(),
                                              extruders=extruders
                                              )
 
