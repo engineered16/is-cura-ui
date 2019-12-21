@@ -471,7 +471,8 @@ class SmartSliceCloudConnector(QObject):
         preferences.addPreference(self.http_token_preference, "")
         Application.getInstance().activityChanged.connect(self._onApplicationActivityChanged)
 
-        # Caches
+        #  Machines / Extruders
+        self.active_machine = None
         self._all_extruders_settings = None
 
         # POC
@@ -492,6 +493,7 @@ class SmartSliceCloudConnector(QObject):
                                  )
 
         self.status = SmartSliceCloudStatus.NoModel
+        self.active_machine = Application.getInstance().getMachineManager().activeMachine
 
     def updateSliceWidget(self):
         if self.status is SmartSliceCloudStatus.NoModel:
@@ -754,6 +756,7 @@ class SmartSliceCloudConnector(QObject):
             self._proxy.selectedFacesChanged.emit()
         elif self._proxy._propertyChanged is SmartSliceValidationProperty.Material:
             self._proxy._material = self._proxy._changedMaterial
+            self._proxy.setMaterial()
 
         # Close Dialog
         self._proxy.confirmationWindowEnabled = False

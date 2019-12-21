@@ -107,14 +107,17 @@ class SmartSliceCloudProxy(QObject):
         #  UI/Validation Signals
         self.activeMaterialChanged.connect(self._onMaterialChanged)
 
+        #  Mesh 
         self.meshScaleChanged.connect(self._onMeshScaleChangd)
-        self.meshRotationChanged.connect(self._onMeshRotationChanged)   #  Only if X, Y
+        self.meshRotationChanged.connect(self._onMeshRotationChanged)
 
+        #  Infills
         self.infillDensityChanged.connect(self._onInfillDensityChanged)
         self.infillPatternChanged.connect(self._onInfillPatternChanged)
         self.infillLineDistanceChanged.connect(self._onInfillLineDistanceChanged)
         self.infillLineDirectionChanged.connect(self._onInfillLineDirectionChanged)
 
+        #  Walls
         self.wallThicknessChanged.connect(self._onWallThicknessChanged)
         self.wallLineCountChanged.connect(self._onWallLineCountChanged)
         self.topLayersChanged.connect(self._onTopLayersChanged)
@@ -123,8 +126,9 @@ class SmartSliceCloudProxy(QObject):
         self.bottomLineDirectionChanged.connect(self._onBottomLineDirectionChanged)
         self.alternateExtraWallChanged.connect(self._onAlternateExtraWallChanged)
 
+        #  Line Widths / Layering
         self.layerHeightChanged.connect(self._onLayerHeightChanged)
-        self.layerHeightInitialChanged.connect(self._onLayerHeightIntialChanged)
+        self.layerHeightInitialChanged.connect(self._onLayerHeightInitialChanged)
         self.lineWidthChanged.connect(self._onLineWidthChanged)
         self.lineWidthWallChanged.connect(self._onLineWidthWallChanged)
         self.lineWidthWallOuterChanged.connect(self._onLineWidthWallOuterChanged)
@@ -546,21 +550,22 @@ class SmartSliceCloudProxy(QObject):
             self._loadedMesh = self._changedMesh
             self._loadedFaces = self._changedFaces
 
-
+    #
     #   MATERIAL CHANGES
+    #
     activeMaterialChanged = pyqtSignal()
 
     def setMaterial(self):
-        self._activeMachineManager._global_container_stack.setMetaDataEntry("material", self._material)
+       self._activeMachineManager._global_container_stack.extruderList[0].material = self._material
 
     def _onMaterialChanged(self):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating and (self._material != None):
-            print("\n\nMATERIAL CHANGE CONFIRMED HERE\n\n")
+            #print("\n\nMATERIAL CHANGE CONFIRMED HERE\n\n")
             self._propertyChanged = SmartSliceValidationProperty.Material
             self._changedMaterial = self._activeMachineManager._global_container_stack.extruderList[0].material
-            self.connector._confirmValidation()
+            #self.connector._confirmValidation()
         else:
-            print("\n\nMATERIAL CHANGED HERE\n\n")
+            #print("\n\nMATERIAL CHANGED HERE\n\n")
             self._material = self._activeMachineManager._global_container_stack.extruderList[0].material
             self.setMaterial()
 
