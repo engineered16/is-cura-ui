@@ -53,6 +53,7 @@ class SmartSliceCloudProxy(QObject):
 
         self.connector = connector
         self._activeMachineManager = None
+        self._activeExtruder = None
 
         # Properties (mainly) for the login window
         self._loginStatus = "Please log in with your credentials below."
@@ -76,8 +77,11 @@ class SmartSliceCloudProxy(QObject):
         self._secondaryButtonVisible = False
 
         # Confirm Changes Dialog
+        self._validationRaised = False
         self._propertyChanged = None
         self._changedValue = None
+        self._changedFloat = None
+        self._changedString = None
         self._changedMaterial  = None
         self._confirmationWindowEnabled = False
         self._validate_confirmed = True
@@ -112,37 +116,30 @@ class SmartSliceCloudProxy(QObject):
         self.meshRotationChanged.connect(self._onMeshRotationChanged)
 
         #  Infills
-        self.infillDensityChanged.connect(self._onInfillDensityChanged)
-        self.infillPatternChanged.connect(self._onInfillPatternChanged)
-        self.infillLineDistanceChanged.connect(self._onInfillLineDistanceChanged)
-        self.infillLineDirectionChanged.connect(self._onInfillLineDirectionChanged)
+        self._infillDensity = None
+        self._infillPattern = None
+        self._infillLineDistance = None
+        self._infillLineDirection = None
 
         #  Walls
-        self.wallThicknessChanged.connect(self._onWallThicknessChanged)
-        self.wallLineCountChanged.connect(self._onWallLineCountChanged)
-        self.topLayersChanged.connect(self._onTopLayersChanged)
-        self.bottomLayersChanged.connect(self._onBottomLayersChanged)
-        self.topLineDirectionChanged.connect(self._onTopLineDirectionChanged)
-        self.bottomLineDirectionChanged.connect(self._onBottomLineDirectionChanged)
-        self.alternateExtraWallChanged.connect(self._onAlternateExtraWallChanged)
+        self._wallThickness = None
+        self._wallLineCount = None
+        self._topThickness = None
+        self._topLayers = None
+        self._bottomLayers = None
+        self._bottomThickness = None
+        self._horizontalExpansion = None
+
 
         #  Line Widths / Layering
-        self.layerHeightChanged.connect(self._onLayerHeightChanged)
-        self.layerHeightInitialChanged.connect(self._onLayerHeightInitialChanged)
-        self.lineWidthChanged.connect(self._onLineWidthChanged)
-        self.lineWidthWallChanged.connect(self._onLineWidthWallChanged)
-        self.lineWidthWallOuterChanged.connect(self._onLineWidthWallOuterChanged)
-        self.lineWidthWallInnerChanged.connect(self._onLineWidthWallInnerChanged)
-        self.lineWidthTopChanged.connect(self._onLineWidthTopChanged)
-        self.lineWidthBottomChanged.connect(self._onLineWidthBottomChanged)
-        self.lineWidthInfillChanged.connect(self._onLineWidthInfillChanged)
-        self.lineWidthSkirtChanged.connect(self._onLineWidthSkirtChanged)
-        self.lineWidthBrimChanged.connect(self._onLineWidthBrimChanged)
-        self.lineWidthSupportChanged.connect(self._onLineWidthSupportChanged)
-        self.lineWidthSupportInterfaceChanged.connect(self._onLineWidthSupportInterfaceChanged)
-        self.lineWidthSupportRoofChanged.connect(self._onLineWidthSupportRoofChanged)
-        self.lineWidthSupportFloorChanged.connect(self._onLineWidthSupportFloorChanged)
-        self.lineWidthPrimeTowerChanged.connect(self._onLineWidthPrimeTowerChanged)
+        self._layerHeight = None
+        self._layerHeightInitial = None
+        self._lineWidth = None
+        self._lineWidthWall = None
+        self._lineWidthOuter = None
+        self._lineWidthInner = None
+        self._lineWidthTopBottom = None
+        self._lineWidthInfill = None
 
 
         # Properties (mainly) for the sliceinfo widget
@@ -417,6 +414,58 @@ class SmartSliceCloudProxy(QObject):
             self.sliceIconVisibleChanged.emit()
 
     #
+    #   PROPERTY CHANGES
+    #
+
+    # On GLOBAL Property Changed
+    def _onGlobalPropertyChanged(self, key: str, property_name: str):
+
+        if   key == "layer_height" and property_name == "value":          
+            self._onLayerHeightChanged()
+        elif key == "initial_layer_height" and property_name == "value":   
+            self._onInitialLayerHeightChanged()
+
+        else: 
+            return
+
+    # On EXTRUDER Property Changed
+    def _onExtruderPropertyChanged(self, key: str, property_name: str):
+        
+        if   key == "infill_sparse_density" and property_name == "value":
+            self._onInfillDensityChanged()
+        elif key == "infill_pattern" and property_name == "value":
+            self._onInfillPatternChanged()
+        # Infill Direction/Distance
+        
+        elif key == "line_width" and property_name == "value":
+            self._onLineWidthChanged()
+        elif key == "outer_wall_line_width" and property_name == "value":
+            self._onOuterLineWidthChanged()
+        elif key == "inner_wall_line_width" and property_name == "value":
+            self._onInnerLineWidthChanged()
+        elif key == "infill_wall_line_width" and property_name == "value":
+            self._onInfillLineWidthChanged()
+        elif key == "wall_thickness" and property_name == "value":
+            self._onWallThicknessChanged()
+        elif key == "wall_line_count" and property_name == "value":
+            self._onWallLineCountChanged()
+        elif key == "horizontal_expansion" and property_name == "value":    # DISFUNCT!!!!
+            self._onHorizontalExpansionChanged()
+        
+        elif key == "top_thickness" and property_name == "value":
+            self._onTopThicknessChanged()
+        elif key == "top_layers" and property_name == "value":
+            self._onTopLayersChanged()
+        elif key == "bottom_thickness" and property_name == "value":
+            self._onBottomThicknessChanged()
+        elif key == "bottom_layers" and property_name == "value":
+            self._onBottomLayersChanged()
+
+        #  Invalid Property
+        else:
+            return
+
+    #
     # USE-CASE REQUIREMENTS
     #   * Safety Factor
     #   * Max Displacement
@@ -556,7 +605,7 @@ class SmartSliceCloudProxy(QObject):
     activeMaterialChanged = pyqtSignal()
 
     def setMaterial(self):
-       self._activeMachineManager._global_container_stack.extruderList[0].material = self._material
+       self._activeExtruder.material = self._material
 
     def _onMaterialChanged(self):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating and (self._material != None):
@@ -571,52 +620,205 @@ class SmartSliceCloudProxy(QObject):
 
 
     #  INFILL CHANGES
-    infillDensityChanged        = pyqtSignal()
-    infillPatternChanged        = pyqtSignal()
     infillLineDistanceChanged   = pyqtSignal()
     infillLineDirectionChanged  = pyqtSignal()
 
+    def setInfillDefaults(self):
+        self._infillPattern = self._activeExtruder.getProperty("infill_pattern", "value")
+
+    def setInfillDensity(self):
+        self._activeExtruder.setProperty("infill_sparse_density", "value", self._infillDensity)
+
     def _onInfillDensityChanged(self):
-        #  STUB
-        1 + 1
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.InfillDensity
+            self._changedValue = self._activeExtruder.getProperty("infill_sparse_density", "value")
+            self.connector._confirmValidation()
+        else:
+            self._infillDensity = self._activeExtruder.getProperty("infill_sparse_density", "value")
+
+    def setInfillPattern(self):
+        self._activeExtruder.setProperty("infill_pattern", "value", self._infillPattern)
 
     def _onInfillPatternChanged(self):
-        #  STUB
-        1 + 1
-
-    def _onInfillLineDistanceChanged(self):
-        #  STUB 
-        1 + 1
-
-    def _onInfillLineDirectionChanged(self):
-        #  STUB
-        1 + 1
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.InfillPattern
+            self._changedString = self._activeExtruder.getProperty("infill_pattern", "value")
+            self.connector._confirmValidation()
+        else:
+            self._infillPattern = self._activeExtruder.getProperty("infill_pattern", "value")
 
 
     #  SHELL/STRUCTURE CHANGES
-    wallThicknessChanged        = pyqtSignal()
-    wallLineCountChanged        = pyqtSignal()
     topLayersChanged            = pyqtSignal()
     bottomLayersChanged         = pyqtSignal()
     topLineDirectionChanged     = pyqtSignal()
     bottomLineDirectionChanged  = pyqtSignal()
     alternateExtraWallChanged   = pyqtSignal()
 
+    def setLayerHeight(self):
+        self._activeMachineManager._global_container_stack.setProperty("layer_height", "value", self._layerHeight)
+
+    def _onLayerHeightChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.LayerHeight
+            self._changedFloat = self._activeMachineManager._global_container_stack.getProperty("layer_height", "value")
+            self.connector._confirmValidation()
+        else:
+            self._layerHeight = self._activeMachineManager._global_container_stack.getProperty("layer_height", "value")
+
+    def setInitialLayerHeight(self):
+        self._activeExtruder.setProperty("initial_layer_height", "value", self._layerHeightInitial)
+
+    def _onInitialLayerHeightChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.InitialLayerHeight
+            self._changedFloat = self._activeExtruder.getProperty("initial_layer_height", "value")
+            self.connector._confirmValidation()
+        else:
+            self._layerHeightInitial = self._activeExtruder.getProperty("initial_layer_height", "value")
+
+    def setLineWidth(self):
+        self._activeExtruder.setProperty("line_width", "value", self._lineWidth)
+
+    def _onLineWidthChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.LineWidth
+            self._changedFloat = self._activeExtruder.getProperty("line_width", "value")
+            self.connector._confirmValidation()
+        else:
+            self._lineWidth = self._activeExtruder.getProperty("line_width", "value")
+
+    def setWallLineWidth(self):
+        self._activeExtruder.setProperty("wall_line_width", "value", self._lineWidthWall)
+
+    def _onWallLineWidthChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.WallLineWidth
+            self._changedFloat = self._activeExtruder.getProperty("wall_line_width", "value")
+            self.connector._confirmValidation()
+        else:
+            self._lineWidth = self._activeExtruder.getProperty("wall_line_width", "value")
+        
+
+    def setOuterLineWidth(self):
+        self._activeExtruder.setProperty("outer_wall_line_width", "value", self._lineWidthOuter)
+
+    def _onOuterLineWidthChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.OuterLineWidth
+            self._changedFloat = self._activeExtruder.getProperty("outer_wall_line_width", "value")
+            self.connector._confirmValidation()
+        else:
+            self._lineWidthOuter = self._activeExtruder.getProperty("outer_wall_line_width", "value")
+
+    def setInnerLineWidth(self):
+        self._activeExtruder.setProperty("inner_wall_line_width", "value", self._lineWidthInner)
+
+    def _onInnerLineWidthChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.InnerLineWidth
+            self._changedFloat = self._activeExtruder.getProperty("inner_wall_line_width", "value")
+            self.connector._confirmValidation()
+        else:
+            self._lineWidthInner = self._activeExtruder.getProperty("inner_wall_line_width", "value")
+
+    def setInfillLineWidth(self):
+        self._activeExtruder.setProperty("infill_wall_line_width", "value", self._lineWidthInfill)
+
+    def _onInfillLineWidthChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.InfillLineWidth
+            self._changedFloat = self._activeExtruder.getProperty("infill_wall_line_width", "value")
+            self.connector._confirmValidation()
+        else:
+            self._lineWidthInfill = self._activeExtruder.getProperty("infill_wall_line_width", "value")
+
+
+
+
+    def setWallThickness(self):
+        self._activeExtruder.setProperty("wall_thickness", "value", self._wallThickness)
+
     def _onWallThicknessChanged(self):
-        #  STUB
-        1 + 1
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.WallThickness
+            self._changedValue = self._activeExtruder.getProperty("wall_thickness", "value")
+            self.connector._confirmValidation()
+        else:
+            self._wallThickness = self._activeExtruder.getProperty("wall_thickness", "value")
+
+    def setWallLineCount(self):
+        self._activeExtruder.setProperty("wall_line_count", "value", self._wallLineCount)
 
     def _onWallLineCountChanged(self):
-        #  STUB
-        1 + 1
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.WallLineCount
+            self._changedValue = self._activeExtruder.getProperty("wall_line_count", "value")
+            self.connector._confirmValidation()
+        else:
+            self._wallLineCount = self._activeExtruder.getProperty("wall_line_count", "value")
+
+
+    #  Top Thickness
+    def setTopThickness(self):
+        self._activeExtruder.setProperty("top_thickness", "value", self._topThickness)
+
+    def _onTopThicknessChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.TopThickness
+            self._changedValue = self._activeExtruder.getProperty("top_thickness", "value")
+            self.connector._confirmValidation()
+        else:
+            self._topLayers = self._activeExtruder.getProperty("top_thickness", "value")
+
+    #  Top Layers
+    def setTopLayers(self):
+        self._activeExtruder.setProperty("top_layers", "value", self._topLayers)
 
     def _onTopLayersChanged(self):
-        #  STUB 
-        1 + 1
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.TopLayers
+            self._changedValue = self._activeExtruder.getProperty("top_layers", "value")
+            self.connector._confirmValidation()
+        else:
+            self._topLayers = self._activeExtruder.getProperty("top_layers", "value")
+
+    #  Bottom Thickness
+    def setBottomThickness(self):
+        self._activeExtruder.setProperty("bottom_thickness", "value",self._bottomThickness)
+
+    def _onBottomThicknessChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.BottomThickness
+            self._changedValue = self._activeExtruder.getProperty("bottom_thickness", "value")
+            self.connector._confirmValidation()
+        else:
+            self._bottomThickness = self._activeExtruder.getProperty("bottom_thickness", "value")
+        
+    #  Bottom Layers
+    def setBottomLayers(self):
+        self._activeExtruder.setProperty("bottom_layers", "value", self._bottomLayers)
 
     def _onBottomLayersChanged(self):
-        #  STUB 
-        1 + 1
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.BottomLayers
+            self._changedValue = self._activeExtruder.getProperty("bottom_layers", "value")
+            self.connector._confirmValidation()
+        else:
+            self._bottomLayers = self._activeExtruder.getProperty("bottom_layers", "value")
+
+    #  Horizontal Expansion
+    def setHorizontalExpansion(self):
+        self._activeExtruder.setProperty("horizontal_expansion", "value", self._horizontalExpansion)
+
+    def _onHorizontalExpansionChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.HorizontalExpansion
+            self._changedValue = self._activeExtruder.getProperty("horizontal_expansion", "value")
+            self.connector._confirmValidation()
+        else:
+            self._horizontalExpansion = self._activeExtruder.getProperty("horizontal_expansion", "value")
     
     def _onTopLineDirectionChanged(self):
         #  STUB 
@@ -643,100 +845,6 @@ class SmartSliceCloudProxy(QObject):
         #  STUB 
         1 + 1
 
-
-    #  SLICER SETTINGS
-    layerHeightChanged          = pyqtSignal()
-    layerHeightInitialChanged   = pyqtSignal()
-
-    lineWidthChanged            = pyqtSignal() 
-    lineWidthInitialLayerChanged = pyqtSignal()
-
-    lineWidthWallChanged        = pyqtSignal()
-    lineWidthWallOuterChanged   = pyqtSignal()
-    lineWidthWallInnerChanged   = pyqtSignal()
-
-    lineWidthInfillChanged      = pyqtSignal()
-
-    lineWidthTopChanged         = pyqtSignal()
-    lineWidthBottomChanged      = pyqtSignal()
-
-    lineWidthSkirtChanged       = pyqtSignal()
-    lineWidthBrimChanged        = pyqtSignal()
-
-    lineWidthSupportChanged     = pyqtSignal()
-    lineWidthSupportInterfaceChanged = pyqtSignal()
-    lineWidthSupportRoofChanged = pyqtSignal()
-    lineWidthSupportFloorChanged = pyqtSignal()
-
-    lineWidthPrimeTowerChanged  = pyqtSignal()
-
-    def _onLayerHeightChanged(self):
-        # STUB
-        1 + 1
-
-    def _onLayerHeightInitialChanged(self):
-        # STUB
-        1 + 1
-
-    def _onLineWidthChanged(self):
-        # STUB
-        1 + 1
-    
-    def _onLineWidthInitialChanged(self):
-        # STUB
-        1 + 1
-
-    def _onLineWidthWallChanged(self):
-        # STUB
-        1
-    
-    def _onLineWidthWallOuterChanged(self):
-        #  STUB
-        1
-
-    def _onLineWidthWallInnerChanged(self):
-        #  STUB
-        1
-    
-    def _onLineWidthInfillChanged(self):
-        # STUB
-        1
-
-    def _onLineWidthTopChanged(self):
-        # STUB
-        1
-
-    def _onLineWidthBottomChanged(self):
-        # STUB
-        1
-    
-    def _onLineWidthSkirtChanged(self):
-        # STUB
-        1
-
-    def _onLineWidthBrimChanged(self):
-        #  STUB
-        1
-
-    def _onLineWidthSupportChanged(self):
-        #  STUB
-        1
-
-    def _onLineWidthSupportInterfaceChanged(self):
-        # STUB
-        1
-
-    def _onLineWidthSupportRoofChanged(self):
-        # STUB
-        1
-
-    def _onLineWidthSupportFloorChanged(self):
-        # STUB
-        1
-
-    def _onLineWidthPrimeTowerChanged(self):
-        # STUB
-        1
 
 
     #
@@ -1000,3 +1108,11 @@ class SmartSliceCloudProxy(QObject):
             Logger.log("d", "materialCost: <{}> -> <{}>".format(self._materialCost, value))
             self._materialCost = value
             self.materialCostChanged.emit()
+
+    def connectSmartSlicePropertyListeners(self):
+        global_stack = Application.getInstance().getGlobalContainerStack()
+        global_stack.propertyChanged.connect(self._onGlobalPropertyChanged)
+        global_stack.extruderList[0].propertyChanged.connect(self._onExtruderPropertyChanged)
+        self._activeMachineManager.activeMaterialChanged.connect(self._onMaterialChanged)
+
+
