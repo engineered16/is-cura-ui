@@ -80,13 +80,6 @@ class SmartSliceStage(CuraStage):
         self._connector._proxy._activeMachineManager = CuraApplication.getInstance().getMachineManager()
         self._connector._proxy._activeExtruder = self._connector._proxy._activeMachineManager._global_container_stack.extruderList[0]
         
-        #  Set Signal Connections
-        self._connector._proxy.connectSmartSlicePropertyListeners()
-
-        #  Set Default Values
-        self._connector._proxy.setInfillDefaults()
-
-
     #   onStageDeselected:
     #       Sets attributes that allow the Smart Slice Stage to properly deactivate
     #       This occurs before the next Cura Stage is activated

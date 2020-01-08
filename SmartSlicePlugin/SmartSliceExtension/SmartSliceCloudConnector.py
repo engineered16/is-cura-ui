@@ -58,6 +58,7 @@ from cura.Scene.SliceableObjectDecorator import SliceableObjectDecorator
 from .SmartSliceCloudProxy import SmartSliceCloudStatus
 from .SmartSliceCloudProxy import SmartSliceCloudProxy
 from .SmartSliceValidationProperty import SmartSliceValidationProperty
+from .SmartSlicePropertyHandler import SmartSlicePropertyHandler
 
 i18n_catalog = i18nCatalog("smartslice")
 
@@ -475,6 +476,7 @@ class SmartSliceCloudConnector(QObject):
         self.active_machine = None
         self.extruders = None
         self._all_extruders_settings = None
+        self.propertyHandler = None
 
         # POC
         self._poc_default_infill_direction = 45
@@ -495,6 +497,7 @@ class SmartSliceCloudConnector(QObject):
 
         self.status = SmartSliceCloudStatus.NoModel
         self.active_machine = Application.getInstance().getMachineManager().activeMachine
+        self.propertyHandler = SmartSlicePropertyHandler(self)
 
     def updateSliceWidget(self):
         if self.status is SmartSliceCloudStatus.NoModel:
@@ -745,62 +748,66 @@ class SmartSliceCloudConnector(QObject):
         Application.getInstance().activityChanged.emit()
 
         # Store changes to use case
-        if self._proxy._propertyChanged is SmartSliceValidationProperty.FactorOfSafety:
+        if self.propertyHandler._propertyChanged is SmartSliceValidationProperty.FactorOfSafety:
             self._proxy._targetFactorOfSafety = self._proxy._changedValue
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.MaxDisplacement:
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.MaxDisplacement:
             self._proxy._targetMaximalDisplacement = self._proxy._changedValue
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.LoadMagnitude:
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.LoadMagnitude:
             self._proxy._loadMagnitude = self._proxy._changedValue
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.LoadDirection:
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.LoadDirection:
             self._proxy._loadDirection = self._proxy._changedValue
 
       #  Face Selection
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.SelectedFace:
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.SelectedFace:
             self._proxy.updateMeshes()
             self._proxy.selectedFacesChanged.emit()
 
       #  Material
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.Material:
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.Material:
             self._proxy._material = self._proxy._changedMaterial
             self._proxy.setMaterial()
      
       #  Infill Properties
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.InfillDensity:
-            self._proxy._infillDensity = self._proxy._changedValue
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.InfillPattern:
-            self._proxy._infillPattern = self._proxy._changedString
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillDensity:
+            self.propertyHandler.infillDensity = self.propertyHandler._changedInt
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillPattern:
+            self.propertyHandler.infillPattern = self.propertyHandler._changedString
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillAngles:
+            self.propertyHandler.infillLineDirection = self.propertyHandler._changedString
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillLineDistance:
+            self.propertyHandler.infillLineDistance = self.propertyHandler._changedValue
 
       #  Layer Height/Width
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.LayerHeight:
-            self._proxy._layerHeight = self._proxy._changedFloat
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.InitialLayerHeight:
-            self._proxy._layerHeightInitial = self._proxy._changedFloat
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.LineWidth:
-            self._proxy._lineWidth = self._proxy._changedFloat
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.WallLineWidth:
-            self._proxy._lineWidthWall = self._proxy._changedFloat
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.OuterLineWidth:
-            self._proxy._lineWidthOuter = self._proxy._changedFloat
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.InnerLineWidth:
-            self._proxy._lineWidthInner = self._proxy._changedFloat
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.InfillLineWidth:
-            self._proxy._lineWidthInfill = self._proxy._changedFloat
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.LayerHeight:
+            self.propertyHandler.layerHeight = self.propertyHandler._changedFloat
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InitialLayerHeight:
+            self.propertyHandler.layerHeightInitial = self.propertyHandler._changedFloat
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.LineWidth:
+            self.propertyHandler.lineWidth = self.propertyHandler._changedFloat
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.WallLineWidth:
+            self.propertyHandler.lineWidthWall = self.propertyHandler._changedFloat
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.OuterLineWidth:
+            self.propertyHandler.lineWidthOuter = self.propertyHandler._changedFloat
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InnerLineWidth:
+            self.propertyHandler.lineWidthInner = self.propertyHandler._changedFloat
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillLineWidth:
+            self.propertyHandler.lineWidthInfill = self.propertyHandler._changedFloat
 
       #  Wall Properties
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.WallThickness:
-            self._proxy._wallThickness = self._proxy._changedValue
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.HorizontalExpansion:
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.WallThickness:
+            self.propertyHandler.wallThickness = self._proxy._changedValue
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.HorizontalExpansion:
             self._proxy._horizontalExpansion = self._proxy._changedValue
       #  Top Walls
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.TopThickness:
-            self._proxy._topThickness = self._proxy._changedValue
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.TopLayers:
-            self._proxy._topLayers = self._proxy._changedValue
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.TopThickness:
+            self.propertyHandler.topThickness = self._proxy._changedValue
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.TopLayers:
+            self.propertyHandler.topLayers = self._proxy._changedValue
       #  Bottom Walls
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.BottomThickness:
-            self._proxy._bottomThickness = self._proxy._changedValue
-        elif self._proxy._propertyChanged is SmartSliceValidationProperty.BottomLayers:
-            self._proxy._bottomLayers = self._proxy._changedValue
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.BottomThickness:
+            self.propertyHandler.bottomThickness = self._proxy._changedValue
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.BottomLayers:
+            self.propertyHandler.bottomLayers = self._proxy._changedValue
 
         # Close Dialog
         self._proxy.confirmationWindowEnabled = False
@@ -815,21 +822,21 @@ class SmartSliceCloudConnector(QObject):
     def onConfirmationCancelClicked(self):
       #  REQUIREMENTS
         #  Factor of Safety (DEPRECATED)
-        if self._proxy._propertyChanged == SmartSliceValidationProperty.FactorOfSafety:
+        if self.propertyHandler._propertyChanged == SmartSliceValidationProperty.FactorOfSafety:
             self._proxy._changedValue = None
             self._proxy.targetFactorOfSafetyChanged.emit()
         #  Max Displacement (DEPRECATED)
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.MaxDisplacement:
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.MaxDisplacement:
             self._proxy._changedValue = None
             self._proxy.targetMaximalDisplacementChanged.emit()
             
       #  LOADS / ANCHORS
         #  Load Magnitude
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.LoadMagnitude:
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.LoadMagnitude:
             self._proxy._changedValue = None
             self._proxy.loadMagnitudeChanged.emit()
         #  Load Direction
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.LoadDirection:
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.LoadDirection:
             self._proxy.loadMagnitudeInvertedChanged.emit()
 
       #  FACE SELECTION
@@ -837,75 +844,58 @@ class SmartSliceCloudConnector(QObject):
             # Do Nothing
       
       #  AIR QUALITY
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.LayerHeight:
-            self._proxy._changedFloat = None
-            self._proxy.setLayerHeight()
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.InitialLayerHeight:
-            self._proxy._changedFloat = None
-            self._proxy.setInitialLayerHeight()
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.LineWidth:
-            self._proxy._changedFloat = None
-            self._proxy.setLineWidth()
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.WallLineWidth:
-            self._proxy._changedFloat = None
-            self._proxy.setWallLineWidth()
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.OuterLineWidth:
-            self._proxy._changedFloat = None
-            self._proxy.setOuterLineWidth()
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.InnerLineWidth:
-            self._proxy._changedFloat = None
-            self._proxy.setInnerLineWidth()
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.InfillLineWidth:
-            self._proxy._changedFloat = None
-            self._proxy.setInfillLineWidth()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.LayerHeight:
+            self.propertyHandler.setLayerHeight()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.InitialLayerHeight:
+            self.propertyHandler.setInitialLayerHeight()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.LineWidth:
+            self.propertyHandler.setLineWidth()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.WallLineWidth:
+              self.propertyHandler.setWallLineWidth()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.OuterLineWidth:
+            self.propertyHandler.setOuterLineWidth()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.InnerLineWidth:
+            self.propertyHandler.setInnerLineWidth()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.InfillLineWidth:
+            self.propertyHandler.setInfillLineWidth()
       
       #  INFILL PROPERTIES
         #  Infill Density
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.InfillDensity:
-            self._proxy._changedValue = None
-            self._proxy.setInfillDensity()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.InfillDensity:
+            self.propertyHandler.setInfillDensity()
         #  Infill Pattern
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.InfillPattern:
-            self._proxy._changedString = None
-            self._proxy.setInfillPattern()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.InfillPattern:
+            self.propertyHandler.setInfillPattern()
 
       #  WALL PROPERTIES
         #  Layer Height
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.LayerHeight:
-            self._proxy._changedFloat = None
-            self._proxy.setLayerHeight()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.LayerHeight:
+            self.propertyHandler.setLayerHeight()
         #  Wall Thickness
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.WallThickness:
-            self._proxy._changedValue = None
-            self._proxy.setWallThickness()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.WallThickness:
+            self.propertyHandler.setWallThickness()
         #  Wall Line Count
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.WallLineCount:
-            self._proxy._changedValue = None
-            self._proxy.setWallLineCount()
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.HorizontalExpansion:
-            self._proxy._changedValue = None
-            self._proxy.setHorizontalExpansion()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.WallLineCount:
+            self.propertyHandler.setWallLineCount()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.HorizontalExpansion:
+            self.propertyHandler.setHorizontalExpansion()
       #  Top Walls
         #  Top Thickness
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.TopThickness:
-            self._proxy._changedValue = None
-            self._proxy.setTopThickness()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.TopThickness:
+            self.propertyHandler.setTopThickness()
         #  Top layers
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.TopLayers:
-            self._proxy._changedValue = None
-            self._proxy.setTopLayers()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.TopLayers:
+            self.propertyHandler.setTopLayers()
       #  Bottom Walls
         #  Bottom Thickness
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.BottomThickness:
-            self._proxy._changedValue = None
-            self._proxy.setBottomThickness()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.BottomThickness:
+            self.propertyHandler.setBottomThickness()
         #  Bottom layers
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.BottomLayers:
-            self._proxy._changedValue = None
-            self._proxy.setBottomLayers()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.BottomLayers:
+            self.propertyHandler.setBottomLayers()
 
         #  Material Properties
-        elif self._proxy._propertyChanged == SmartSliceValidationProperty.Material:
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.Material:
             self._proxy.setMaterial()
         # Close Dialog
         self._proxy.confirmationWindowEnabled = False
