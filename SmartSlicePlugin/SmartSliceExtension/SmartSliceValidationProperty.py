@@ -23,6 +23,11 @@ class SmartSliceValidationProperty(Enum):
     InfillPattern   =  41
     InfillLineDistance = 42
     InfillAngles    = 43
+    InfillLineMultiplier = 44
+    InfillOffsetX   = 45
+    InfillOffsetY   = 46
+    InfillOverlapPer = 47
+    InfillOverlapMM  = 48
   # Walls
     WallsCount      =  50
     WallThickness   =  51

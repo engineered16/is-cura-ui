@@ -38,7 +38,7 @@ class SmartSlicePropertyHandler(QObject):
         
         #  Cache Space
         self._propertyChanged = None
-        self._changedInt = None
+        self._changedValue = None
         self._changedFloat = None
         self._changedBool  = None
         self._changedString = None
@@ -71,9 +71,17 @@ class SmartSlicePropertyHandler(QObject):
 
         #  Infills
         self.infillDensity = self._activeExtruder.getProperty("infill_sparse_density", "value")
+        self.infillLineDistance = self._activeExtruder.getProperty("infill_line_distance", "value")
         self.infillPattern = self._activeExtruder.getProperty("infill_pattern", "value")
         self.infillLineDirection = self._activeExtruder.getProperty("infill_angles", "value")
-        self.infillLineDistance = self._activeExtruder.getProperty("infill_line_distance", "value")
+        self.infillOffsetX = self._activeExtruder.getProperty("infill_offset_x", "value")
+        self.infillOffsetY = self._activeExtruder.getProperty("infill_offset_y", "value")
+        self.infillMultiplier = self._activeExtruder.getProperty("infill_multiplier", "value")
+        self.infillOverlapPercentage = self._activeExtruder.getProperty("infill_overlap_percentage", "value")
+        self.infillOverlapMM = self._activeExtruder.getProperty("infill_overlap_mm", "value")
+
+        
+
 
         self._material = None #  Cura Material Node
 
@@ -340,6 +348,63 @@ class SmartSlicePropertyHandler(QObject):
         else:
             self.infillPattern = self._activeExtruder.getProperty("infill_pattern", "value")
 
+    def setInfillOffsetX(self):
+        self._activeExtruder.setProperty("infill_offset_x", "value", self.infillOffsetX)
+
+    def onInfillOffsetXChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.InfillOffsetX
+            self._changedValue = self._activeExtruder.getProperty("infill_offset_x", "value")
+            self.connector._confirmValidation()
+        else:
+            self.infillOffsetX = self._activeExtruder.getProperty("infill_offset_x", "value")
+
+    def setInfillOffsetY(self):
+        self._activeExtruder.setProperty("infill_offset_y", "value", self.infillOffsetY)
+
+    def onInfillOffsetYChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.InfillOffsetY
+            self._changedValue = self._activeExtruder.getProperty("infill_offset_y", "value")
+            self.connector._confirmValidation()
+        else:
+            self.infillOffsetY = self._activeExtruder.getProperty("infill_offset_y", "value")
+
+    def setInfillMultiplier(self):
+        self._activeExtruder.setProperty("infill_muliplier", "value", self.infillMultiplier)
+
+    def onInfillMultiplierChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.InfillLineMultiplier
+            self._changedValue = self._activeExtruder.getProperty("infill_multiplier", "value")
+            self.connector._confirmValidation()
+        else:
+            self.infillMultiplier = self._activeExtruder.getProperty("infill_multiplier", "value")
+
+    def setInfillOverlap(self):
+        self._activeExtruder.setProperty("infill_overlap", "value", self.infillOverlapPercentage)
+
+    def onInfillOverlapChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.InfillOverlapPer
+            self._changedValue =self._activeExtruder.getProperty("infill_overlap", "value")
+            self.connector._confirmValidation()
+        else:
+            self.infillOverlapPercentage = self._activeExtruder.getProperty("infill_overlap", "value")
+
+    def setInfillOverlapMM(self):
+        self._activeExtruder.setProperty("infill_overlap_mm", "value", self.infillOverlapMM)
+
+    def onInfillOverlapMMChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.InfillOverlapMM
+            self._changedFloat = self._activeExtruder.getProperty("infill_overlap_mm", "value")
+            self.connector._confirmValidation()
+        else:
+            self.infillOverlapMM = self._activeExtruder.getProperty("infill_overlap_mm")
+
+
+        
 
     def onTopLineDirectionChanged(self):
         #  STUB 
@@ -397,15 +462,26 @@ class SmartSlicePropertyHandler(QObject):
         
         if   key == "infill_sparse_density" and property_name == "value":
             self.onInfillDensityChanged()
+        elif key == "infill_line_distance" and property_name == "value":
+            self.onInfillLineDistanceChanged()
         elif key == "infill_pattern" and property_name == "value":
             self.onInfillPatternChanged()
-        # Infill Direction/Distance
+        elif key == "infill_multiplier" and property_name == "value":
+            self.onInfillMultiplierChanged()
+        elif key == "infill_offset_x" and property_name == "value":
+            self.onInfillOffsetXChanged()
+        elif key == "infill_offset_y" and property_name == "value":
+            self.onInfillOffsetYChanged()
+        elif key == "infill_overlap" and property_name == "value":
+            self.onInfillOverlapChanged()
+        elif key == "infill_overlap_mm" and property_name == "value":
+            self.onInfillOverlapMMChanged()
         
         elif key == "line_width" and property_name == "value":
             self.onLineWidthChanged()
-        elif key == "outer_wall_line_width" and property_name == "value":
+        elif key == "wall_line_width" and property_name == "value":
             self.onOuterLineWidthChanged()
-        elif key == "inner_wall_line_width" and property_name == "value":
+        elif key == "wall_line_width" and property_name == "value":
             self.onInnerLineWidthChanged()
         elif key == "infill_wall_line_width" and property_name == "value":
             self.onInfillLineWidthChanged()

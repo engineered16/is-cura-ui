@@ -769,13 +769,23 @@ class SmartSliceCloudConnector(QObject):
      
       #  Infill Properties
         elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillDensity:
-            self.propertyHandler.infillDensity = self.propertyHandler._changedInt
+            self.propertyHandler.infillDensity = self.propertyHandler._changedValue
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillLineDistance:
+            self.propertyHandler.infillLineDistance = self.propertyHandler._changedValue
         elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillPattern:
             self.propertyHandler.infillPattern = self.propertyHandler._changedString
         elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillAngles:
             self.propertyHandler.infillLineDirection = self.propertyHandler._changedString
-        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillLineDistance:
-            self.propertyHandler.infillLineDistance = self.propertyHandler._changedValue
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillOffsetX:
+            self.propertyHandler.infillOffsetX = self.propertyHandler._changedValue
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillOffsetY:
+            self.propertyHandler.infillOffsetY = self.propertyHandler._changedValue
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillLineMultiplier:
+            self.propertyHandler.infillMultiplier = self.propertyHandler._changedValue
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillOverlapPer:
+            self.propertyHandler.infillOverlapPercentage = self.propertyHandler._changedValue
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillOverlapMM:
+            self.propertyHandler.infillOverlapMM = self.propertyHandler._changedFloat
 
       #  Layer Height/Width
         elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.LayerHeight:
@@ -860,12 +870,22 @@ class SmartSliceCloudConnector(QObject):
             self.propertyHandler.setInfillLineWidth()
       
       #  INFILL PROPERTIES
-        #  Infill Density
         elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.InfillDensity:
             self.propertyHandler.setInfillDensity()
-        #  Infill Pattern
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillLineDistance:
+            self.propertyHandler.setInfillLineDistance()
         elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.InfillPattern:
             self.propertyHandler.setInfillPattern()
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillOffsetX:
+            self.propertyHandler.setInfillOffsetX()
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillOffsetY:
+            self.propertyHandler.setInfillOffsetY()
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillLineMultiplier:
+            self.propertyHandler.setInfillMultiplier()
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillOverlapPer:
+            self.propertyHandler.setInfillOverlap()
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillOverlapMM:
+            self.propertyHandler.setInfillOverlapMM()
 
       #  WALL PROPERTIES
         #  Layer Height
