@@ -28,11 +28,26 @@ class SmartSliceValidationProperty(Enum):
     InfillOffsetY   = 46
     InfillOverlapPer = 47
     InfillOverlapMM  = 48
+    InfillWipeDistance = 49
+    InfillLayerThickness = 50
+    InfillGradualSteps = 51
+    InfillBeforeWalls = 52
+    InfillMinimumArea = 53
+    InfillSupport     = 54
+  # Skins
+    SkinRemovalWidth = 55
+    SkinTopRemovalWidth = 56
+    SkinBottomRemovalWidth = 57
+    SkinExpandDistance = 58
+    SkinTopExpandDistance = 59
+    SkinBottomExpandDistance = 60
+    SkinMaxAngleExpansion = 61
+    SkinMinWidthExpansion = 62
   # Walls
-    WallsCount      =  50
-    WallThickness   =  51
-    WallLineCount   =  52
-    AlternateExtraWall = 53
+    WallsCount      =  80
+    WallThickness   =  81
+    WallLineCount   =  82
+    AlternateExtraWall = 83
   # Skin & Orientation
     TopSkin         =  60
     BottomSkin      =  61

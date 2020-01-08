@@ -7,6 +7,8 @@
 #  Contains procedures for handling Cura Properties in accordance with SmartSlice
 #
 
+import copy
+from copy import copy
 
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import pyqtProperty
@@ -79,8 +81,24 @@ class SmartSlicePropertyHandler(QObject):
         self.infillMultiplier = self._activeExtruder.getProperty("infill_multiplier", "value")
         self.infillOverlapPercentage = self._activeExtruder.getProperty("infill_overlap_percentage", "value")
         self.infillOverlapMM = self._activeExtruder.getProperty("infill_overlap_mm", "value")
+        self.infillWipeDist = self._activeExtruder.getProperty("infill_wipe_dist", "value")
+        self.infillLayerThick = self._activeExtruder.getProperty("infill_layer_thickness", "value")
+        self.infillGradSteps = self._activeExtruder.getProperty("gradual_infill_steps", "value")
+        self.infillBeforeWalls = self._activeExtruder.getProperty("infill_before_walls", "value")
+        self.infillMinimumArea = self._activeExtruder.getProperty("min_infill_area", "value")
+        self.infillSupport = self._activeExtruder.getProperty("infill_support_enabled", "value")
 
+        #  Skins
+        self.skinRemovalWidth = self._activeExtruder.getProperty("skin_preshrink", "value")
+        self.skinRemovalTop = self._activeExtruder.getProperty("top_skin_preshrink", "value")
+        self.skinRemovalBottom = self._activeExtruder.getProperty("bottom_skin_preshrink", "value")
+        self.skinExpandDistance = self._activeExtruder.getProperty("expand_skins_expand_distance", "value")
+        self.skinExpandTop = self._activeExtruder.getProperty("top_skin_expand_distance", "value")
+        self.skinExpandBottom = self._activeExtruder.getProperty("bottom_skin_expand_distance", "value")
+        self.skinExpandMaxAngle = self._activeExtruder.getProperty("max_skin_angle_for_expansion", "value")
+        self.skinExpandMinWidth = self._activeExtruder.getProperty("min_skin_width_for_expansion", "value")
         
+        #  Walls
 
 
         self._material = None #  Cura Material Node
@@ -401,10 +419,162 @@ class SmartSlicePropertyHandler(QObject):
             self._changedFloat = self._activeExtruder.getProperty("infill_overlap_mm", "value")
             self.connector._confirmValidation()
         else:
-            self.infillOverlapMM = self._activeExtruder.getProperty("infill_overlap_mm")
+            self.infillOverlapMM = self._activeExtruder.getProperty("infill_overlap_mm", "value")
 
+    def setInfillWipeDist(self):
+        self._activeExtruder.setProperty("infill_wipe_dist", "value", self.infillWipeDist)
 
+    def onInfillWipeDistChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.InfillWipeDistance
+            self._changedValue = self._activeExtruder.getProperty("infill_wipe_dist", "value")
+            self.connector._confirmValidation()
+        else:
+            self.infillWipeDist = self._activeExtruder.getProperty("infill_wipe_dist", "value")
         
+    def setInfillLayerThickness(self):
+        self._activeExtruder.setProperty("infill_sparse_thickness", "value", self.infillLayerThick)
+
+    def onInfillLayerThicknessChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.InfillLayerThickness
+            self._changedFloat = self._activeExtruder.getProperty("infill_sparse_thickness", "value")
+            self.connector._confirmValidation()
+        else:
+            self.infillLayerThick = self._activeExtruder.getProperty("infill_sparse_thickness", "value")
+
+    def setInfillGradualSteps(self):
+        self._activeExtruder.setProperty("gradual_infill_steps", "value", self.infillGradSteps)
+    
+    def onInfillGradualStepsChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.InfillGradualSteps
+            self._changedValue = self._activeExtruder.getProperty("gradual_infill_steps", "value")
+            self.connector._confirmValidation()
+        else:
+            self.infillGradSteps = self._activeExtruder.getProperty("gradual_infill_steps", "value")
+
+    def setInfillBeforeWalls(self):
+        self._activeExtruder.setProperty("infill_before_walls", "value", self.infillBeforeWalls)
+
+    def onInfillBeforeWalls(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.InfillBeforeWalls
+            self._changedBool = self._activeExtruder.getProperty("infill_before_walls", "value")
+            self.connector._confirmValidation()
+        else:
+            self.infillBeforeWalls = self._activeExtruder.getProperty("infill_before_walls", "value")
+
+    def setInfillMinimumArea(self):
+        self._activeExtruder.setProperty("min_infill_area", "value", self.infillMinimumArea)
+    
+    def onInfillMinAreaChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.InfillMinimumArea
+            self._changedValue = self._activeExtruder.getProperty("min_infill_area", "value")
+            self.connector._confirmValidation()
+        else:
+            self.infillMinimumArea = self._activeExtruder.getProperty("min_infill_area", "value")
+
+    def setInfillSupport(self):
+        self._activeExtruder.setProperty("infill_support_enabled", "value", self.infillSupport)
+
+    def onInfillSupportChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.InfillSupport
+            self._changedBool = self._activeExtruder.getProperty("infill_support_enabled", "value")
+            self.connector._confirmValidation()
+        else:
+            self.infillSupport = self._activeExtruder.getProperty("infill_support_enabled", "value")
+
+    def setSkinRemovalWidth(self):
+        self._activeExtruder.setProperty("skin_preshrink", "value", self.skinRemovalWidth)
+
+    def onSkinRemovalWidthChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.SkinRemovalWidth
+            self._changedFloat = self._activeExtruder.getProperty("skin_preshrink", "value")
+            self.connector._confirmValidation()
+        else:
+            self.skinRemovalWidth = self._activeExtruder.getProperty("skin_preshrink", "value")
+
+    def setSkinRemovalTop(self):
+        self._activeExtruder.setProperty("top_skin_preshrink", "value", self.skinRemovalTop)
+
+    def onSkinRemovalTopChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.SkinTopRemovalWidth
+            self._changedFloat = self._activeExtruder.getProperty("top_skin_preshrink", "value")
+            self.connector._confirmValidation()
+        else:
+            self.skinRemovalTop = self._activeExtruder.getProperty("top_skin_preshrink", "value")
+
+    def setSkinRemovalBottom(self):
+        self._activeExtruder.setProperty("bottom_skin_preshrink", "value", self.skinRemovalBottom)
+
+    def onSkinRemovalBottomChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.SkinBottomRemovalWidth
+            self._changedFloat = self._activeExtruder.getProperty("bottom_skin_preshrink", "value")
+            self.connector._confirmValidation()
+        else:
+            self.skinRemovalBottom = self._activeExtruder.getProperty("bottom_skin_preshrink", "value")
+
+    def setSkinExpandDistance(self):
+        self._activeExtruder.setProperty("expand_skins_expand_distance", "value", self.skinExpandDistance)
+
+    def onSkinExpandDistanceChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.SkinExpandDistance
+            self._changedFloat = self._activeExtruder.getProperty("expand_skins_expand_distance", "value")
+            self.connector._confirmValidation()
+        else:
+            self.skinExpandDistance = self._activeExtruder.getProperty("expand_skins_expand_distance", "value")
+
+    def setSkinExpandTop(self):
+        self._activeExtruder.setProperty("top_skin_expand_distance", "value", self.skinExpandTop)
+
+    def onSkinExpandTopChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.SkinTopExpandDistance
+            self._changedFloat = self._activeExtruder.getProperty("top_skin_expand_distance", "value")
+            self.connector._confirmValidation()
+        else:
+            self.skinExpandTop = self._activeExtruder.getProperty("top_skin_expand_distance", "value")
+
+    def setSkinExpandBottom(self):
+        self._activeExtruder.setProperty("bottom_skin_expand_distance", "value", self.skinExpandBottom)
+
+    def onSkinExpandBottomChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.SkinBottomExpandDistance
+            self._changedFloat = self._activeExtruder.getProperty("bottom_skin_expand_distance", "value")
+            self.connector._confirmValidation()
+        else:
+            self.skinExpandBottom = self._activeExtruder.getProperty("bottom_skin_expand_distance", "value")
+
+    def setSkinMaxAngleExpansion(self):
+        self._activeExtruder.setProperty("max_skin_angle_for_expansion", "value", self.skinExpandMaxAngle)
+
+    def onSkinMaxAngleExpansionChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.SkinMaxAngleExpansion
+            self._changedFloat = self._activeExtruder.getProperty("max_skin_angle_for_expansion", "value")
+            self.connector._confirmValidation()
+        else:
+            self.skinExpandMaxAngle = self._activeExtruder.getProperty("max_skin_angle_for_expansion", "value")
+
+    def setSkinMinWidthExpansion(self):
+        self._activeExtruder.setProperty("min_skin_width_for_expansion", "value", self.skinExpandMinWidth)
+
+    def onSkinMinAngleExpansionChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.SkinMinWidthExpansion
+            self._changedFloat = self._activeExtruder.getProperty("min_skin_width_for_expansion", "value")
+            self.connector._confirmValidation()
+        else:
+            self.skinExpandMinWidth = self._activeExtruder.getProperty("min_skin_width_for_expansion", "value")
+
 
     def onTopLineDirectionChanged(self):
         #  STUB 
@@ -460,6 +630,7 @@ class SmartSlicePropertyHandler(QObject):
     # On EXTRUDER Property Changed
     def _onExtruderPropertyChanged(self, key: str, property_name: str):
         
+      #  Infills
         if   key == "infill_sparse_density" and property_name == "value":
             self.onInfillDensityChanged()
         elif key == "infill_line_distance" and property_name == "value":
@@ -476,6 +647,35 @@ class SmartSlicePropertyHandler(QObject):
             self.onInfillOverlapChanged()
         elif key == "infill_overlap_mm" and property_name == "value":
             self.onInfillOverlapMMChanged()
+        elif key == "infill_wipe_dist" and property_name == "value":
+            self.onInfillWipeDistChanged()
+        elif key == "infill_sparse_thickness" and property_name == "value":
+            self.onInfillLayerThicknessChanged()
+        elif key == "gradual_infill_steps" and property_name == "value":
+            self.onInfillGradualStepsChanged()
+        elif key == "infill_before_walls" and property_name == "value":
+            self.onInfillBeforeWalls()
+        elif key == "min_infill_area" and property_name == "value":
+            self.onInfillMinAreaChanged()
+        elif key == "infill_support_enabled" and property_name == "value":
+            self.onInfillSupportChanged()
+      #  Skins
+        elif key == "skin_preshrink" and property_name == "value":
+            self.onSkinRemovalWidthChanged()
+        elif key == "top_skin_preshrink" and property_name == "value":
+            self.onSkinRemovalTopChanged()
+        elif key == "bottom_skin_preshrink" and property_name == "value":
+            self.onSkinRemovalBottomChanged()
+        elif key == "expand_skins_expand_distance" and property_name == "value":
+            self.onSkinExpandDistanceChanged()
+        elif key == "top_skin_expand_distance" and property_name == "value":
+            self.onSkinExpandTopChanged()
+        elif key == "bottom_skin_expand_distance" and property_name == "value":
+            self.onSkinExpandBottomChanged()
+        elif key == "max_skin_angle_for_expansion" and property_name == "value":
+            self.onSkinMaxAngleExpansionChanged()
+        elif key == "min_skin_angle_for_expansion" and property_name == "value":
+            self.onSkinMinAngleExpansionChanged()
         
         elif key == "line_width" and property_name == "value":
             self.onLineWidthChanged()
