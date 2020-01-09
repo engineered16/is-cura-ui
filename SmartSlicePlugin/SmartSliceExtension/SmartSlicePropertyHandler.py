@@ -28,6 +28,7 @@ class SmartSlicePropertyHandler(QObject):
 
         #  Callback
         self.connector = connector
+        self._confirming = False
         
         self._activeMachineManager = CuraApplication.getInstance().getMachineManager()
         self._activeExtruder = self._activeMachineManager._global_container_stack.extruderList[0]
@@ -37,6 +38,7 @@ class SmartSlicePropertyHandler(QObject):
         global_stack.propertyChanged.connect(self._onGlobalPropertyChanged)
         self._activeExtruder.propertyChanged.connect(self._onExtruderPropertyChanged)
         self._activeMachineManager.activeMaterialChanged.connect(self._onMaterialChanged)
+        self._activeTool = Application.getInstance().getController().getActiveTool()
         
         #  Cache Space
         self._propertyChanged = None
@@ -44,6 +46,8 @@ class SmartSlicePropertyHandler(QObject):
         self._changedFloat = None
         self._changedBool  = None
         self._changedString = None
+        self._changedRotation = None
+        self._changedScale = None
 
         #
         #   DEFAULT PROPERTY VALUES
@@ -53,7 +57,7 @@ class SmartSlicePropertyHandler(QObject):
         self.wallThickness = self._activeExtruder.getProperty("wall_thickness", "value")
         self.wallLineCount = self._activeExtruder.getProperty("wall_line_count", "value")
         self.wallOuterWipeDist = self._activeExtruder.getProperty("wall_0_wipe_dist", "value")
-        self.wallTopSkinLayers = self._activeExtruder.getProperty("roofing_layer_count", "value")
+        self.wallRoofingLayers = self._activeExtruder.getProperty("roofing_layer_count", "value")
         self.wallTopBottomThick = self._activeExtruder.getProperty("top_bottom_thickness", "value")
         self.wallTopThickness = self._activeExtruder.getProperty("top_thickness", "value")
         self.wallTopLayers = self._activeExtruder.getProperty("top_layers", "value")
@@ -61,6 +65,7 @@ class SmartSlicePropertyHandler(QObject):
         self.wallBottomLayers = self._activeExtruder.getProperty("bottom_layers", "value")
         self.wallTopBottomPattern = self._activeExtruder.getProperty("top_bottom_pattern", "value")
         self.wallBottomInitialPattern = self._activeExtruder.getProperty("top_bottom_pattern_0", "value")
+        self.wallSkinAngles = self._activeExtruder.getProperty("skin_angles", "value")
         self.wallOuterInset = self._activeExtruder.getProperty("wall_0_inset", "value")
 
         #  Line Widths / Layering
@@ -102,6 +107,11 @@ class SmartSlicePropertyHandler(QObject):
         self.skinExpandMinWidth = self._activeExtruder.getProperty("min_skin_width_for_expansion", "value")
 
 
+        #  Mesh Properties
+        self.meshRotation = Application.getInstance().getController().getScene().getRoot().getOrientation()
+        self.meshScale = Application.getInstance().getController().getScene().getRoot().getScale()
+        #  NOTE:  ROOT SCENE MAY NOT BE CORRECT FOR THE TWO PROPERTIES ABOVE
+
         self._material = None #  Cura Material Node
 
         #  UI/Validation Signals
@@ -128,18 +138,6 @@ class SmartSlicePropertyHandler(QObject):
             self.connector._confirmValidation()
         else:
             self.alternateExtraWall = self._activeExtruder.getProperty("alternate_extra_perimeter", "value")
-
-    #  Top/Bottom Line Directions (DISFUNCT)
-    def setSkinAngles(self):
-        self._activeExtruder.setProperty("skin_angles", "value", self.skinAngles)
-
-    def onSkinAnglesChanged(self):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
-            self._propertyChanged = SmartSliceValidationProperty.SkinAngles
-            self._changedString = self._activeExtruder.getProperty("skin_angles", "value")
-            self.connector._confirmValidation()
-        else:
-            self.skinAngles = self._activeExtruder.getProperty("skin_angles", "value")
 
     #
     #   SHELL PROPERTIES
@@ -252,11 +250,32 @@ class SmartSlicePropertyHandler(QObject):
     def onWallLineCountChanged(self):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating:
             self._propertyChanged = SmartSliceValidationProperty.WallLineCount
-            self._changedFloat = self._activeExtruder.getProperty("wall_line_count", "value")
+            self._changedValue = self._activeExtruder.getProperty("wall_line_count", "value")
             self.connector._confirmValidation()
         else:
             self.wallLineCount = self._activeExtruder.getProperty("wall_line_count", "value")
 
+    def setWallOuterWipeDist(self):
+        self._activeExtruder.setProperty("wall_0_wipe_dist", "value", self.wallOuterWipeDist)
+
+    def onWallOuterWipeDistChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.WallOuterWipeDistance
+            self._changedFloat = self._activeExtruder.getProperty("wall_0_wipe_dist", "value")
+            self.connector._confirmValidation()
+        else:
+            self.wallOuterWipeDist = self._activeExtruder.getProperty("wall_0_wipe_dist", "value")
+
+    def setWallRoofingLayerCount(self):
+        self._activeExtruder.setProperty("roofing_layer_count", "value", self.wallRoofingLayers)
+
+    def onWallRoofingLayerCountChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.WallTopSkinLayers
+            self._changedValue = self._activeExtruder.getProperty("roofing_layer_count", "value")
+            self.connector._confirmValidation()
+        else:
+            self.wallRoofingLayers = self._activeExtruder.getProperty("roofing_layer_count", "value")
 
     def setWallTopThickness(self):
         self._activeExtruder.setProperty("top_thickness", "value", self.wallTopThickness)
@@ -291,7 +310,6 @@ class SmartSlicePropertyHandler(QObject):
         else:
             self.wallBottomThickness = self._activeExtruder.getProperty("bottom_thickness", "value")
         
-    #  Bottom Layers
     def setWallBottomLayers(self):
         self._activeExtruder.setProperty("bottom_layers", "value", self.wallBottomLayers)
 
@@ -324,6 +342,17 @@ class SmartSlicePropertyHandler(QObject):
             self.connector._confirmValidation()
         else:
             self.wallBottomInitialPattern = self._activeExtruder.getProperty("top_bottom_pattern_0", "value")
+
+    def setWallSkinAngles(self):
+        self._activeExtruder.setProperty("skin_angles", "value", self.wallSkinAngles)
+
+    def onWallSkinAnglesChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.SkinAngles
+            self._changedString = self._activeExtruder.getProperty("skin_angles", "value")
+            self.connector._confirmValidation()
+        else:
+            self.wallSkinAngles = self._activeExtruder.getProperty("skin_angles", "value")
 
     def setWallOuterInset(self):
         self._activeExtruder.setProperty("wall_0_inset", "value", self.wallOuterInset)
@@ -608,13 +637,30 @@ class SmartSlicePropertyHandler(QObject):
         #  STUB 
         1 + 1
 
-    def onMeshScaleChangd(self):
-        #  STUB
-        1 + 1
+    #
+    #   MESH PROPERTIES
+    #
+    def setMeshScale(self):
+        Application.getInstance().getController().getScene().getRoot().setScale(self.meshScale)
+
+    def onMeshScaleChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.MeshScaling
+            self._changedScale = Application.getInstance().getController().getScene().getRoot().getScale()
+            self.connector._confirmValidation()
+        else:
+            self.meshScale = Application.getInstance().getController().getScene().getRoot().getScale()
+    
+    def setMeshRotation(self):
+        Application.getInstance().getController().getScene().getRoot().setOrientation(self.meshRotation)
 
     def onMeshRotationChanged(self):
-        #  STUB 
-        1 + 1
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.MeshRotation
+            self._changedRotation = Application.getInstance().getController().getScene().getRoot().getOrientation()
+            self.connector._confirmValidation()
+        else:
+            self.meshRotation = Application.getInstance().getController().getScene().getRoot().getOrientation()
 
     #
     #   MATERIAL CHANGES
@@ -714,6 +760,10 @@ class SmartSlicePropertyHandler(QObject):
             self.onWallThicknessChanged()
         elif key == "wall_line_count" and property_name == "value":
             self.onWallLineCountChanged()
+        elif key == "wall_0_wipe_dist" and property_name == "value":
+            self.onWallOuterWipeDistChanged()
+        elif key == "roofing_layer_count" and property_name == "value":
+            self.onWallRoofingLayerCountChanged()
         elif key == "top_thickness" and property_name == "value":
             self.onWallTopThicknessChanged()
         elif key == "top_layers" and property_name == "value":
@@ -728,9 +778,25 @@ class SmartSlicePropertyHandler(QObject):
             self.onWallTopBottomPatternChanged()
         elif key == "top_bottom_pattern_0" and property_name == "value":
             self.onWallBottomInitialPatternChanged()
+        elif key == "skin_angles" and property_name == "value":
+            self.onWallSkinAnglesChanged()
         elif key == "wall_0_inset" and property_name == "value":
             self.onWallOuterInsetChanged()
 
-        #  Invalid Property
+        #  Other Property
         else:
             return
+
+    #
+    #   NOTE:  THIS FUNCTION IS WRONG!!!!!
+    #          This needs to be changed from `getRoot()` to Machine Change Detection
+    #
+    def _onMeshDataChanged(self, key: str, property_name: str):
+        if self.meshScale != Application.getInstance().getController().getScene().getRoot().getScale():
+            self.onMeshScaleChanged()
+        elif self.meshRotation != Application.getInstance().getController().getScene().getRoot().getOrientation():
+            self.onMeshRotationChanged()
+        
+
+        #  Other Property
+        return
