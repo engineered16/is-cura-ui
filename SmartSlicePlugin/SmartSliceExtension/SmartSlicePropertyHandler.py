@@ -52,13 +52,16 @@ class SmartSlicePropertyHandler(QObject):
         #  Shell
         self.wallThickness = self._activeExtruder.getProperty("wall_thickness", "value")
         self.wallLineCount = self._activeExtruder.getProperty("wall_line_count", "value")
-        self.topThickness = self._activeExtruder.getProperty("top_thickness", "value")
-        self.topLayers = self._activeExtruder.getProperty("top_layers", "value")
-        self.bottomLayers = self._activeExtruder.getProperty("bottom_layers", "value")
-        self.bottomThickness = self._activeExtruder.getProperty("bottom_thickness", "value")
-        self.horizontalExpansion = None
-        self.alternateExtraWall = self._activeExtruder.getProperty("alternate_extra_perimeter", "value")
-        self.skinAngles = self._activeExtruder.getProperty("skin_angles", "value")
+        self.wallOuterWipeDist = self._activeExtruder.getProperty("wall_0_wipe_dist", "value")
+        self.wallTopSkinLayers = self._activeExtruder.getProperty("roofing_layer_count", "value")
+        self.wallTopBottomThick = self._activeExtruder.getProperty("top_bottom_thickness", "value")
+        self.wallTopThickness = self._activeExtruder.getProperty("top_thickness", "value")
+        self.wallTopLayers = self._activeExtruder.getProperty("top_layers", "value")
+        self.wallBottomThickness = self._activeExtruder.getProperty("bottom_thickness", "value")
+        self.wallBottomLayers = self._activeExtruder.getProperty("bottom_layers", "value")
+        self.wallTopBottomPattern = self._activeExtruder.getProperty("top_bottom_pattern", "value")
+        self.wallBottomInitialPattern = self._activeExtruder.getProperty("top_bottom_pattern_0", "value")
+        self.wallOuterInset = self._activeExtruder.getProperty("wall_0_inset", "value")
 
         #  Line Widths / Layering
         self.layerHeight = self._activeExtruder.getProperty("layer_height", "value")
@@ -97,8 +100,6 @@ class SmartSlicePropertyHandler(QObject):
         self.skinExpandBottom = self._activeExtruder.getProperty("bottom_skin_expand_distance", "value")
         self.skinExpandMaxAngle = self._activeExtruder.getProperty("max_skin_angle_for_expansion", "value")
         self.skinExpandMinWidth = self._activeExtruder.getProperty("min_skin_width_for_expansion", "value")
-        
-        #  Walls
 
 
         self._material = None #  Cura Material Node
@@ -195,7 +196,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedFloat = self._activeExtruder.getProperty("wall_line_width", "value")
             self.connector._confirmValidation()
         else:
-            self.lineWidth = self._activeExtruder.getProperty("wall_line_width", "value")
+            self.lineWidthWall = self._activeExtruder.getProperty("wall_line_width", "value")
         
 
     def setOuterLineWidth(self):
@@ -231,14 +232,16 @@ class SmartSlicePropertyHandler(QObject):
         else:
             self.lineWidthInfill = self._activeExtruder.getProperty("infill_line_width", "value")
 
-
+    #
+    #   SHELLS
+    #
     def setWallThickness(self):
         self._activeExtruder.setProperty("wall_thickness", "value", self.wallThickness)
 
     def onWallThicknessChanged(self):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating:
             self._propertyChanged = SmartSliceValidationProperty.WallThickness
-            self._changedValue = self._activeExtruder.getProperty("wall_thickness", "value")
+            self._changedFloat = self._activeExtruder.getProperty("wall_thickness", "value")
             self.connector._confirmValidation()
         else:
             self.wallThickness = self._activeExtruder.getProperty("wall_thickness", "value")
@@ -249,72 +252,93 @@ class SmartSlicePropertyHandler(QObject):
     def onWallLineCountChanged(self):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating:
             self._propertyChanged = SmartSliceValidationProperty.WallLineCount
-            self._changedValue = self._activeExtruder.getProperty("wall_line_count", "value")
+            self._changedFloat = self._activeExtruder.getProperty("wall_line_count", "value")
             self.connector._confirmValidation()
         else:
             self.wallLineCount = self._activeExtruder.getProperty("wall_line_count", "value")
 
 
-    #  Top Thickness
-    def setTopThickness(self):
-        self._activeExtruder.setProperty("top_thickness", "value", self.topThickness)
+    def setWallTopThickness(self):
+        self._activeExtruder.setProperty("top_thickness", "value", self.wallTopThickness)
 
-    def onTopThicknessChanged(self):
+    def onWallTopThicknessChanged(self):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating:
-            self._propertyChanged = SmartSliceValidationProperty.TopThickness
-            self._changedValue = self._activeExtruder.getProperty("top_thickness", "value")
+            self._propertyChanged = SmartSliceValidationProperty.WallTopThickness
+            self._changedFloat = self._activeExtruder.getProperty("top_thickness", "value")
             self.connector._confirmValidation()
         else:
-            self.topThickness = self._activeExtruder.getProperty("top_thickness", "value")
+            self.wallTopThickness = self._activeExtruder.getProperty("top_thickness", "value")
 
-    #  Top Layers
-    def setTopLayers(self):
-        self._activeExtruder.setProperty("top_layers", "value", self.topLayers)
+    def setWallTopLayers(self):
+        self._activeExtruder.setProperty("top_layers", "value", self.wallTopLayers)
 
-    def onTopLayersChanged(self):
+    def onWallTopLayersChanged(self):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating:
-            self._propertyChanged = SmartSliceValidationProperty.TopLayers
-            self._changedValue = self._activeExtruder.getProperty("top_layers", "value")
+            self._propertyChanged = SmartSliceValidationProperty.WallTopLayers
+            self._changedFloat = self._activeExtruder.getProperty("top_layers", "value")
             self.connector._confirmValidation()
         else:
-            self.topLayers = self._activeExtruder.getProperty("top_layers", "value")
+            self.wallTopLayers = self._activeExtruder.getProperty("top_layers", "value")
 
-    #  Bottom Thickness
-    def setBottomThickness(self):
-        self._activeExtruder.setProperty("bottom_thickness", "value",self.bottomThickness)
+    def setWallBottomThickness(self):
+        self._activeExtruder.setProperty("bottom_thickness", "value", self.wallBottomThickness)
 
-    def onBottomThicknessChanged(self):
+    def onWallBottomThicknessChanged(self):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating:
-            self._propertyChanged = SmartSliceValidationProperty.BottomThickness
-            self._changedValue = self._activeExtruder.getProperty("bottom_thickness", "value")
+            self._propertyChanged = SmartSliceValidationProperty.WallBottomThickness
+            self._changedFloat = self._activeExtruder.getProperty("bottom_thickness", "value")
             self.connector._confirmValidation()
         else:
-            self.bottomThickness = self._activeExtruder.getProperty("bottom_thickness", "value")
+            self.wallBottomThickness = self._activeExtruder.getProperty("bottom_thickness", "value")
         
     #  Bottom Layers
-    def setBottomLayers(self):
-        self._activeExtruder.setProperty("bottom_layers", "value", self.bottomLayers)
+    def setWallBottomLayers(self):
+        self._activeExtruder.setProperty("bottom_layers", "value", self.wallBottomLayers)
 
-    def onBottomLayersChanged(self):
+    def onWallBottomLayersChanged(self):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating:
-            self._propertyChanged = SmartSliceValidationProperty.BottomLayers
-            self._changedValue = self._activeExtruder.getProperty("bottom_layers", "value")
+            self._propertyChanged = SmartSliceValidationProperty.WallBottomLayers
+            self._changedFloat = self._activeExtruder.getProperty("bottom_layers", "value")
             self.connector._confirmValidation()
         else:
-            self.bottomLayers = self._activeExtruder.getProperty("bottom_layers", "value")
+            self.wallBottomLayers = self._activeExtruder.getProperty("bottom_layers", "value")
 
-    #  Horizontal Expansion
-    def setHorizontalExpansion(self):
-        self._activeExtruder.setProperty("horizontal_expansion", "value", self.horizontalExpansion)
+    def setWallTopBottomPattern(self):
+        self._activeExtruder.setProperty("top_bottom_pattern", "value", self.wallTopBottomPattern)
 
-    def onHorizontalExpansionChanged(self):
+    def onWallTopBottomPatternChanged(self):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating:
-            self._propertyChanged = SmartSliceValidationProperty.HorizontalExpansion
-            self._changedValue = self._activeExtruder.getProperty("horizontal_expansion", "value")
+            self._propertyChanged = SmartSliceValidationProperty.WallTopBottomPattern
+            self._changedString = self._activeExtruder.getProperty("top_bottom_pattern", "value")
             self.connector._confirmValidation()
         else:
-            self.horizontalExpansion = self._activeExtruder.getProperty("horizontal_expansion", "value")
-    
+            self.wallTopBottomPattern = self._activeExtruder.getProperty("top_bottom_pattern", "value")
+
+    def setWallBottomInitialPattern(self):
+        self._activeExtruder.setProperty("top_bottom_pattern_0", "value", self.wallBottomInitialPattern)
+
+    def onWallBottomInitialPatternChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.WallBottomInitialPattern
+            self._changedString = self._activeExtruder.getProperty("top_bottom_pattern_0", "value")
+            self.connector._confirmValidation()
+        else:
+            self.wallBottomInitialPattern = self._activeExtruder.getProperty("top_bottom_pattern_0", "value")
+
+    def setWallOuterInset(self):
+        self._activeExtruder.setProperty("wall_0_inset", "value", self.wallOuterInset)
+
+    def onWallOuterInsetChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.WallOuterInset
+            self._changedFloat = self._activeExtruder.getProperty("wall_0_inset", "value")
+            self.connector._confirmValidation()
+        else:
+            self.wallOuterInset = self._activeExtruder.getProperty("wall_0_inset", "value")
+
+
+
+
 
     #
     #   INFILL PROPERTIES
@@ -685,21 +709,27 @@ class SmartSlicePropertyHandler(QObject):
             self.onInnerLineWidthChanged()
         elif key == "infill_wall_line_width" and property_name == "value":
             self.onInfillLineWidthChanged()
+        
         elif key == "wall_thickness" and property_name == "value":
             self.onWallThicknessChanged()
         elif key == "wall_line_count" and property_name == "value":
             self.onWallLineCountChanged()
+        elif key == "top_thickness" and property_name == "value":
+            self.onWallTopThicknessChanged()
+        elif key == "top_layers" and property_name == "value":
+            self.onWallTopLayersChanged()
+        elif key == "bottom_thickness" and property_name == "value":
+            self.onWallBottomThicknessChanged()
+        elif key == "bottom_layers" and property_name == "value":
+            self.onWallBottomLayersChanged()
         elif key == "horizontal_expansion" and property_name == "value":    # DISFUNCT!!!!
             self.onHorizontalExpansionChanged()
-        
-        elif key == "top_thickness" and property_name == "value":
-            self.onTopThicknessChanged()
-        elif key == "top_layers" and property_name == "value":
-            self.onTopLayersChanged()
-        elif key == "bottom_thickness" and property_name == "value":
-            self.onBottomThicknessChanged()
-        elif key == "bottom_layers" and property_name == "value":
-            self.onBottomLayersChanged()
+        elif key == "top_bottom_pattern" and property_name == "value":
+            self.onWallTopBottomPatternChanged()
+        elif key == "top_bottom_pattern_0" and property_name == "value":
+            self.onWallBottomInitialPatternChanged()
+        elif key == "wall_0_inset" and property_name == "value":
+            self.onWallOuterInsetChanged()
 
         #  Invalid Property
         else:

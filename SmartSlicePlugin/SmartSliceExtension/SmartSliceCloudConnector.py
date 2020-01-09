@@ -766,7 +766,25 @@ class SmartSliceCloudConnector(QObject):
         elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.Material:
             self._proxy._material = self._proxy._changedMaterial
             self._proxy.setMaterial()
-     
+      
+      # Shell Properties
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.WallThickness:
+            self.propertyHandler.wallThickness = self.propertyHandler._changedValue
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.WallTopThickness:
+            self.propertyHandler.wallTopThickness = self.propertyHandler._changedValue
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.WallTopLayers:
+            self.propertyHandler.wallTopLayers = self.propertyHandler._changedValue
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.WallBottomThickness:
+            self.propertyHandler.wallBottomThickness = self.propertyHandler._changedValue
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.WallBottomLayers:
+            self.propertyHandler.wallBottomLayers = self.propertyHandler._changedValue
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.WallTopBottomPattern:
+            self.propertyHandler.wallTopBottomPattern = self.propertyHandler._changedString
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.WallBottomInitialPattern:
+            self.propertyHandler.wallBottomInitialPattern = self.propertyHandler._changedString
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.WallOuterInset:
+            self.propertyHandler.wallOuterInset = self.propertyHandler._changedFloat
+
       #  Infill Properties
         elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillDensity:
             self.propertyHandler.infillDensity = self.propertyHandler._changedValue
@@ -832,22 +850,6 @@ class SmartSliceCloudConnector(QObject):
         elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillLineWidth:
             self.propertyHandler.lineWidthInfill = self.propertyHandler._changedFloat
 
-      #  Wall Properties
-        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.WallThickness:
-            self.propertyHandler.wallThickness = self._proxy._changedValue
-        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.HorizontalExpansion:
-            self._proxy._horizontalExpansion = self._proxy._changedValue
-      #  Top Walls
-        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.TopThickness:
-            self.propertyHandler.topThickness = self._proxy._changedValue
-        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.TopLayers:
-            self.propertyHandler.topLayers = self._proxy._changedValue
-      #  Bottom Walls
-        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.BottomThickness:
-            self.propertyHandler.bottomThickness = self._proxy._changedValue
-        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.BottomLayers:
-            self.propertyHandler.bottomLayers = self._proxy._changedValue
-
         # Close Dialog
         self._proxy.confirmationWindowEnabled = False
         self._proxy.confirmationWindowEnabledChanged.emit()
@@ -877,7 +879,6 @@ class SmartSliceCloudConnector(QObject):
         #  Load Direction
         elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.LoadDirection:
             self._proxy.loadMagnitudeInvertedChanged.emit()
-
       #  FACE SELECTION
         #  Selected Face(s)
             # Do Nothing
@@ -890,13 +891,16 @@ class SmartSliceCloudConnector(QObject):
         elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.LineWidth:
             self.propertyHandler.setLineWidth()
         elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.WallLineWidth:
-              self.propertyHandler.setWallLineWidth()
+            self.propertyHandler.setWallLineWidth()
         elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.OuterLineWidth:
             self.propertyHandler.setOuterLineWidth()
         elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.InnerLineWidth:
             self.propertyHandler.setInnerLineWidth()
         elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.InfillLineWidth:
             self.propertyHandler.setInfillLineWidth()
+
+      #  SHELL
+
       
       #  INFILL PROPERTIES
         elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.InfillDensity:
@@ -959,18 +963,24 @@ class SmartSliceCloudConnector(QObject):
             self.propertyHandler.setHorizontalExpansion()
       #  Top Walls
         #  Top Thickness
-        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.TopThickness:
-            self.propertyHandler.setTopThickness()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.WallTopThickness:
+            self.propertyHandler.setWallTopThickness()
         #  Top layers
-        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.TopLayers:
-            self.propertyHandler.setTopLayers()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.WallTopLayers:
+            self.propertyHandler.setWallTopLayers()
       #  Bottom Walls
         #  Bottom Thickness
-        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.BottomThickness:
-            self.propertyHandler.setBottomThickness()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.WallBottomThickness:
+            self.propertyHandler.setWallBottomThickness()
         #  Bottom layers
-        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.BottomLayers:
-            self.propertyHandler.setBottomLayers()
+        elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.WallBottomLayers:
+            self.propertyHandler.setWallBottomLayers()
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.WallTopBottomPattern:
+            self.propertyHandler.setWallTopBottomPattern()
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.WallBottomInitialPattern:
+            self.propertyHandler.setWallBottomInitialPattern()
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.WallOuterInset:
+            self.propertyHandler.setWallOuterInset()
 
         #  Material Properties
         elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.Material:

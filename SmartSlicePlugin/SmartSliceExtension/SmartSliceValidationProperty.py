@@ -47,13 +47,20 @@ class SmartSliceValidationProperty(Enum):
     WallsCount      =  80
     WallThickness   =  81
     WallLineCount   =  82
-    AlternateExtraWall = 83
-  # Skin & Orientation
-    TopSkin         =  60
-    BottomSkin      =  61
-    TopOrientation  =  62
-    BottomOrientation= 63
-    SkinAngles      =  64
+    WallOuterWipeDistance = 83
+    WallTopSkinLayers = 84
+    WallTopBottomThickness = 85
+    WallTopThickness = 85
+    WallTopLayers = 86
+    WallBottomThickness = 87
+    WallBottomLayers = 88
+    WallTopBottomPattern = 89
+    WallBottomInitialPattern = 90
+    WallOuterInset = 91
+
+    AlternateExtraWall = 95
+
+    HorizontalExpansion = 110
   # Layers
     LayerHeight     =  100
     InitialLayerHeight = 101
@@ -63,13 +70,12 @@ class SmartSliceValidationProperty(Enum):
     InnerLineWidth  =  105
     InfillLineWidth =  106
     InitialLayerLineWidth = 107
-
-    LayerWidth      =  111
-    HorizontalExpansion = 112
-    TopThickness    =  120
-    TopLayers       =  121
-    BottomThickness =  122
-    BottomLayers    =  123
+  # Skin & Orientation
+    TopSkin         =  160
+    BottomSkin      =  161
+    TopOrientation  =  162
+    BottomOrientation= 163
+    SkinAngles      =  164
 
   # Material
     Material        =  150
