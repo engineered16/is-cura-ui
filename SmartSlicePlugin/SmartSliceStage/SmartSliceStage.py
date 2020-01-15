@@ -101,6 +101,10 @@ class SmartSliceStage(CuraStage):
         if self._previous_tool:
             application.getController().setActiveTool(self._default_fallback_tool)
 
+        #  Hide all visible SmartSlice UI Components
+
+        
+
     def getVisibleTools(self):
         visible_tools = []
         tools = Application.getInstance().getController().getAllTools().keys()

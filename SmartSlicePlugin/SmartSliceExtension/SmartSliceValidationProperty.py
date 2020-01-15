@@ -12,8 +12,8 @@ from enum import Enum
 
 class SmartSliceValidationProperty(Enum):
   # Mesh Properties
-    MeshRotation    =  1
-    MeshScaling     =  2
+    MeshScale       =  1
+    MeshRotation    =  2
   # Requirements
     FactorOfSafety  =  11
     MaxDisplacement =  12

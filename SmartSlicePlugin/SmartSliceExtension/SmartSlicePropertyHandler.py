@@ -16,7 +16,9 @@ from PyQt5.QtCore import QObject
 
 #  Cura
 from UM.Application import Application
+from UM.Scene.Selection import Selection
 from cura.CuraApplication import CuraApplication
+
 
 #  Smart Slice
 from .SmartSliceCloudProxy import SmartSliceCloudStatus
@@ -34,20 +36,15 @@ class SmartSlicePropertyHandler(QObject):
         self._activeExtruder = self._activeMachineManager._global_container_stack.extruderList[0]
         global_stack = Application.getInstance().getGlobalContainerStack()
         
-        #  Connect Signals
-        global_stack.propertyChanged.connect(self._onGlobalPropertyChanged)
-        self._activeExtruder.propertyChanged.connect(self._onExtruderPropertyChanged)
-        self._activeMachineManager.activeMaterialChanged.connect(self._onMaterialChanged)
-        self._activeTool = Application.getInstance().getController().getActiveTool()
-        
         #  Cache Space
         self._propertyChanged = None
-        self._changedValue = None
-        self._changedFloat = None
-        self._changedBool  = None
-        self._changedString = None
+        self._changedValue    = None
+        self._changedFloat    = None
+        self._changedBool     = None
+        self._changedString   = None
+        self._changedScale    = None
         self._changedRotation = None
-        self._changedScale = None
+        self._loadedFilename  = None
 
         #
         #   DEFAULT PROPERTY VALUES
@@ -108,16 +105,89 @@ class SmartSlicePropertyHandler(QObject):
 
 
         #  Mesh Properties
-        self.meshRotation = Application.getInstance().getController().getScene().getRoot().getOrientation()
-        self.meshScale = Application.getInstance().getController().getScene().getRoot().getScale()
-        #  NOTE:  ROOT SCENE MAY NOT BE CORRECT FOR THE TWO PROPERTIES ABOVE
+        self.meshScale    = None
+        self.meshRotation = None
+        self._sceneNode = None
+        self._sceneRoot = Application.getInstance().getController().getScene().getRoot()
 
         self._material = None #  Cura Material Node
-
-        #  UI/Validation Signals
-        self.activeMaterialChanged.connect(self._onMaterialChanged)
-
         
+        #  Connect Signals
+        global_stack.propertyChanged.connect(self._onGlobalPropertyChanged)
+        self._activeExtruder.propertyChanged.connect(self._onExtruderPropertyChanged)
+
+        self._activeMachineManager.activeMaterialChanged.connect(self._onMaterialChanged)
+        #Application.getInstance().getController().getScene().sceneChanged.connect(self._onModelChanged)
+
+        self._sceneRoot.childrenChanged.connect(self.connectTransformSignals)
+
+                
+
+    #
+    #  LOCAL TRANSFORMATION PROPERTIES
+    #
+
+    def connectTransformSignals(self, dummy):
+        i = 0
+        _root = self._sceneRoot 
+
+        for node in _root.getAllChildren():
+            print ("Node Found:  " + node.getName())
+            if node.getName() == "3d":
+                if (self._sceneNode is None) or (self._sceneNode.getName() != _root.getAllChildren()[i+1].getName()):
+                    self._sceneNode = _root.getAllChildren()[i+1]
+                    print ("\nFile Found:  " + self._sceneNode.getName() + "\n")
+
+                    #  Set Initial Scale/Rotation
+                    self.meshScale    = self._sceneNode.getScale()
+                    self.meshRotation = self._sceneNode.getOrientation()
+
+                    #  TODO: Properly Disconnect this Signal, when figure out where to do so
+                    self._sceneNode.transformationChanged.connect(self._onLocalTransformationChanged)
+                    i += 1
+
+
+            i += 1
+
+        # STUB
+        return 
+
+    def _onLocalTransformationChanged(self, node):
+        if node.getScale() != self.meshScale:
+            self.onMeshScaleChanged()
+        if node.getOrientation() != self.meshRotation:
+            self.onMeshRotationChanged()
+
+    def setMeshScale(self):
+        print ("\nMesh Scale Set\n")
+        self._sceneNode.setScale(self.meshScale)
+        self._sceneNode.transformationChanged.emit(self._sceneNode)
+        
+
+    def onMeshScaleChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.MeshScale
+            self._changedScale = self._sceneNode.getScale()
+            self.connector._confirmValidation()
+        else:
+            self.meshScale = self._sceneNode.getScale()
+
+    def setMeshRotation(self):
+        print ("\nMesh Rotation Set\n")
+        self._sceneNode.setOrientation(self.meshRotation)
+        self._sceneNode.transformationChanged.emit(self._sceneNode)
+
+    def onMeshRotationChanged(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.MeshRotation
+            self._changedRotation = self._sceneNode.getOrientation()
+            self.connector._confirmValidation()
+        else:
+            self.meshRotation = self._sceneNode.getOrientation()
+
+
+
+
     #
     #   QUALITY PROPERTIES
     #
@@ -636,31 +706,7 @@ class SmartSlicePropertyHandler(QObject):
     def onBottomLineDirectionChanged(self):
         #  STUB 
         1 + 1
-
-    #
-    #   MESH PROPERTIES
-    #
-    def setMeshScale(self):
-        Application.getInstance().getController().getScene().getRoot().setScale(self.meshScale)
-
-    def onMeshScaleChanged(self):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
-            self._propertyChanged = SmartSliceValidationProperty.MeshScaling
-            self._changedScale = Application.getInstance().getController().getScene().getRoot().getScale()
-            self.connector._confirmValidation()
-        else:
-            self.meshScale = Application.getInstance().getController().getScene().getRoot().getScale()
     
-    def setMeshRotation(self):
-        Application.getInstance().getController().getScene().getRoot().setOrientation(self.meshRotation)
-
-    def onMeshRotationChanged(self):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
-            self._propertyChanged = SmartSliceValidationProperty.MeshRotation
-            self._changedRotation = Application.getInstance().getController().getScene().getRoot().getOrientation()
-            self.connector._confirmValidation()
-        else:
-            self.meshRotation = Application.getInstance().getController().getScene().getRoot().getOrientation()
 
     #
     #   MATERIAL CHANGES
@@ -683,7 +729,7 @@ class SmartSlicePropertyHandler(QObject):
 
 
     #
-    #   PROPERTY CHANGES
+    #   SIGNAL LISTENERS
     #
 
     # On GLOBAL Property Changed
@@ -787,16 +833,3 @@ class SmartSlicePropertyHandler(QObject):
         else:
             return
 
-    #
-    #   NOTE:  THIS FUNCTION IS WRONG!!!!!
-    #          This needs to be changed from `getRoot()` to Machine Change Detection
-    #
-    def _onMeshDataChanged(self, key: str, property_name: str):
-        if self.meshScale != Application.getInstance().getController().getScene().getRoot().getScale():
-            self.onMeshScaleChanged()
-        elif self.meshRotation != Application.getInstance().getController().getScene().getRoot().getOrientation():
-            self.onMeshRotationChanged()
-        
-
-        #  Other Property
-        return

@@ -43,7 +43,7 @@ from UM.Operations.GroupedOperation import GroupedOperation
 from UM.PluginRegistry import PluginRegistry
 from UM.Scene.SceneNode import SceneNode
 from UM.Scene.Iterator.DepthFirstIterator import DepthFirstIterator
-from UM.Settings.SettingInstance import SettingInstance
+from UM.Settings.SettingInstance import SettingInstance, InstanceState
 from UM.Signal import Signal
 
 # Cura
@@ -767,7 +767,7 @@ class SmartSliceCloudConnector(QObject):
         elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.Material:
             self._proxy._material = self._proxy._changedMaterial
             self._proxy.setMaterial()
-        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.MeshScaling:
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.MeshScale:
             self.propertyHandler.meshScale = self.propertyHandler._changedScale
         elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.MeshRotation:
             self.propertyHandler.meshRotation = self.propertyHandler._changedRotation
@@ -863,6 +863,7 @@ class SmartSliceCloudConnector(QObject):
         elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.InfillLineWidth:
             self.propertyHandler.lineWidthInfill = self.propertyHandler._changedFloat
 
+
         # Close Dialog
         self._proxy.confirmationWindowEnabled = False
         self._proxy.confirmationWindowEnabledChanged.emit()
@@ -885,9 +886,10 @@ class SmartSliceCloudConnector(QObject):
             self._proxy._changedValue = None
             self._proxy.targetMaximalDisplacementChanged.emit()
 
-      #  MESH PROPERTIES
-        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.MeshScaling:
-            self.propertyHandler
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.MeshScale:
+            self.propertyHandler.setMeshScale()
+        elif self.propertyHandler._propertyChanged is SmartSliceValidationProperty.MeshRotation:
+            self.propertyHandler.setMeshRotation()
             
       #  LOADS / ANCHORS
         #  Load Magnitude
@@ -997,7 +999,7 @@ class SmartSliceCloudConnector(QObject):
 
         #  Material Properties
         elif self.propertyHandler._propertyChanged == SmartSliceValidationProperty.Material:
-            self._proxy.setMaterial()
+            self.propertyHandler.setMaterial()
         # Close Dialog
         self._proxy.confirmationWindowEnabled = False
         self._proxy.confirmationWindowEnabledChanged.emit()
