@@ -85,6 +85,6 @@ class SmartSliceValidationProperty(Enum):
     
 
 class SmartSliceLoadDirection(Enum):
-    Push = 1
-    Pull = 2
+    Pull = 1
+    Push = 2
 

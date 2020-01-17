@@ -119,7 +119,7 @@ class SmartSliceSelectTool(Tool):
             load_vector = self._handle.getLoadVector()
             # -> After clicking on a face, I get a crash below, that my load_vector is None.
             
-            if load_vector and self._handle._connector._proxy.loadMagnitudeInverted:
+            if load_vector and self._handle._connector._proxy.loadDirection:
                 load_vector = load_vector * -1
             
             loaded_faces = [face._id for face in self._handle._loaded_faces]

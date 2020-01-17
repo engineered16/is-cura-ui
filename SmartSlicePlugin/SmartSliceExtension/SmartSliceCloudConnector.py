@@ -664,8 +664,6 @@ class SmartSliceCloudConnector(QObject):
         Application.getInstance().activityChanged.emit()
 
     def _confirmValidation(self):
-        #if len(self.propertyHandler._propertiesChanged) == 1:
-        self.propertyHandler._confirming = True
         self._proxy.confirmationWindowEnabled = True
         self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose the current\n validation results?"
         self._proxy.confirmationWindowEnabledChanged.emit()

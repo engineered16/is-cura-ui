@@ -137,8 +137,8 @@ Item {
 
             text: "Flip Direction"
 
-            checked: SmartSlice.Cloud.loadMagnitudeInverted
-            onCheckedChanged: SmartSlice.Cloud.loadMagnitudeInverted = checked
+            checked: SmartSlice.Cloud.loadDirection
+            onCheckedChanged: SmartSlice.Cloud.loadDirection = checked
             
         }
 

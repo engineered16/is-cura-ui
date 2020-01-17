@@ -24,7 +24,7 @@ from cura.CuraApplication import CuraApplication
 from cura.Settings.MachineManager import MachineManager
 
 #  Smart Slice
-from .SmartSliceValidationProperty import SmartSliceValidationProperty, SmartSliceLoadDirection
+from .SmartSliceValidationProperty import SmartSliceValidationProperty
 
 class SmartSliceCloudStatus():
     NoConnection = 1
@@ -77,11 +77,6 @@ class SmartSliceCloudProxy(QObject):
 
         # Confirm Changes Dialog
         self._validationRaised = False
-        self._propertyChanged = None
-        self._changedValue = None
-        self._changedFloat = None
-        self._changedString = None
-        self._changedMaterial  = None
         self._confirmationWindowEnabled = False
         self._validate_confirmed = True
         self._optimize_confirmed = True
@@ -104,7 +99,7 @@ class SmartSliceCloudProxy(QObject):
         self._loadsApplied = 0
         self._anchorsApplied = 0
         self._loadMagnitude = 10.0
-        self._loadDirection = SmartSliceLoadDirection.Pull
+        self._loadDirection = False
 
         # Properties (mainly) for the sliceinfo widget
         self._resultSafetyFactor = copy.copy(self._targetFactorOfSafety)
@@ -438,6 +433,7 @@ class SmartSliceCloudProxy(QObject):
     #   Load Direction/Magnitude
 
     loadMagnitudeChanged = pyqtSignal()
+    loadDirectionChanged = pyqtSignal()
 
     @pyqtProperty(float, notify=loadMagnitudeChanged)
     def loadMagnitude(self):
@@ -445,41 +441,17 @@ class SmartSliceCloudProxy(QObject):
 
     @loadMagnitude.setter
     def loadMagnitude(self, value):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
-            self._propertyChanged = SmartSliceValidationProperty.LoadMagnitude
-            self._changedValue = value
-            self.connector._confirmValidation()
-        elif self._loadMagnitude is not value:
-            self._loadMagnitude = value
-            self.loadMagnitudeChanged.emit()
-            self.connector._prepareValidation()
-    
-    loadMagnitudeInvertedChanged = pyqtSignal()
+        self._loadMagnitude = value
+        self.loadMagnitudeChanged.emit()
 
-    @pyqtProperty(bool, notify=loadMagnitudeInvertedChanged)
-    def loadMagnitudeInverted(self) -> bool:
-        if self._loadDirection == SmartSliceLoadDirection.Push:
-            return True
-        else: 
-            return False
+    @pyqtProperty(bool, notify=loadDirectionChanged)
+    def loadDirection(self):
+        return self._loadDirection
 
-    @loadMagnitudeInverted.setter
-    def loadMagnitudeInverted(self, value):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
-            self._propertyChanged = SmartSliceValidationProperty.LoadDirection
-            if value == True:
-                self._changedValue = SmartSliceLoadDirection.Push
-            else: 
-                self._changedValue = SmartSliceLoadDirection.Pull
-            self.connector._confirmValidation()
-            Logger.log("d", "Changing loadMagnitudeInverted to: {}".format(value))
-        else:
-            if value == True:
-                self._changedValue = SmartSliceLoadDirection.Push
-            else: 
-                self._changedValue = SmartSliceLoadDirection.Pull
-            self.connector._prepareValidation()
-        self.loadMagnitudeInvertedChanged.emit()
+    @loadDirection.setter
+    def loadDirection(self, value):
+        self._loadDirection = value
+        self.loadDirectionChanged.emit()
 
 
     #   FACE DRAWING/SELECTION
