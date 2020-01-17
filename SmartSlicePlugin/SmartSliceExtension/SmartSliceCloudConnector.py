@@ -484,6 +484,8 @@ class SmartSliceCloudConnector(QObject):
         self.resetForce0FacesPoc()
         self.resetForce0VectorPoc()
 
+    SmartSlicePrepared = pyqtSignal()
+
     def getProxy(self, engine, script_engine):
         return self._proxy
 
@@ -498,6 +500,7 @@ class SmartSliceCloudConnector(QObject):
         self.status = SmartSliceCloudStatus.NoModel
         self.active_machine = Application.getInstance().getMachineManager().activeMachine
         self.propertyHandler = SmartSlicePropertyHandler(self)
+        self.SmartSlicePrepared.emit()
 
     def updateSliceWidget(self):
         if self.status is SmartSliceCloudStatus.NoModel:

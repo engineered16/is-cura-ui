@@ -65,13 +65,17 @@ class SmartSliceSelectHandle(ToolHandle):
 
         #   Arrow Mesh
         self._arrow = False
-        self._connector._proxy._selection_mode = SelectionMode.AnchorMode
         
         #  Disable auto scale
         self._auto_scale = False
 
+        self._connector.SmartSlicePrepared.connect(self._onSmartSlicePrepared)
+
+    def _onSmartSlicePrepared(self):
         #  Connect to UI 'Cancel Changes' Signal
-        self._connector._proxy.selectedFacesChanged.connect(self.drawSelection)
+        self._connector.propertyHandler.selectedFacesChanged.connect(self.drawSelection)
+        self._connector.propertyHandler._selection_mode = SelectionMode.AnchorMode
+
 
 
 #  ACCESSORS
@@ -106,15 +110,15 @@ class SmartSliceSelectHandle(ToolHandle):
 
         print("DRAWING!!!")
 
-        if self._connector._proxy._selection_mode == SelectionMode.LoadMode:
+        if self._connector.propertyHandler._selection_mode == SelectionMode.LoadMode:
             self._load_magnitude = self._connector._proxy._loadMagnitude
-            _selected_mesh = self._connector._proxy._loadedMesh
+            _selected_mesh = self._connector.propertyHandler._loadedMesh
             #  TODO: Generalize this for more than one Active Load
-            self.setFace(self._connector._proxy._loadedFaces[0])
+            self.setFace(self._connector.propertyHandler._loadedFaces[0])
         else:
-            _selected_mesh = self._connector._proxy._anchoredMesh
+            _selected_mesh = self._connector.propertyHandler._anchoredMesh
             #  TODO: Generalize this for more than one Active Anchor
-            self.setFace(self._connector._proxy._anchoredFaces[0])
+            self.setFace(self._connector.propertyHandler._anchoredFaces[0])
         self._face = set()
 
         #if draw_arrow:
@@ -170,12 +174,12 @@ class SmartSliceSelectHandle(ToolHandle):
             face_list.append(_selected_mesh.faces[fid])
             self.paintFace(_selected_mesh.faces[fid], mb)
 
-        if self._connector._proxy._selection_mode == SelectionMode.LoadMode:
+        if self._connector.propertyHandler._selection_mode == SelectionMode.LoadMode:
             self._loaded_faces = face_list
-            self._connector._proxy._selection_mode = SelectionMode.LoadMode
+            self._connector.propertyHandler._selection_mode = SelectionMode.LoadMode
         else:
             self._anchored_faces = face_list
-            self._connector._proxy._selection_mode = SelectionMode.AnchorMode
+            self._connector.propertyHandler._selection_mode = SelectionMode.AnchorMode
 
         #  Add to Cura Scene
         self.setSolidMesh(mb.build())

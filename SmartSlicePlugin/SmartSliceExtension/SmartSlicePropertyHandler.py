@@ -108,6 +108,13 @@ class SmartSlicePropertyHandler(QObject):
         #  Mesh Properties
         self.meshScale    = None
         self.meshRotation = None
+        self._selection_mode = 1 # Default to AnchorMode
+        self._changedMesh = None
+        self._changedFaces = None
+        self._anchoredMesh = None
+        self._anchoredFaces = None
+        self._loadedMesh = None
+        self._loadedFaces = None
         self._sceneNode = None
         self._sceneRoot = Application.getInstance().getController().getScene().getRoot()
 
@@ -145,11 +152,11 @@ class SmartSlicePropertyHandler(QObject):
 
           #  Face Selection
             elif prop is SmartSliceValidationProperty.SelectedFace:
-                self._proxy.updateMeshes()
-                self._proxy.selectedFacesChanged.emit()
+                self.updateMeshes()
+                self.selectedFacesChanged.emit()
 
           #  Material
-            elif self._propertiesChanged[0] is SmartSliceValidationProperty.Material:
+            elif prop is SmartSliceValidationProperty.Material:
                 self._material = self._changedValues.pop(0)
             elif prop is SmartSliceValidationProperty.MeshScale:
                 self.meshScale = self._changedValues.pop(0)
@@ -1046,6 +1053,30 @@ class SmartSlicePropertyHandler(QObject):
         else:
             #print("\n\nMATERIAL CHANGED HERE\n\n")
             self._material = self._activeExtruder.material
+            
+    #
+    #   FACE SELECTION
+    #
+
+    selectedFacesChanged = pyqtSignal() 
+
+    def confirmFaceDraw(self):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertiesChanged.append(SmartSliceValidationProperty.SelectedFace)
+            self.connector._confirmValidation()
+        else:
+            self.updateMeshes()
+            self.selectedFacesChanged.emit()
+
+    def updateMeshes(self):
+        #  ANCHOR MODE
+        if self._selection_mode == 1:
+            self._anchoredMesh = self._changedMesh
+            self._anchoredFaces = self._changedFaces
+        #  LOAD MODE
+        else:
+            self._loadedMesh = self._changedMesh
+            self._loadedFaces = self._changedFaces
 
 
     #

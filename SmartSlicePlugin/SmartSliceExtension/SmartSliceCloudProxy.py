@@ -84,15 +84,6 @@ class SmartSliceCloudProxy(QObject):
         self._hasModMesh = True # Currently ASSUMES a mod mesh is in place; TODO: Detect this property change
         self._confirmationText = ""
 
-        #  Confirm/Cancel Face Selection
-        self._changedMesh = None
-        self._changedFaces = None
-        self._anchoredMesh = None
-        self._anchoredFaces = None
-        self._loadedMesh = None
-        self._loadedFaces = None
-        self._selection_mode = 1 # Default to AnchorMode
-
         # Default Boundary values
         self._targetFactorOfSafety = 1.5
         self._targetMaximalDisplacement = 1.0
@@ -452,36 +443,6 @@ class SmartSliceCloudProxy(QObject):
     def loadDirection(self, value):
         self._loadDirection = value
         self.loadDirectionChanged.emit()
-
-
-    #   FACE DRAWING/SELECTION
-    selectedFacesChanged = pyqtSignal() 
-
-    def confirmFaceDraw(self):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
-            self._propertyChanged = SmartSliceValidationProperty.SelectedFace
-            self.connector._confirmValidation()
-        else:
-            self.updateMeshes()
-            self.selectedFacesChanged.emit()
-        #  ANCHOR MODE
-        if self._selection_mode == 1:
-            self._anchoredMesh = self._changedMesh
-            self._anchoredFaces = self._changedFaces
-        #  LOAD MODE
-        else:
-            self._loadedMesh = self._changedMesh
-            self._loadedFaces = self._changedFaces
-
-    def updateMeshes(self):
-        #  ANCHOR MODE
-        if self._selection_mode == 1:
-            self._anchoredMesh = self._changedMesh
-            self._anchoredFaces = self._changedFaces
-        #  LOAD MODE
-        else:
-            self._loadedMesh = self._changedMesh
-            self._loadedFaces = self._changedFaces
 
 
     #

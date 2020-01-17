@@ -133,11 +133,11 @@ class SmartSliceSelectTool(Tool):
                 self._handle._arrow = False
                 
                 #  Set mesh
-                self._handle._connector._proxy._changedMesh = selmesh
-                self._handle._connector._proxy._changedFaces = selected_faces
+                self._handle._connector.propertyHandler._changedMesh = selmesh
+                self._handle._connector.propertyHandler._changedFaces = selected_faces
 
                 #  Draw Selection
-                self._handle._connector._proxy.confirmFaceDraw()
+                self._handle._connector.propertyHandler.confirmFaceDraw()
 
                 #
                 #   TODO: Change _anchorsApplied from ' = 1' to arbitrary # of loads
@@ -152,13 +152,13 @@ class SmartSliceSelectTool(Tool):
                 #  Set/Draw Scene Properties
                 cloud_connector._proxy._loadsApplied = 1
                 self._handle._arrow = True
-
-                #  Set Mesh
-                self._handle._connector._proxy._changedMesh = selmesh
-                self._handle._connector._proxy._changedFaces = selected_faces
+                
+                #  Set mesh
+                self._handle._connector.propertyHandler._changedMesh = selmesh
+                self._handle._connector.propertyHandler._changedFaces = selected_faces
 
                 #  Draw Selection
-                self._handle._connector._proxy.confirmFaceDraw()
+                self._handle._connector.propertyHandler.confirmFaceDraw()
 
                 #
                 #   TODO: Change _loadsApplied from ' = 1' to arbitrary # of loads
@@ -197,26 +197,26 @@ class SmartSliceSelectTool(Tool):
         return Version(OpenGL.getInstance().getOpenGLVersion()) >= Version("4.1 dummy-postfix")
 
     def setSelectionMode(self, mode):
-        self._handle._connector._proxy._selection_mode = mode
+        self._handle._connector.propertyHandler._selection_mode = mode
         Logger.log("d", "Changed selection mode to enum: {}".format(mode))
 
     def getSelectionMode(self):
-        return self._handle._connector._proxy._selection_mode
+        return self._handle._connector.propertyHandler._selection_mode
 
     def setAnchorSelection(self):
         self._handle.clearSelection()
         self.setSelectionMode(SelectionMode.AnchorMode)
         if self._handle._connector._proxy._anchorsApplied > 0:
-            self._handle._connector._proxy.selectedFacesChanged.emit()
+            self._handle._connector.propertyHandler.selectedFacesChanged.emit()
 
     def getAnchorSelectionActive(self):
-        return self._handle._connector._proxy._selection_mode is SelectionMode.AnchorMode
+        return self._handle._connector.propertyHandler._selection_mode is SelectionMode.AnchorMode
 
     def setLoadSelection(self):
         self._handle.clearSelection()
         self.setSelectionMode(SelectionMode.LoadMode)
         if self._handle._connector._proxy._loadsApplied > 0:
-            self._handle._connector._proxy.selectedFacesChanged.emit()
+            self._handle._connector.propertyHandler.selectedFacesChanged.emit()
 
     def getLoadSelectionActive(self):
-        return self._handle._connector._proxy._selection_mode is SelectionMode.LoadMode
+        return self._handle._connector.propertyHandler._selection_mode is SelectionMode.LoadMode
