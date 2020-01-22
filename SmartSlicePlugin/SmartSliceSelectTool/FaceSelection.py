@@ -346,7 +346,6 @@ class SelectableMesh:
     def __init__(self, mesh_data: MeshData):
         self.points = dict()
         self.faces = dict()
-
         
 
         nfaces = int(len(mesh_data._vertices) / 3)

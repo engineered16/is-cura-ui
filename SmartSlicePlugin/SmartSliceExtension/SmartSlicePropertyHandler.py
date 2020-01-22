@@ -1049,7 +1049,9 @@ class SmartSlicePropertyHandler(QObject):
             #print("\n\nMATERIAL CHANGE CONFIRMED HERE\n\n")
             self._propertiesChanged.append(SmartSliceValidationProperty.Material)
             self._changedValues.append(self._activeExtruder.material)
-            self.connector._confirmValidation()
+            if len(self._propertiesChanged) > 2:
+                print ("\nlength: " + str(len(self._propertiesChanged)) + "\n")
+                self.connector._confirmValidation()
         else:
             #print("\n\nMATERIAL CHANGED HERE\n\n")
             self._material = self._activeExtruder.material

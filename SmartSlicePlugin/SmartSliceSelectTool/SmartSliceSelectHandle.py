@@ -120,7 +120,7 @@ class SmartSliceSelectHandle(ToolHandle):
             #  TODO: Generalize this for more than one Active Anchor
             self.setFace(self._connector.propertyHandler._anchoredFaces[0])
         self._face = set()
-
+        
         #if draw_arrow:
         #    self.drawNormalArrow()
         #    self.addChild(self._arrow)
