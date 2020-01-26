@@ -343,7 +343,7 @@ def fromCalculatableFace(points, normals=[]):
     return SelectableFace(points, normals)
 
 class SelectableMesh:
-    def __init__(self, mesh_data: MeshData):
+    def __init__(self, mesh_data):
         self.points = dict()
         self.faces = dict()
         

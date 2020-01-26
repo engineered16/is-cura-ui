@@ -30,7 +30,7 @@ from .FaceSelection import SelectableFace
 '''
 class SmartSliceNormalArrow(QObject):
 #  CONSTRUCTORS
-    def __init__(self, parent : SelectableFace = None) -> None:
+    def __init__(self, parent) -> None:
         super().__init__()
         
         #  Set Hooks
