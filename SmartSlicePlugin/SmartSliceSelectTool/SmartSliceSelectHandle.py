@@ -104,7 +104,7 @@ class SmartSliceSelectHandle(ToolHandle):
     def drawSelection(self):
         #  Construct Edges using MeshBuilder Cubes
         mb = MeshBuilder()
-        _selected_mesh : SelectableMesh = None
+        _selected_mesh = None
 
         #Logger.log("d", "Root Face: {}".format(self._tri))
 
@@ -215,7 +215,7 @@ class SmartSliceSelectHandle(ToolHandle):
         Paints all SelectableFaces in 'possible' that are jointed/coplanar with 'face'
         NOTE:  This assumes all entries in 'possible' are coplanar with 'face'
     '''
-    def paintPossibleFaces(self, mode, mb, face, possible : set):
+    def paintPossibleFaces(self, mode, mb, face, possible):
         for _tri in possible:
             if isJointed(face, _tri):
                 self.paintFace(_tri, mb)
