@@ -797,10 +797,7 @@ class SmartSliceCloudConnector(QObject):
         else:
             active_extruder_position = int(active_extruder_position)
 
-        extruders = list(self.active_machine.extruders.values())
-        extruders = sorted(self.extruders,
-                           key=lambda extruder: extruder.getMetaDataEntry("position")
-                           )
+        extruders = Application.getInstance().getGlobalContainerStack().extruderList
 
         material_guids_per_extruder = []
         for extruder in extruders:

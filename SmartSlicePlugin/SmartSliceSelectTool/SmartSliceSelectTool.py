@@ -74,7 +74,7 @@ class SmartSliceSelectTool(Tool):
 
         if len(nodes) > 0:
             sn = nodes[0]
-            self._handle._connector._proxy._activeExtruderStack = nodes[0].callDecoration("getExtruderStack")
+            #self._handle._connector._proxy._activeExtruderStack = nodes[0].callDecoration("getExtruderStack")
 
             if self._scene_node_name is None or sn.getName() != self._scene_node_name:
 
@@ -92,7 +92,7 @@ class SmartSliceSelectTool(Tool):
 
     def _onSelectedFaceChanged(self):
         curr_sf = Selection.getSelectedFace()
-        cloud_connector = PluginRegistry.getInstance().getPluginObject("SmartSliceExtension").cloud
+        #cloud_connector = PluginRegistry.getInstance().getPluginObject("SmartSliceExtension").cloud
 
         if curr_sf is not None:
             scene_node, face_id = curr_sf
@@ -129,7 +129,7 @@ class SmartSliceSelectTool(Tool):
             
             if self.getAnchorSelectionActive():
                 #  Set/Draw Anchor Selection in Scene
-                cloud_connector._proxy._anchorsApplied = 1
+                self._handle._connector._proxy._anchorsApplied = 1
                 self._handle._arrow = False
                 
                 #  Set mesh
@@ -144,13 +144,13 @@ class SmartSliceSelectTool(Tool):
                 #           * Check for multiple selection key, e.g. Shift
                 #
                 
-                cloud_connector.appendAnchor0FacesPoc(anchored_faces)
-                Logger.log("d", "cloud_connector.getAnchor0FacesPoc(): {}".format(cloud_connector.getAnchor0FacesPoc()))
+                self._handle._connector.appendAnchor0FacesPoc(anchored_faces)
+                Logger.log("d", "cloud_connector.getAnchor0FacesPoc(): {}".format(self._handle._connector.getAnchor0FacesPoc()))
 
                 Application.getInstance().activityChanged.emit()
             else:
                 #  Set/Draw Scene Properties
-                cloud_connector._proxy._loadsApplied = 1
+                self._handle._connector._proxy._loadsApplied = 1
                 self._handle._arrow = True
                 
                 #  Set mesh
@@ -165,13 +165,13 @@ class SmartSliceSelectTool(Tool):
                 #           * Check for multiple selection key, e.g. Shift
                 #
 
-                cloud_connector.setForce0VectorPoc(load_vector.x,
+                self._handle._connector.setForce0VectorPoc(load_vector.x,
                                                    load_vector.y,
                                                    load_vector.z
                                                    )
-                cloud_connector.appendForce0FacesPoc(loaded_faces)
-                Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(cloud_connector.getForce0VectorPoc()))
-                Logger.log("d", "cloud_connector.getForce0FacesPoc(): {}".format(cloud_connector.getForce0FacesPoc()))
+                self._handle._connector.appendForce0FacesPoc(loaded_faces)
+                Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(self._handle._connector.getForce0VectorPoc()))
+                Logger.log("d", "cloud_connector.getForce0FacesPoc(): {}".format(self._handle._connector.getForce0FacesPoc()))
 
                 Application.getInstance().activityChanged.emit()
             
