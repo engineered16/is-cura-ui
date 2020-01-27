@@ -559,8 +559,8 @@ class SmartSliceCloudConnector(QObject):
             self._proxy.sliceHint = "Well done! You can review the results!"
             self._proxy.sliceButtonText = "Preview"
             self._proxy.sliceButtonEnabled = True
-            self._proxy.sliceButtonFillWidth = False
-            self._proxy.secondaryButtonVisible = True
+            self._proxy.sliceButtonFillWidth = True
+            self._proxy.secondaryButtonVisible = False
             self._proxy.secondaryButtonFillWidth = False
         else:
             self._proxy.sliceStatus = "! INTERNAL ERRROR!"
@@ -711,6 +711,8 @@ class SmartSliceCloudConnector(QObject):
                 self.doVerification.emit()
             elif self.status in SmartSliceCloudStatus.Optimizable:
                 self.doOptimization.emit()
+            elif self.status is SmartSliceCloudStatus.Optimized:
+                Application.getInstance().getController().setActiveStage("PreviewStage")
         else:
             error_message = Message()
             error_message.setTitle("SmartSlice plugin")

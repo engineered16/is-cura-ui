@@ -17,6 +17,7 @@ from PyQt5.QtCore import QObject
 #  Cura
 from UM.Application import Application
 from UM.Scene.Selection import Selection
+from UM.Logger import Logger
 from cura.CuraApplication import CuraApplication
 
 
@@ -260,6 +261,7 @@ class SmartSlicePropertyHandler(QObject):
 
 
     def _onCancelChanges(self):
+        #Logger.log(str(prop))
         for prop in self._propertiesChanged:
             print (str(prop))
           #  REQUIREMENTS / USE-CASE
@@ -1092,6 +1094,7 @@ class SmartSlicePropertyHandler(QObject):
                 self.connector._confirmValidation()
         else:
             #print("\n\nMATERIAL CHANGED HERE\n\n")
+            #  TODO:  Next line is commented because there are two signals that are thrown
             #self.connector._prepareValidation()
             self._material = self._activeExtruder.material
             
