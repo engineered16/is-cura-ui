@@ -112,6 +112,7 @@ class SmartSlicePropertyHandler(QObject):
         self._selection_mode = 1 # Default to AnchorMode
         self._changedMesh = None
         self._changedFaces = None
+        self._changedForce = None
         self._anchoredMesh = None
         self._anchoredFaces = None
         self._loadedMesh = None
@@ -1104,7 +1105,7 @@ class SmartSlicePropertyHandler(QObject):
 
     selectedFacesChanged = pyqtSignal() 
 
-    def confirmFaceDraw(self):
+    def confirmFaceDraw(self, force=None):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating:
             self._propertiesChanged.append(SmartSliceValidationProperty.SelectedFace)
             self.connector._confirmValidation()

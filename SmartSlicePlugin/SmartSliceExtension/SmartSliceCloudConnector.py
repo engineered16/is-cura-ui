@@ -557,11 +557,9 @@ class SmartSliceCloudConnector(QObject):
         elif self.status is SmartSliceCloudStatus.Optimized:
             self._proxy.sliceStatus = "Part optimized"
             self._proxy.sliceHint = "Well done! You can review the results!"
-            self._proxy.sliceButtonText = "Preview"
-            self._proxy.sliceButtonEnabled = True
-            self._proxy.sliceButtonFillWidth = True
-            self._proxy.secondaryButtonVisible = False
-            self._proxy.secondaryButtonFillWidth = False
+            self._proxy.secondaryButtonText = "Preview"
+            self._proxy.secondaryButtonVisible = True
+            self._proxy.secondaryButtonFillWidth = True
         else:
             self._proxy.sliceStatus = "! INTERNAL ERRROR!"
             self._proxy.sliceHint = "! UNKNOWN STATUS ENUM SET!"
@@ -684,7 +682,7 @@ class SmartSliceCloudConnector(QObject):
         #   Display confirmation prompt before optimizing
         if self._proxy._hasModMesh:
             self._proxy.confirmationWindowEnabled = True
-            self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to cancel the current optimization?"
+            self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose your optimization results?"
             self._proxy.confirmationWindowEnabledChanged.emit()
 
     doOptimization = pyqtSignal()
