@@ -422,23 +422,13 @@ class SmartSlicePropertyHandler(QObject):
     #
 
     def onSafetyFactorChanged(self):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
-            self._propertiesChanged.append(SmartSliceValidationProperty.FactorOfSafety)
-            self._changedValues.append(self.connector._proxy.targetFactorOfSafety)
-            self.connector._confirmValidation()
-        else:
-            self.reqsSafetyFactor = self.connector._proxy.targetFactorOfSafety
+        self.reqsSafetyFactor = self.connector._proxy.targetFactorOfSafety
 
     def setSafetyFactor(self):
        self.connector._proxy.targetFactorOfSafety = self.reqsSafetyFactor
 
     def onMaxDeflectChanged(self):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
-            self._propertiesChanged.append(SmartSliceValidationProperty.MaxDisplacement)
-            self._changedValues.append(self.connector._proxy.targetMaximalDisplacement)
-            self.connector._confirmValidation()
-        else:
-            self.reqsMaxDeflect = self.connector._proxy.targetMaximalDisplacement
+        self.reqsMaxDeflect = self.connector._proxy.targetMaximalDisplacement
 
     def setMaxDeflect(self):
         self.connector._proxy.targetMaximalDisplacement = self.reqsMaxDeflect
@@ -450,6 +440,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self.connector._proxy.loadMagnitude)
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.loadMagnitude = self.connector._proxy.loadMagnitude
     
     def setLoadMagnitude(self):
@@ -464,6 +455,7 @@ class SmartSlicePropertyHandler(QObject):
                 self._changedValues.append(False)
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             if self.connector._proxy.loadDirection:
                 self.loadDirection = SmartSliceLoadDirection.Push
             else:
@@ -497,6 +489,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._sceneNode.getScale())
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.meshScale = self._sceneNode.getScale()
 
     def setMeshRotation(self):
@@ -510,6 +503,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._sceneNode.getOrientation())
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.meshRotation = self._sceneNode.getOrientation()
 
 
@@ -534,6 +528,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("alternate_extra_perimeter", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.alternateExtraWall = self._activeExtruder.getProperty("alternate_extra_perimeter", "value")
 
     #
@@ -549,6 +544,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeMachineManager._global_container_stack.getProperty("layer_height", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.layerHeight = self._activeMachineManager._global_container_stack.getProperty("layer_height", "value")
 
     def setInitialLayerHeight(self):
@@ -560,6 +556,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("initial_layer_height", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.layerHeightInitial = self._activeExtruder.getProperty("initial_layer_height", "value")
 
     def onInitialLayerLineWidthChanged(self):
@@ -568,6 +565,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("initial_layer_line_width", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.lineWidthInitialLayer = self._activeExtruder.getProperty("initial_layer_line_width", "value")
 
 
@@ -580,6 +578,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("line_width", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.lineWidth = self._activeExtruder.getProperty("line_width", "value")
 
     def setWallLineWidth(self):
@@ -591,6 +590,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("wall_line_width", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.lineWidthWall = self._activeExtruder.getProperty("wall_line_width", "value")
         
 
@@ -603,6 +603,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("wall_line_width_0", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.lineWidthOuter = self._activeExtruder.getProperty("wall_line_width_0", "value")
 
     def setInnerLineWidth(self):
@@ -614,6 +615,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("wall_line_width_x", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.lineWidthInner = self._activeExtruder.getProperty("wall_line_width_x", "value")
 
     def setInfillLineWidth(self):
@@ -625,6 +627,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("infill_line_width", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.lineWidthInfill = self._activeExtruder.getProperty("infill_line_width", "value")
 
     #
@@ -639,6 +642,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("wall_thickness", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.wallThickness = self._activeExtruder.getProperty("wall_thickness", "value")
 
     def setWallLineCount(self):
@@ -650,6 +654,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("wall_line_count", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.wallLineCount = self._activeExtruder.getProperty("wall_line_count", "value")
 
     def setWallOuterWipeDist(self):
@@ -661,6 +666,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("wall_0_wipe_dist", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.wallOuterWipeDist = self._activeExtruder.getProperty("wall_0_wipe_dist", "value")
 
     def setWallRoofingLayerCount(self):
@@ -672,6 +678,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("roofing_layer_count", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.wallRoofingLayers = self._activeExtruder.getProperty("roofing_layer_count", "value")
 
     def setWallTopThickness(self):
@@ -683,6 +690,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("top_thickness", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.wallTopThickness = self._activeExtruder.getProperty("top_thickness", "value")
 
     def setWallTopLayers(self):
@@ -694,6 +702,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("top_layers", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.wallTopLayers = self._activeExtruder.getProperty("top_layers", "value")
 
     def setWallBottomThickness(self):
@@ -705,6 +714,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("bottom_thickness", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.wallBottomThickness = self._activeExtruder.getProperty("bottom_thickness", "value")
         
     def setWallBottomLayers(self):
@@ -716,6 +726,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("bottom_layers", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.wallBottomLayers = self._activeExtruder.getProperty("bottom_layers", "value")
 
     def setWallTopBottomPattern(self):
@@ -727,6 +738,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("top_bottom_pattern", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.wallTopBottomPattern = self._activeExtruder.getProperty("top_bottom_pattern", "value")
 
     def setWallBottomInitialPattern(self):
@@ -738,6 +750,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("top_bottom_pattern_0", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.wallBottomInitialPattern = self._activeExtruder.getProperty("top_bottom_pattern_0", "value")
 
     def setWallSkinAngles(self):
@@ -749,6 +762,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("skin_angles", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.wallSkinAngles = self._activeExtruder.getProperty("skin_angles", "value")
 
     def setWallOuterInset(self):
@@ -760,6 +774,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("wall_0_inset", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.wallOuterInset = self._activeExtruder.getProperty("wall_0_inset", "value")
 
 
@@ -780,6 +795,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("infill_line_distance", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.infillLineDistance = self._activeExtruder.getProperty("infill_line_distance", "value")
 
     #  Infill Angles
@@ -792,6 +808,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("infill_angles", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.infillLineDirection = self._activeExtruder.getProperty("infill_angles", "value")
 
     def setInfillDensity(self):
@@ -803,6 +820,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("infill_sparse_density", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.infillDensity = self._activeExtruder.getProperty("infill_sparse_density", "value")
 
     def setInfillPattern(self):
@@ -814,6 +832,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("infill_pattern", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.infillPattern = self._activeExtruder.getProperty("infill_pattern", "value")
 
     def setInfillOffsetX(self):
@@ -825,6 +844,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("infill_offset_x", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.infillOffsetX = self._activeExtruder.getProperty("infill_offset_x", "value")
 
     def setInfillOffsetY(self):
@@ -836,6 +856,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("infill_offset_y", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.infillOffsetY = self._activeExtruder.getProperty("infill_offset_y", "value")
 
     def setInfillMultiplier(self):
@@ -847,6 +868,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("infill_multiplier", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.infillMultiplier = self._activeExtruder.getProperty("infill_multiplier", "value")
 
     def setInfillOverlap(self):
@@ -858,6 +880,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("infill_overlap", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.infillOverlapPercentage = self._activeExtruder.getProperty("infill_overlap", "value")
 
     def setInfillOverlapMM(self):
@@ -869,6 +892,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("infill_overlap_mm", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.infillOverlapMM = self._activeExtruder.getProperty("infill_overlap_mm", "value")
 
     def setInfillWipeDist(self):
@@ -880,6 +904,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("infill_wipe_dist", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.infillWipeDist = self._activeExtruder.getProperty("infill_wipe_dist", "value")
         
     def setInfillLayerThickness(self):
@@ -891,6 +916,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("infill_sparse_thickness", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.infillLayerThick = self._activeExtruder.getProperty("infill_sparse_thickness", "value")
 
     def setInfillGradualSteps(self):
@@ -902,6 +928,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("gradual_infill_steps", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.infillGradSteps = self._activeExtruder.getProperty("gradual_infill_steps", "value")
 
     def setInfillBeforeWalls(self):
@@ -913,6 +940,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("infill_before_walls", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.infillBeforeWalls = self._activeExtruder.getProperty("infill_before_walls", "value")
 
     def setInfillMinimumArea(self):
@@ -924,6 +952,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("min_infill_area", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.infillMinimumArea = self._activeExtruder.getProperty("min_infill_area", "value")
 
     def setInfillSupport(self):
@@ -935,6 +964,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("infill_support_enabled", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.infillSupport = self._activeExtruder.getProperty("infill_support_enabled", "value")
 
     def setSkinRemovalWidth(self):
@@ -946,6 +976,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("skin_preshrink", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.skinRemovalWidth = self._activeExtruder.getProperty("skin_preshrink", "value")
 
     def setSkinRemovalTop(self):
@@ -957,6 +988,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("top_skin_preshrink", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.skinRemovalTop = self._activeExtruder.getProperty("top_skin_preshrink", "value")
 
     def setSkinRemovalBottom(self):
@@ -968,6 +1000,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("bottom_skin_preshrink", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.skinRemovalBottom = self._activeExtruder.getProperty("bottom_skin_preshrink", "value")
 
     def setSkinExpandDistance(self):
@@ -979,6 +1012,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("expand_skins_expand_distance", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.skinExpandDistance = self._activeExtruder.getProperty("expand_skins_expand_distance", "value")
 
     def setSkinExpandTop(self):
@@ -990,6 +1024,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("top_skin_expand_distance", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.skinExpandTop = self._activeExtruder.getProperty("top_skin_expand_distance", "value")
 
     def setSkinExpandBottom(self):
@@ -1001,6 +1036,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("bottom_skin_expand_distance", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.skinExpandBottom = self._activeExtruder.getProperty("bottom_skin_expand_distance", "value")
 
     def setSkinMaxAngleExpansion(self):
@@ -1012,6 +1048,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("max_skin_angle_for_expansion", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.skinExpandMaxAngle = self._activeExtruder.getProperty("max_skin_angle_for_expansion", "value")
 
     def setSkinMinWidthExpansion(self):
@@ -1023,6 +1060,7 @@ class SmartSlicePropertyHandler(QObject):
             self._changedValues.append(self._activeExtruder.getProperty("min_skin_width_for_expansion", "value"))
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.skinExpandMinWidth = self._activeExtruder.getProperty("min_skin_width_for_expansion", "value")
 
 
@@ -1054,6 +1092,7 @@ class SmartSlicePropertyHandler(QObject):
                 self.connector._confirmValidation()
         else:
             #print("\n\nMATERIAL CHANGED HERE\n\n")
+            #self.connector._prepareValidation()
             self._material = self._activeExtruder.material
             
     #
@@ -1067,6 +1106,7 @@ class SmartSlicePropertyHandler(QObject):
             self._propertiesChanged.append(SmartSliceValidationProperty.SelectedFace)
             self.connector._confirmValidation()
         else:
+            self.connector._prepareValidation()
             self.updateMeshes()
             self.selectedFacesChanged.emit()
 
