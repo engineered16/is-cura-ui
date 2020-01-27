@@ -77,7 +77,6 @@ class SmartSliceSelectHandle(ToolHandle):
         self._connector.propertyHandler._selection_mode = SelectionMode.AnchorMode
 
 
-
 #  ACCESSORS
     @property
     def face(self):

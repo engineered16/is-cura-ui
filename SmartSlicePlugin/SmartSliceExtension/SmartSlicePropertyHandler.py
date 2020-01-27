@@ -19,6 +19,7 @@ from UM.Application import Application
 from UM.Scene.Selection import Selection
 from UM.Logger import Logger
 from cura.CuraApplication import CuraApplication
+from cura.Settings.SettingOverrideDecorator import SettingOverrideDecorator
 
 
 #  Smart Slice
@@ -134,7 +135,7 @@ class SmartSlicePropertyHandler(QObject):
         self.connector._proxy.loadMagnitudeChanged.connect(self.onLoadMagnitudeChanged)
         self.connector._proxy.loadDirectionChanged.connect(self.onLoadDirectionChanged)
 
-        self._sceneRoot.childrenChanged.connect(self.connectTransformSignals)
+        self._sceneRoot.childrenChanged.connect(self.connectMeshSignals)
 
 
     #
@@ -390,12 +391,11 @@ class SmartSlicePropertyHandler(QObject):
         self.connector._proxy.confirmationWindowEnabledChanged.emit()
 
 
-
     #
     #  LOCAL TRANSFORMATION PROPERTIES
     #
 
-    def connectTransformSignals(self, dummy):
+    def connectMeshSignals(self, dummy):
         i = 0
         _root = self._sceneRoot 
 
@@ -409,12 +409,13 @@ class SmartSlicePropertyHandler(QObject):
                     #  Set Initial Scale/Rotation
                     self.meshScale    = self._sceneNode.getScale()
                     self.meshRotation = self._sceneNode.getOrientation()
+                    
+                    #self._sceneNode.childrenChanged.connect(self._onMeshChildrenChanged)
 
                     #  TODO: Properly Disconnect this Signal, when figure out where to do so
                     self._sceneNode.transformationChanged.connect(self._onLocalTransformationChanged)
                     i += 1
-
-
+            
             i += 1
 
         # STUB
@@ -508,7 +509,6 @@ class SmartSlicePropertyHandler(QObject):
         else:
             self.connector._prepareValidation()
             self.meshRotation = self._sceneNode.getOrientation()
-
 
 
 
@@ -1125,6 +1125,7 @@ class SmartSlicePropertyHandler(QObject):
             self._loadedFaces = self._changedFaces
 
 
+
     #
     #   SIGNAL LISTENERS
     #
@@ -1230,3 +1231,30 @@ class SmartSlicePropertyHandler(QObject):
         else:
             return
 
+    '''
+      _onSceneNodesChanged()
+        Executed when a node is changed relative to the root node.
+        Confirms that only one sliceable model is connected to scene and
+          reports any modifier meshes that are currently loaded for model
+    '''
+    def _onSceneNodesChanged(self, root):
+        models = 0
+
+        for node in root.getAllChildren():
+            print ("Node Found:  " + node.getName())
+            if node.getName() == "3d":
+                if (self._sceneNode is None) or (self._sceneNode.getName() != root.getAllChildren()[i+1].getName()):
+                    self._sceneNode = _root.getAllChildren()[i+1]
+                    print ("\nFile Found:  " + self._sceneNode.getName() + "\n")
+
+                    #  Set Initial Scale/Rotation
+                    self.meshScale    = self._sceneNode.getScale()
+                    self.meshRotation = self._sceneNode.getOrientation()
+                    
+                    #self._sceneNode.childrenChanged.connect(self._onMeshChildrenChanged)
+
+                    #  TODO: Properly Disconnect this Signal, when figure out where to do so
+                    self._sceneNode.transformationChanged.connect(self._onLocalTransformationChanged)
+                    i += 1
+
+            i += 1

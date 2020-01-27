@@ -299,7 +299,7 @@ class SmartSliceCloudJob(Job):
                 Logger.log("d", "analyse: {}".format(analyse.to_json()))
                 Logger.log("d", "analyse.modifier_meshes: {}".format(analyse.modifier_meshes))
 
-                self.connector._proxy._hasModMesh = True
+                #self.connector._proxy._hasModMesh = True
 
                 # MODIFIER MESHES STUFF
                 # TODO: We need a per node solution here as soon as we want to analyse multiple models.
@@ -676,26 +676,34 @@ class SmartSliceCloudConnector(QObject):
             self._job.start()
 
     confirmOptimization = pyqtSignal()
+    confirmModMeshRemove = pyqtSignal()
 
     def _confirmOptimization(self):
         #  If a modifier mesh has already been applied,
         #   Display confirmation prompt before optimizing
+        self._proxy.confirmationWindowEnabled = True
+        self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose your optimization results?"
+        self._proxy.confirmationWindowEnabledChanged.emit()
+
+    def _confirmModMeshRemove(self):
+        #  If a modifier mesh has already been applied,
+        #   Display confirmation prompt before optimizing
+
         if self._proxy._hasModMesh:
+            self._proxy._confirming_modmesh = True
             self._proxy.confirmationWindowEnabled = True
-            self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose your optimization results?"
+            self._proxy.confirmationWindowText = "Modifier meshes will be removed for the\noptimization. Do you want to continue?"
             self._proxy.confirmationWindowEnabledChanged.emit()
+        else:
+            self.doOptimization.emit()
+
 
     doOptimization = pyqtSignal()
 
     def _doOptimization(self):
-        if self._proxy._optimize_confirmed:
-            # TODO:  Move the `if` from _doVerification HERE
-            self._job = SmartSliceCloudOptimizeJob(self)
-            self._job.finished.connect(self._onJobFinished)
-            self._proxy._hasModMesh = True
-            self._job.start()
-        else:
-            return # Do Nothing
+        self._job = SmartSliceCloudOptimizeJob(self)
+        self._job.finished.connect(self._onJobFinished)
+        self._job.start()
 
     '''
       Primary Button Actions:
@@ -708,7 +716,7 @@ class SmartSliceCloudConnector(QObject):
             if self.status is SmartSliceCloudStatus.ReadyToVerify:
                 self.doVerification.emit()
             elif self.status in SmartSliceCloudStatus.Optimizable:
-                self.doOptimization.emit()
+                self._confirmModMeshRemove()
             elif self.status is SmartSliceCloudStatus.Optimized:
                 Application.getInstance().getController().setActiveStage("PreviewStage")
         else:
@@ -744,12 +752,16 @@ class SmartSliceCloudConnector(QObject):
 
 
     def onConfirmationConfirmClicked(self):
-        # Forget current Validation
-        self._proxy._hasActiveValidate = False
-        self.status = SmartSliceCloudStatus.ReadyToVerify
-        Application.getInstance().activityChanged.emit()
+        if self._proxy._confirming_modmesh:
+            self.doOptimization.emit()
+            self._proxy._confirming_modmesh = False
+        else:
+            # Forget current Validation
+            self._proxy._hasActiveValidate = False
+            self.status = SmartSliceCloudStatus.ReadyToVerify
+            Application.getInstance().activityChanged.emit()
 
-        self.propertyHandler._onConfirmChanges()
+            self.propertyHandler._onConfirmChanges()
 
         # Close Dialog
         self._proxy.confirmationWindowEnabled = False
@@ -763,7 +775,10 @@ class SmartSliceCloudConnector(QObject):
         * Signal to UI to refresh with previous Validation Property Value
     '''
     def onConfirmationCancelClicked(self):
-        self.propertyHandler._onCancelChanges()
+        if self._proxy._confirming_modmesh:
+            '''Do Nothing'''
+        else:
+            self.propertyHandler._onCancelChanges()
         
         # Close Dialog
         self._proxy.confirmationWindowEnabled = False

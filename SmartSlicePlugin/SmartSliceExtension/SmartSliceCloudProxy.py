@@ -79,9 +79,10 @@ class SmartSliceCloudProxy(QObject):
         self._validationRaised = False
         self._confirmationWindowEnabled = False
         self._validate_confirmed = True
-        self._optimize_confirmed = True
+        self._optimize_confirmed = False
+        self._confirming_modmesh = False
         self._hasActiveValidate = False
-        self._hasModMesh = True # Currently ASSUMES a mod mesh is in place; TODO: Detect this property change
+        self._hasModMesh = False # Currently ASSUMES a mod mesh is in place; TODO: Detect this property change
         self._confirmationText = ""
 
         # Default Boundary values
@@ -706,4 +707,7 @@ class SmartSliceCloudProxy(QObject):
             Logger.log("d", "materialCost: <{}> -> <{}>".format(self._materialCost, value))
             self._materialCost = value
             self.materialCostChanged.emit()
+
+    def _onMeshChildrenChanged(self):
+        mesh = Application.getInstance().getController().getScene()
 
