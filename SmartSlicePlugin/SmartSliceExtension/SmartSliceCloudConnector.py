@@ -412,8 +412,8 @@ class SmartSliceCloudJob(Job):
                     else:
                         self.connector.status = SmartSliceCloudStatus.Optimized
 
-        else:
-            self.connector.status = previous_connector_status
+        #else:
+            #self.connector.status = previous_connector_status
 
 
 class SmartSliceCloudVerificationJob(SmartSliceCloudJob):
@@ -501,6 +501,7 @@ class SmartSliceCloudConnector(QObject):
         self.active_machine = Application.getInstance().getMachineManager().activeMachine
         self.propertyHandler = SmartSlicePropertyHandler(self)
         self.SmartSlicePrepared.emit()
+        self.propertyHandler.cacheChanges() # Setup Cache
 
     def updateSliceWidget(self):
         if self.status is SmartSliceCloudStatus.NoModel:
@@ -784,10 +785,6 @@ class SmartSliceCloudConnector(QObject):
         * Signal to UI to refresh with previous Validation Property Value
     '''
     def onConfirmationCancelClicked(self):
-        if self._job is not None:
-            self._job.cancled = True
-            self._job.cancel()
-            self._job = None
         if self._proxy._confirming_modmesh:
             '''Do Nothing'''
         else:
