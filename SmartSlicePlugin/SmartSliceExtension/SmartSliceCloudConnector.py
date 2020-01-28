@@ -405,9 +405,9 @@ class SmartSliceCloudJob(Job):
                 if previous_connector_status in SmartSliceCloudStatus.Optimizable:
                     self.connector.status = SmartSliceCloudStatus.Optimized
                 else:
-                    if self.connector._proxy.resultSafetyFactor < self.connector._proxy.targetFactorOfSafety or self.connector._proxy.resultMaximalDisplacement > self.connector._proxy.targetMaximalDisplacement:
+                    if self.connector._proxy.resultSafetyFactor < self.connector._proxy.reqsSafetyFactor or (self.connector._proxy.resultMaximalDisplacement > self.connector._proxy.reqsMaxDeflect):
                         self.connector.status = SmartSliceCloudStatus.Underdimensioned
-                    elif self.connector._proxy.resultSafetyFactor > self.connector._proxy.targetFactorOfSafety or self.connector._proxy.resultMaximalDisplacement < self.connector._proxy.targetMaximalDisplacement:
+                    elif self.connector._proxy.resultSafetyFactor > self.connector._proxy.reqsSafetyFactor or (self.connector._proxy.resultMaximalDisplacement < self.connector._proxy.reqsMaxDeflect):
                         self.connector.status = SmartSliceCloudStatus.Overdimensioned
                     else:
                         self.connector.status = SmartSliceCloudStatus.Optimized
@@ -655,18 +655,26 @@ class SmartSliceCloudConnector(QObject):
         if self._job is SmartSliceCloudVerificationJob:
             self._proxy._hasActiveValidate = True
         self._job = None
+        self.onConfirmationCancelClicked()
 
     confirmValidation = pyqtSignal()
     doVerification = pyqtSignal()
 
     def _prepareValidation(self):
+        if self._job is not None:
+            self._job.cancel()
+            self._job = None
         self._proxy._hasActiveValidate = False
         self.status = SmartSliceCloudStatus.ReadyToVerify
         Application.getInstance().activityChanged.emit()
 
     def _confirmValidation(self):
+        if self.status is SmartSliceCloudStatus.BusyValidating:
+            self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose the current\n validation results?"
+        elif self.status is SmartSliceCloudStatus.BusyOptimizing:
+            self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose your \noptimization results?"
+        
         self._proxy.confirmationWindowEnabled = True
-        self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose the current\n validation results?"
         self._proxy.confirmationWindowEnabledChanged.emit()
 
     def _doVerfication(self):
@@ -682,7 +690,7 @@ class SmartSliceCloudConnector(QObject):
         #  If a modifier mesh has already been applied,
         #   Display confirmation prompt before optimizing
         self._proxy.confirmationWindowEnabled = True
-        self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose your optimization results?"
+        self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose your \noptimization results?"
         self._proxy.confirmationWindowEnabledChanged.emit()
 
     def _confirmModMeshRemove(self):
@@ -720,10 +728,8 @@ class SmartSliceCloudConnector(QObject):
             elif self.status is SmartSliceCloudStatus.Optimized:
                 Application.getInstance().getController().setActiveStage("PreviewStage")
         else:
-            error_message = Message()
-            error_message.setTitle("SmartSlice plugin")
-            error_message.setText(i18n_catalog.i18nc("@info:status", "Slice job is already running!"))
-            error_message.show()
+            self._job.cancel()
+            self._job = None
 
     '''
       Secondary Button Actions:
@@ -804,8 +810,6 @@ class SmartSliceCloudConnector(QObject):
         #       The lines below will partly need to be executed as "for model in models: bla bla.."
         mesh_node = mesh_nodes[0]
 
-        mesh_node_stack = mesh_node.callDecoration("getStack")
-
         active_extruder_position = mesh_node.callDecoration("getActiveExtruderPosition")
         if active_extruder_position is None:
             active_extruder_position = 0
@@ -853,8 +857,8 @@ class SmartSliceCloudConnector(QObject):
         job.bulk.fracture = pywim.fea.model.Fracture(material_found['fracture']['KIc'])
 
         # Setup optimization configuration
-        job.optimization.min_safety_factor = self._proxy.targetFactorOfSafety
-        job.optimization.max_displacement = self._proxy.targetMaximalDisplacement
+        job.optimization.min_safety_factor = self._proxy.reqsSafetyFactor
+        job.optimization.max_displacement = self._proxy.reqsMaxDeflect
 
         # Setup the chop model - chop is responsible for creating an FEA model
         # from the triangulated surface mesh, slicer configuration, and
@@ -911,13 +915,13 @@ class SmartSliceCloudConnector(QObject):
         # Now we need to setup the print/slicer configuration
 
         print_config = pywim.am.Config()
-        print_config.layer_width = self.active_machine.getProperty("line_width", "value")
-        print_config.layer_height = self.active_machine.getProperty("layer_height", "value")
-        print_config.walls = mesh_node_stack.getProperty("wall_line_count", "value")
+        print_config.layer_width = self.propertyHandler.lineWidth
+        print_config.layer_height = self.propertyHandler.layerHeight
+        print_config.walls = self.propertyHandler.wallLineCount
 
         # skin angles - CuraEngine vs. pywim
         # > https://github.com/Ultimaker/CuraEngine/blob/master/src/FffGcodeWriter.cpp#L402
-        skin_angles = self.active_machine.getProperty("skin_angles", "value")
+        skin_angles = self.propertyHandler.wallSkinAngles
         if type(skin_angles) is str:
             skin_angles = eval(skin_angles)
         if len(skin_angles) > 0:
@@ -925,21 +929,21 @@ class SmartSliceCloudConnector(QObject):
         else:
             print_config.skin_orientations.extend((45, 135))
 
-        print_config.bottom_layers = mesh_node_stack.getProperty("top_layers", "value")
-        print_config.top_layers = mesh_node_stack.getProperty("bottom_layers", "value")
+        print_config.bottom_layers = self.propertyHandler.wallTopLayers #  Is this correct?
+        print_config.top_layers = self.propertyHandler.wallBottomLayers
 
         # infill pattern - Cura vs. pywim
-        infill_pattern = mesh_node_stack.getProperty("infill_pattern", "value")
+        infill_pattern = self.propertyHandler.infillPattern
         if infill_pattern in self.infill_pattern_cura_to_pywim_dict.keys():
             print_config.infill.pattern = self.infill_pattern_cura_to_pywim_dict[infill_pattern]
         else:
             print_config.infill.pattern = pywim.am.InfillType.unknown
 
-        print_config.infill.density = mesh_node_stack.getProperty("infill_sparse_density", "value")
+        print_config.infill.density = self.propertyHandler.infillDensity
 
         # infill_angles - Setting defaults from the CuraEngine
         # > https://github.com/Ultimaker/CuraEngine/blob/master/src/FffGcodeWriter.cpp#L366
-        infill_angles = mesh_node_stack.getProperty("infill_angles", "value")
+        infill_angles = self.propertyHandler.infillLineDirection
         if type(infill_angles) is str:
             infill_angles = eval(infill_angles)
         if not len(infill_angles):

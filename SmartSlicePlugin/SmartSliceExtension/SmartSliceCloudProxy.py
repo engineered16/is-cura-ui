@@ -85,13 +85,20 @@ class SmartSliceCloudProxy(QObject):
         self._hasModMesh = False # Currently ASSUMES a mod mesh is in place; TODO: Detect this property change
         self._confirmationText = ""
 
-        # Default Boundary values
+        # Proxy Values (DO NOT USE DIRECTLY)
         self._targetFactorOfSafety = 1.5
         self._targetMaximalDisplacement = 1.0
         self._loadsApplied = 0
         self._anchorsApplied = 0
         self._loadMagnitude = 10.0
         self._loadDirection = False
+
+        #  Use-case & Requirements
+        self.reqsSafetyFactor = self._targetFactorOfSafety
+        self.reqsMaxDeflect  = self._targetMaximalDisplacement
+        self.reqsLoadMagnitude = self._loadMagnitude
+        self.reqsLoadDirection = self._loadDirection
+
 
         # Properties (mainly) for the sliceinfo widget
         self._resultSafetyFactor = copy.copy(self._targetFactorOfSafety)
@@ -376,15 +383,26 @@ class SmartSliceCloudProxy(QObject):
     targetFactorOfSafetyChanged = pyqtSignal()
     resultSafetyFactorChanged = pyqtSignal()
 
+    def setFactorOfSafety(self):
+        self._targetFactorOfSafety = self.reqsSafetyFactor
+        self.targetFactorOfSafetyChanged.emit()
+
     @pyqtProperty(float, notify=targetFactorOfSafetyChanged)
     def targetFactorOfSafety(self):
         return self._targetFactorOfSafety
 
     @targetFactorOfSafety.setter
     def targetFactorOfSafety(self, value):
-        if self._targetFactorOfSafety is not value:
+        if self.connector.status is SmartSliceCloudStatus.BusyOptimizing:
+            self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.FactorOfSafety)
+            self.connector.propertyHandler._changedValues.append(value)
+            self.connector._confirmValidation()
+        else:
             self._targetFactorOfSafety = value
+            self.reqsSafetyFactor = value # SET CACHE
             self.targetFactorOfSafetyChanged.emit()
+            if self.connector.status is SmartSliceCloudStatus.Optimized:
+                self.connector._prepareValidation()
 
     @pyqtProperty(float, notify=resultSafetyFactorChanged)
     def resultSafetyFactor(self):
@@ -401,15 +419,26 @@ class SmartSliceCloudProxy(QObject):
     targetMaximalDisplacementChanged = pyqtSignal()
     resultMaximalDisplacementChanged = pyqtSignal()
 
+    def setMaximalDisplacement(self):
+        self._targetMaximalDisplacement = self.reqsMaxDeflect
+        self.targetMaximalDisplacementChanged.emit()
+
     @pyqtProperty(float, notify=targetMaximalDisplacementChanged)
     def targetMaximalDisplacement(self):
         return self._targetMaximalDisplacement
 
     @targetMaximalDisplacement.setter
     def targetMaximalDisplacement(self, value):
-        if self._targetMaximalDisplacement is not value:
+        if self.connector.status is SmartSliceCloudStatus.BusyOptimizing:
+            self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.MaxDisplacement)
+            self.connector.propertyHandler._changedValues.append(value)
+            self.connector._confirmValidation()
+        else:
+            self.reqsMaxDeflect = value
             self._targetMaximalDisplacement = value
             self.targetMaximalDisplacementChanged.emit()
+            if self.connector.status is SmartSliceCloudStatus.Optimized:
+                self.connector._prepareValidation()
 
     @pyqtProperty(float, notify=resultMaximalDisplacementChanged)
     def resultMaximalDisplacement(self):
@@ -427,14 +456,28 @@ class SmartSliceCloudProxy(QObject):
     loadMagnitudeChanged = pyqtSignal()
     loadDirectionChanged = pyqtSignal()
 
+    def setLoadMagnitude(self):
+        self._loadMagnitude = self.reqsLoadMagnitude
+        self.loadMagnitudeChanged.emit()
+
     @pyqtProperty(float, notify=loadMagnitudeChanged)
     def loadMagnitude(self):
         return self._loadMagnitude
 
     @loadMagnitude.setter
     def loadMagnitude(self, value):
-        self._loadMagnitude = value
-        self.loadMagnitudeChanged.emit()
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
+            self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.LoadMagnitude)
+            self.connector.propertyHandler._changedValues.append(value)
+            self.connector._confirmValidation()
+        else:
+            self.reqsLoadMagnitude = value
+            self._loadMagnitude = value
+            self.loadMagnitudeChanged.emit()
+            self.connector._prepareValidation()
+
+    def setLoadDirection(self):
+        self._loadDirection = self.reqsLoadDirection
 
     @pyqtProperty(bool, notify=loadDirectionChanged)
     def loadDirection(self):
@@ -442,8 +485,16 @@ class SmartSliceCloudProxy(QObject):
 
     @loadDirection.setter
     def loadDirection(self, value):
-        self._loadDirection = value
-        self.loadDirectionChanged.emit()
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
+            self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.LoadDirection)
+            self.connector.propertyHandler._changedValues.append(value)
+            self.connector._confirmValidation()
+        else:
+            self.reqsLoadDirection = value
+            self._loadDirection = value
+            self.loadDirectionChanged.emit()
+            self.connector._prepareValidation()
+
 
 
     #

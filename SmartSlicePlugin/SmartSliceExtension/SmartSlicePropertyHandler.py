@@ -47,12 +47,6 @@ class SmartSlicePropertyHandler(QObject):
         #   DEFAULT PROPERTY VALUES
         #
 
-        #  Use-case & Requirements
-        self.reqsSafetyFactor = self.connector._proxy.targetFactorOfSafety
-        self.reqsMaxDeflect  = self.connector._proxy.targetMaximalDisplacement
-        self.loadMagnitude = self.connector._proxy.loadMagnitude
-        self.loadDirection = self.connector._proxy._loadDirection
-
         #  Shell
         self.wallThickness = self._activeExtruder.getProperty("wall_thickness", "value")
         self.wallLineCount = self._activeExtruder.getProperty("wall_line_count", "value")
@@ -130,11 +124,6 @@ class SmartSlicePropertyHandler(QObject):
         self._activeMachineManager.activeMaterialChanged.connect(self._onMaterialChanged)
         #Application.getInstance().getController().getScene().sceneChanged.connect(self._onModelChanged)
 
-        self.connector._proxy.targetFactorOfSafetyChanged.connect(self.onSafetyFactorChanged)
-        self.connector._proxy.targetMaximalDisplacementChanged.connect(self.onMaxDeflectChanged)
-        self.connector._proxy.loadMagnitudeChanged.connect(self.onLoadMagnitudeChanged)
-        self.connector._proxy.loadDirectionChanged.connect(self.onLoadDirectionChanged)
-
         self._sceneRoot.childrenChanged.connect(self.connectMeshSignals)
 
 
@@ -145,13 +134,13 @@ class SmartSlicePropertyHandler(QObject):
         for prop in self._propertiesChanged:
           #  Use-Case/Requirements
             if   prop is SmartSliceValidationProperty.MaxDisplacement:
-                self.reqsMaxDeflect = self.connector._proxy.targetMaximalDisplacement
+                self.connector._proxy.reqsMaxDeflect = self.connector._proxy.targetMaximalDisplacement
             elif prop is SmartSliceValidationProperty.FactorOfSafety:
-                self.reqsSafetyFactor = self.connector._proxy.targetFactorOfSafety
+                self.connector._proxy.reqsSafetyFactor = self.connector._proxy.targetFactorOfSafety
             elif prop is SmartSliceValidationProperty.LoadDirection:
-                self.loadDirection = self.connector._proxy._loadDirection
+                self.connector._proxy.reqsLoadDirection = self.connector._proxy.loadDirection
             elif prop is SmartSliceValidationProperty.LoadMagnitude:
-                self.loadMagnitude = self.connector._proxy.loadMagnitude
+                self.connector._proxy.reqsLoadMagnitude = self.connector._proxy.loadMagnitude
 
           #  Face Selection
             elif prop is SmartSliceValidationProperty.SelectedFace:
@@ -268,13 +257,13 @@ class SmartSlicePropertyHandler(QObject):
             print (str(prop))
           #  REQUIREMENTS / USE-CASE
             if prop is SmartSliceValidationProperty.FactorOfSafety:
-                self.setSafetyFactor()
+                self.connector._proxy.setFactorOfSafety()
             elif prop is SmartSliceValidationProperty.MaxDisplacement:
-                self.setMaxDeflect()
+                self.connector._proxy.setMaximalDisplacement()
             elif prop is SmartSliceValidationProperty.LoadMagnitude:
-                self.setLoadMagnitude()
+                self.connector._proxy.setLoadMagnitude()
             elif prop is SmartSliceValidationProperty.LoadDirection:
-                self.setLoadDirection()
+                self.connector._proxy.setLoadDirection()
 
             elif prop is SmartSliceValidationProperty.MeshScale:
                 self.setMeshScale()
@@ -421,55 +410,6 @@ class SmartSlicePropertyHandler(QObject):
         # STUB
         return 
 
-    #
-    #  USE-CASE & REQUIREMENTS
-    #
-
-    def onSafetyFactorChanged(self):
-        self.reqsSafetyFactor = self.connector._proxy.targetFactorOfSafety
-
-    def setSafetyFactor(self):
-       self.connector._proxy.targetFactorOfSafety = self.reqsSafetyFactor
-
-    def onMaxDeflectChanged(self):
-        self.reqsMaxDeflect = self.connector._proxy.targetMaximalDisplacement
-
-    def setMaxDeflect(self):
-        self.connector._proxy.targetMaximalDisplacement = self.reqsMaxDeflect
-
-    
-    def onLoadMagnitudeChanged(self):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
-            self._propertiesChanged.append(SmartSliceValidationProperty.LoadMagnitude)
-            self._changedValues.append(self.connector._proxy.loadMagnitude)
-            self.connector._confirmValidation()
-        else:
-            self.connector._prepareValidation()
-            self.loadMagnitude = self.connector._proxy.loadMagnitude
-    
-    def setLoadMagnitude(self):
-        self.connector._proxy.loadMagnitude = self.loadMagnitude
-
-    def onLoadDirectionChanged(self):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
-            self._propertiesChanged.append(SmartSliceValidationProperty.LoadDirection)
-            if self.connector._proxy.loadDirection:
-                self._changedValues.append(True)
-            else:
-                self._changedValues.append(False)
-            self.connector._confirmValidation()
-        else:
-            self.connector._prepareValidation()
-            if self.connector._proxy.loadDirection:
-                self.loadDirection = SmartSliceLoadDirection.Push
-            else:
-                self.loadDirection = SmartSliceLoadDirection.Pull
-
-    def setLoadDirection(self):
-        if self.loadDirection is SmartSliceLoadDirection.Pull:
-            self.connector._proxy.loadDirection = False
-        else:
-            self.connector._proxy.loadDirection = True
 
     #
     #  LOCAL TRANSFORMATION
