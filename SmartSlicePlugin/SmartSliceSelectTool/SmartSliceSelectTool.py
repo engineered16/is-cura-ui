@@ -188,7 +188,7 @@ class SmartSliceSelectTool(Tool):
             Selection.setFaceSelectMode(False)
             Logger.log("d", "Disabled faceSelectMode!")
 
-        self._calculateMesh()
+        #self._calculateMesh()
 
     ##  Get whether the select face feature is supported.
     #   \return True if it is supported, or False otherwise.

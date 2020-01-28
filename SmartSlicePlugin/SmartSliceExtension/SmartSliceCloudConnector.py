@@ -758,6 +758,9 @@ class SmartSliceCloudConnector(QObject):
 
 
     def onConfirmationConfirmClicked(self):
+        if self._job is not None:
+            self._job.cancel()
+            self._job = None
         if self._proxy._confirming_modmesh:
             self.doOptimization.emit()
             self._proxy._confirming_modmesh = False
@@ -781,6 +784,9 @@ class SmartSliceCloudConnector(QObject):
         * Signal to UI to refresh with previous Validation Property Value
     '''
     def onConfirmationCancelClicked(self):
+        if self._job is not None:
+            self._job.cancel()
+            self._job = None
         if self._proxy._confirming_modmesh:
             '''Do Nothing'''
         else:
