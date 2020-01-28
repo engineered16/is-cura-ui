@@ -272,7 +272,7 @@ class SmartSliceCloudJob(Job):
         else:
             notification_message = Message()
             notification_message.setTitle("SmartSlice plugin")
-            notification_message.setText(i18n_catalog.i18nc("@info:status", "Job has been cancled!".format(task.error)))
+            notification_message.setText(i18n_catalog.i18nc("@info:status", "Job has been canceled!".format(task.error)))
             notification_message.show()
 
     def run(self) -> None:
@@ -654,16 +654,15 @@ class SmartSliceCloudConnector(QObject):
     def _onJobFinished(self, job):
         if self._job is SmartSliceCloudVerificationJob:
             self._proxy._hasActiveValidate = True
+        self.propertyHandler._propertiesChanged = []
+        self._proxy.confirmationWindowEnabled = False
+        self._proxy.confirmationWindowEnabledChanged.emit()
         self._job = None
-        self.onConfirmationCancelClicked()
 
     confirmValidation = pyqtSignal()
     doVerification = pyqtSignal()
 
     def _prepareValidation(self):
-        if self._job is not None:
-            self._job.cancel()
-            self._job = None
         self._proxy._hasActiveValidate = False
         self.status = SmartSliceCloudStatus.ReadyToVerify
         Application.getInstance().activityChanged.emit()
@@ -759,6 +758,7 @@ class SmartSliceCloudConnector(QObject):
 
     def onConfirmationConfirmClicked(self):
         if self._job is not None:
+            self._job.cancled = True
             self._job.cancel()
             self._job = None
         if self._proxy._confirming_modmesh:
@@ -785,6 +785,7 @@ class SmartSliceCloudConnector(QObject):
     '''
     def onConfirmationCancelClicked(self):
         if self._job is not None:
+            self._job.cancled = True
             self._job.cancel()
             self._job = None
         if self._proxy._confirming_modmesh:
