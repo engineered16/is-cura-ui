@@ -22,6 +22,7 @@ from UM.Scene.Selection import Selection
 from UM.Logger import Logger
 from cura.CuraApplication import CuraApplication
 from cura.Settings.SettingOverrideDecorator import SettingOverrideDecorator
+from UM.Settings.SettingInstance import InstanceState
 
 
 #  Smart Slice
@@ -87,7 +88,8 @@ class SmartSlicePropertyHandler(QObject):
 
         for key in global_keys:
             self._global_cache[key] = self._globalStack.getProperty(key, "value")
-
+            print ("\nSetting State:  " + str(self._globalStack.getProperty(key, "state")) + "\n")
+            
 
 
     def cacheExtruder(self):
@@ -110,9 +112,11 @@ class SmartSlicePropertyHandler(QObject):
 
         for property in self._global_cache:
             self._globalStack.setProperty(property, "value", self._global_cache[property])
+            #self._globalStack.setProperty(property, "state", InstanceState.Default)
 
         for property in self._extruder_cache:
             self._activeExtruder.setProperty(property, "value", self._extruder_cache[property])
+            #self._activeExtruder.setProperty(property, "state", InstanceState.Default)
 
         print ("\nTest Property Cache:  " + str(self._activeExtruder.getProperty("infill_sparse_density", "value")) + "\n")
 

@@ -397,6 +397,15 @@ class SmartSliceCloudProxy(QObject):
             self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.FactorOfSafety)
             self.connector.propertyHandler._changedValues.append(value)
             self.connector._confirmValidation()
+        elif self.connector.status in SmartSliceCloudStatus.Optimizable:
+            self._targetFactorOfSafety = value
+            self.reqsSafetyFactor = value # SET CACHE
+            self.targetFactorOfSafetyChanged.emit()
+            if value < self.resultSafetyFactor:
+                self.connector.status = SmartSliceCloudStatus.Overdimensioned
+            else:
+                self.connector.status = SmartSliceCloudStatus.Underdimensioned
+            self.connector.updateSliceWidget()
         else:
             self._targetFactorOfSafety = value
             self.reqsSafetyFactor = value # SET CACHE
@@ -433,6 +442,15 @@ class SmartSliceCloudProxy(QObject):
             self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.MaxDisplacement)
             self.connector.propertyHandler._changedValues.append(value)
             self.connector._confirmValidation()
+        elif self.connector.status in SmartSliceCloudStatus.Optimizable:
+            self._targetMaximalDisplacement = value
+            self.reqsMaxDeflect = value # SET CACHE
+            self.targetMaximalDisplacementChanged.emit()
+            if value < self.resultMaximalDisplacement:
+                self.connector.status = SmartSliceCloudStatus.Underdimensioned
+            else:
+                self.connector.status = SmartSliceCloudStatus.Overdimensioned
+            self.connector.updateSliceWidget()
         else:
             self.reqsMaxDeflect = value
             self._targetMaximalDisplacement = value

@@ -138,6 +138,7 @@ class SmartSliceCloudJob(Job):
         super().__init__()
         self.connector = connector
         self.job_type = None
+        self._id = 0
 
         self.cancled = False
 
@@ -414,6 +415,8 @@ class SmartSliceCloudJob(Job):
 
         #else:
             #self.connector.status = previous_connector_status
+        self.connector._proxy.confirmationWindowEnabled = False
+        self.connector._proxy.confirmationWindowEnabledChanged.emit()
 
 
 class SmartSliceCloudVerificationJob(SmartSliceCloudJob):
@@ -444,6 +447,9 @@ class SmartSliceCloudConnector(QObject):
 
         # Variables
         self._job = None
+        self._jobs = {}
+        self._current_job = 0
+        self._jobs[self._current_job] = None
         self.infill_pattern_cura_to_pywim_dict = {"grid": pywim.am.InfillType.grid,
                                                   "triangles": pywim.am.InfillType.triangle,
                                                   "cubic": pywim.am.InfillType.cubic
@@ -653,12 +659,13 @@ class SmartSliceCloudConnector(QObject):
             pass
 
     def _onJobFinished(self, job):
-        if self._job is SmartSliceCloudVerificationJob:
-            self._proxy._hasActiveValidate = True
-        self.propertyHandler._propertiesChanged = []
-        self._proxy.confirmationWindowEnabled = False
-        self._proxy.confirmationWindowEnabledChanged.emit()
-        self._job = None
+        if self._jobs[self._current_job] is None:
+            print("\nJOB WAS CANCELED!!!!\n")
+        elif not self._jobs[self._current_job].cancled:
+            self.propertyHandler._propertiesChanged = []
+            self._jobs[self._current_job] = None
+            
+
 
     confirmValidation = pyqtSignal()
     doVerification = pyqtSignal()
@@ -679,9 +686,11 @@ class SmartSliceCloudConnector(QObject):
 
     def _doVerfication(self):
         if self._proxy._validate_confirmed:
-            self._job = SmartSliceCloudVerificationJob(self)
-            self._job.finished.connect(self._onJobFinished)
-            self._job.start()
+            self._current_job += 1
+            self._jobs[self._current_job] = SmartSliceCloudVerificationJob(self)
+            self._jobs[self._current_job]._id = self._current_job
+            self._jobs[self._current_job].finished.connect(self._onJobFinished)
+            self._jobs[self._current_job].start()
 
     confirmOptimization = pyqtSignal()
     confirmModMeshRemove = pyqtSignal()
@@ -709,9 +718,11 @@ class SmartSliceCloudConnector(QObject):
     doOptimization = pyqtSignal()
 
     def _doOptimization(self):
-        self._job = SmartSliceCloudOptimizeJob(self)
-        self._job.finished.connect(self._onJobFinished)
-        self._job.start()
+        self._current_job += 1
+        self._jobs[self._current_job] = SmartSliceCloudOptimizeJob(self)
+        self._jobs[self._current_job]._id = self._current_job
+        self._jobs[self._current_job].finished.connect(self._onJobFinished)
+        self._jobs[self._current_job].start()
 
     '''
       Primary Button Actions:
@@ -720,7 +731,7 @@ class SmartSliceCloudConnector(QObject):
         * Slice
     '''
     def onSliceButtonClicked(self):
-        if not self._job:
+        if not self._jobs[self._current_job]:
             if self.status is SmartSliceCloudStatus.ReadyToVerify:
                 self.doVerification.emit()
             elif self.status in SmartSliceCloudStatus.Optimizable:
@@ -728,8 +739,8 @@ class SmartSliceCloudConnector(QObject):
             elif self.status is SmartSliceCloudStatus.Optimized:
                 Application.getInstance().getController().setActiveStage("PreviewStage")
         else:
-            self._job.cancel()
-            self._job = None
+            self._jobs[self._current_job].cancel()
+            self._jobs[self._current_job] = None
 
     '''
       Secondary Button Actions:
@@ -742,7 +753,8 @@ class SmartSliceCloudConnector(QObject):
             #  CANCEL SMART SLICE JOB HERE
             #    Any connection to AWS server should be severed here
             #
-            self._job = None
+            self._jobs[self._current_job].cancled = True
+            self._jobs[self._current_job] = None
             self.status = SmartSliceCloudStatus.ReadyToVerify
             Application.getInstance().activityChanged.emit()
         elif self.status is SmartSliceCloudStatus.BusyValidating:
@@ -750,7 +762,8 @@ class SmartSliceCloudConnector(QObject):
             #  CANCEL SMART SLICE JOB HERE
             #    Any connection to AWS server should be severed here
             #
-            self._job = None
+            self._jobs[self._current_job].cancled = True
+            self._jobs[self._current_job] = None
             self.status = SmartSliceCloudStatus.ReadyToVerify
             Application.getInstance().activityChanged.emit()
         else:
@@ -758,10 +771,11 @@ class SmartSliceCloudConnector(QObject):
 
 
     def onConfirmationConfirmClicked(self):
-        if self._job is not None:
-            self._job.cancled = True
-            self._job.cancel()
-            self._job = None
+        #  Cancel Smart Slice Job
+        if self._jobs[self._current_job] is not None:
+            self._jobs[self._current_job].Cancel()
+            self._jobs[self._current_job].cancled = True
+            self._jobs[self._current_job] = None
         if self._proxy._confirming_modmesh:
             self.doOptimization.emit()
             self._proxy._confirming_modmesh = False
