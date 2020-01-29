@@ -919,13 +919,13 @@ class SmartSliceCloudConnector(QObject):
         # Now we need to setup the print/slicer configuration
 
         print_config = pywim.am.Config()
-        print_config.layer_width = self.propertyHandler.lineWidth
-        print_config.layer_height = self.propertyHandler.layerHeight
-        print_config.walls = self.propertyHandler.wallLineCount
+        print_config.layer_width = self.propertyHandler.getExtruderProperty("line_width")
+        print_config.layer_height = self.propertyHandler.getGlobalProperty("layer_height")
+        print_config.walls = self.propertyHandler.getExtruderProperty("wall_line_count")
 
         # skin angles - CuraEngine vs. pywim
         # > https://github.com/Ultimaker/CuraEngine/blob/master/src/FffGcodeWriter.cpp#L402
-        skin_angles = self.propertyHandler.wallSkinAngles
+        skin_angles = self.propertyHandler.getExtruderProperty("skin_angles")
         if type(skin_angles) is str:
             skin_angles = eval(skin_angles)
         if len(skin_angles) > 0:
@@ -933,21 +933,21 @@ class SmartSliceCloudConnector(QObject):
         else:
             print_config.skin_orientations.extend((45, 135))
 
-        print_config.bottom_layers = self.propertyHandler.wallTopLayers #  Is this correct?
-        print_config.top_layers = self.propertyHandler.wallBottomLayers
+        print_config.bottom_layers = self.propertyHandler.getExtruderProperty("top_layers")
+        print_config.top_layers = self.propertyHandler.getExtruderProperty("bottom_layers")
 
         # infill pattern - Cura vs. pywim
-        infill_pattern = self.propertyHandler.infillPattern
+        infill_pattern = self.propertyHandler.getExtruderProperty("infill_pattern")
         if infill_pattern in self.infill_pattern_cura_to_pywim_dict.keys():
             print_config.infill.pattern = self.infill_pattern_cura_to_pywim_dict[infill_pattern]
         else:
             print_config.infill.pattern = pywim.am.InfillType.unknown
 
-        print_config.infill.density = self.propertyHandler.infillDensity
+        print_config.infill.density = self.propertyHandler.getExtruderProperty("infill_sparse_density")
 
         # infill_angles - Setting defaults from the CuraEngine
         # > https://github.com/Ultimaker/CuraEngine/blob/master/src/FffGcodeWriter.cpp#L366
-        infill_angles = self.propertyHandler.infillLineDirection
+        infill_angles = self.propertyHandler.getExtruderProperty("infill_angles")
         if type(infill_angles) is str:
             infill_angles = eval(infill_angles)
         if not len(infill_angles):

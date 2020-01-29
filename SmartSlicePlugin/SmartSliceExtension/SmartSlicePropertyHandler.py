@@ -37,70 +37,13 @@ class SmartSlicePropertyHandler(QObject):
         self._confirming = False
         
         self._activeMachineManager = CuraApplication.getInstance().getMachineManager()
-        self._activeExtruder = self._activeMachineManager._global_container_stack.extruderList[0]
-        global_stack = Application.getInstance().getGlobalContainerStack()
+        self._globalStack = self._activeMachineManager.activeMachine
+        self._activeExtruder = self._globalStack.extruderList[0]
         
         #  Cache Space
         self._propertiesChanged = []
         self._changedValues     = []
         self._hasChanges = False
-
-        #
-        #   DEFAULT PROPERTY VALUES
-        #
-
-        #  Shell
-        self.wallThickness = self._activeExtruder.getProperty("wall_thickness", "value")
-        self.wallLineCount = self._activeExtruder.getProperty("wall_line_count", "value")
-        self.wallOuterWipeDist = self._activeExtruder.getProperty("wall_0_wipe_dist", "value")
-        self.wallRoofingLayers = self._activeExtruder.getProperty("roofing_layer_count", "value")
-        self.wallTopBottomThick = self._activeExtruder.getProperty("top_bottom_thickness", "value")
-        self.wallTopThickness = self._activeExtruder.getProperty("top_thickness", "value")
-        self.wallTopLayers = self._activeExtruder.getProperty("top_layers", "value")
-        self.wallBottomThickness = self._activeExtruder.getProperty("bottom_thickness", "value")
-        self.wallBottomLayers = self._activeExtruder.getProperty("bottom_layers", "value")
-        self.wallTopBottomPattern = self._activeExtruder.getProperty("top_bottom_pattern", "value")
-        self.wallBottomInitialPattern = self._activeExtruder.getProperty("top_bottom_pattern_0", "value")
-        self.wallSkinAngles = self._activeExtruder.getProperty("skin_angles", "value")
-        self.wallOuterInset = self._activeExtruder.getProperty("wall_0_inset", "value")
-
-        #  Line Widths / Layering
-        self.layerHeight = self._activeExtruder.getProperty("layer_height", "value")
-        self.layerHeightInitial = self._activeExtruder.getProperty("layer_height_0", "value")
-        self.lineWidth = self._activeExtruder.getProperty("line_width", "value")
-        self.lineWidthInitialLayer = self._activeExtruder.getProperty("line_width_0", "value")
-        self.lineWidthWall = self._activeExtruder.getProperty("wall_line_width", "value")
-        self.lineWidthOuter = self._activeExtruder.getProperty("wall_line_width_0", "value")
-        self.lineWidthInner = self._activeExtruder.getProperty("wall_line_width_x", "value")
-        self.lineWidthTopBottom = None
-        self.lineWidthInfill = self._activeExtruder.getProperty("infill_line_width", "value")
-
-        #  Infills
-        self.infillDensity = self._activeExtruder.getProperty("infill_sparse_density", "value")
-        self.infillLineDistance = self._activeExtruder.getProperty("infill_line_distance", "value")
-        self.infillPattern = self._activeExtruder.getProperty("infill_pattern", "value")
-        self.infillLineDirection = self._activeExtruder.getProperty("infill_angles", "value")
-        self.infillOffsetX = self._activeExtruder.getProperty("infill_offset_x", "value")
-        self.infillOffsetY = self._activeExtruder.getProperty("infill_offset_y", "value")
-        self.infillMultiplier = self._activeExtruder.getProperty("infill_multiplier", "value")
-        self.infillOverlapPercentage = self._activeExtruder.getProperty("infill_overlap_percentage", "value")
-        self.infillOverlapMM = self._activeExtruder.getProperty("infill_overlap_mm", "value")
-        self.infillWipeDist = self._activeExtruder.getProperty("infill_wipe_dist", "value")
-        self.infillLayerThick = self._activeExtruder.getProperty("infill_layer_thickness", "value")
-        self.infillGradSteps = self._activeExtruder.getProperty("gradual_infill_steps", "value")
-        self.infillBeforeWalls = self._activeExtruder.getProperty("infill_before_walls", "value")
-        self.infillMinimumArea = self._activeExtruder.getProperty("min_infill_area", "value")
-        self.infillSupport = self._activeExtruder.getProperty("infill_support_enabled", "value")
-
-        #  Skins
-        self.skinRemovalWidth = self._activeExtruder.getProperty("skin_preshrink", "value")
-        self.skinRemovalTop = self._activeExtruder.getProperty("top_skin_preshrink", "value")
-        self.skinRemovalBottom = self._activeExtruder.getProperty("bottom_skin_preshrink", "value")
-        self.skinExpandDistance = self._activeExtruder.getProperty("expand_skins_expand_distance", "value")
-        self.skinExpandTop = self._activeExtruder.getProperty("top_skin_expand_distance", "value")
-        self.skinExpandBottom = self._activeExtruder.getProperty("bottom_skin_expand_distance", "value")
-        self.skinExpandMaxAngle = self._activeExtruder.getProperty("max_skin_angle_for_expansion", "value")
-        self.skinExpandMinWidth = self._activeExtruder.getProperty("min_skin_width_for_expansion", "value")
 
 
         #  Mesh Properties
@@ -122,7 +65,7 @@ class SmartSlicePropertyHandler(QObject):
         self._cancelChanges = False
         
         #  Connect Signals
-        global_stack.propertyChanged.connect(self._onGlobalPropertyChanged)
+        self._globalStack.propertyChanged.connect(self._onGlobalPropertyChanged)
         self._activeExtruder.propertyChanged.connect(self._onExtruderPropertyChanged)
 
         self._activeMachineManager.activeMaterialChanged.connect(self._onMaterialChanged)
@@ -131,31 +74,51 @@ class SmartSlicePropertyHandler(QObject):
         self._sceneRoot.childrenChanged.connect(self.connectMeshSignals)
         
 
-        self._global_stack_id = global_stack.getId()
-        self._extruder_stack_id = self._activeExtruder.getId()
+        self._global_cache = {}
+        self._extruder_cache = {}
 
-        self._global_cache = None
-        self._extruder_cache = None
 
+
+    def cacheGlobal(self):
+
+        global_keys = {"layer_height"}
+
+        self._global_cache = {}
+
+        for key in global_keys:
+            self._global_cache[key] = self._globalStack.getProperty(key, "value")
+
+
+
+    def cacheExtruder(self):
+        
+        extruder_keys = {"line_width", "wall_line_count", "skin_angles", "top_layers", "bottom_layers", "infill_pattern",
+                         "infill_sparse_density", "infill_angles", "top_thickness", "bottom_thickness"}
+
+        self._extruder_cache = {}
+
+        for key in extruder_keys:
+            self._extruder_cache[key] = self._activeExtruder.getProperty(key, "value")
 
     def cacheChanges(self):
-        print ("\nTest Property Extruder:  " + str(self._activeExtruder.getProperty("infill_sparse_density", "value")) + "\n")
-
-        self._global_cache   = Application.getInstance().getMachineManager().activeMachine.serialize()
-        self._extruder_cache = self._activeExtruder.serialize()
+        self.cacheGlobal()
+        self.cacheExtruder()
 
     def restoreCache(self):
-        test = ContainerStack(0)
-        test.deserialize(self._extruder_cache)
-        
-        self._activeMachineManager.activeMachine.deserialize(self._global_cache)
-        self._activeExtruder.deserialize(self._extruder_cache)
 
-        print ("\nTest Property Cache:  " + str(test.getProperty("infill_sparse_density", "value")) + "\n")
+        for property in self._global_cache:
+            self._globalStack.setProperty(property, "value", self._global_cache[property])
+
+        #for property in self._extruder_cache:
+        #    self._activeExtruder.setProperty(property, "value", self._extruder_cache[property])
+
+        print ("\nTest Property Cache:  " + str(self._activeExtruder.getProperty("infill_sparse_density", "value")) + "\n")
 
 
     def cancelChanges(self):
         self.restoreCache()
+        self.connector._proxy.confirmationWindowEnabled = False
+        self.connector._proxy.confirmationWindowEnabledChanged.emit()
 
     def confirmChanges(self):
         self.cacheChanges()
@@ -197,7 +160,6 @@ class SmartSlicePropertyHandler(QObject):
 
     def _onCancelChanges(self):
         self._cancelChanges = True
-        self.cancelChanges()
         #Logger.log(str(prop))
         for prop in self._propertiesChanged:
             print (str(prop))
@@ -229,11 +191,20 @@ class SmartSlicePropertyHandler(QObject):
         
         for i in self._changedValues:
             self._changedValues.pop(0)
-        self.connector._proxy.confirmationWindowEnabled = False
-        self.connector._proxy.confirmationWindowEnabledChanged.emit()
+
+        self.cancelChanges()
 
         self._cancelChanges = False
 
+        self.connector._proxy.confirmationWindowEnabled = False
+        self.connector._proxy.confirmationWindowEnabledChanged.emit()
+
+
+    def getGlobalProperty(self, key):
+        return self._global_cache[key]
+
+    def getExtruderProperty(self, key):
+        return self._extruder_cache[key]
 
     #
     #  LOCAL TRANSFORMATION PROPERTIES
@@ -364,10 +335,12 @@ class SmartSlicePropertyHandler(QObject):
     # On GLOBAL Property Changed
     def _onGlobalPropertyChanged(self, key: str, property_name: str):
 
-        if   key == "layer_height" and property_name == "value":          
-            self.onLayerHeightChanged()
-        elif key == "initial_layer_height" and property_name == "value":   
-            self.onInitialLayerHeightChanged()
+        if not self._cancelChanges:
+            if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
+                self.connector._confirmValidation()
+            else:
+                self.connector._prepareValidation()
+                self.cacheGlobal()
 
         else: 
             return
@@ -380,7 +353,8 @@ class SmartSlicePropertyHandler(QObject):
                 self.connector._confirmValidation()
             else:
                 self.connector._prepareValidation()
-                #  Cache New Settings
+                self.cacheExtruder()
+        
 
 
     '''
