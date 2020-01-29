@@ -92,8 +92,8 @@ class SmartSlicePropertyHandler(QObject):
 
     def cacheExtruder(self):
         
-        extruder_keys = {"line_width", "wall_line_count", "skin_angles", "top_layers", "bottom_layers", "infill_pattern",
-                         "infill_sparse_density", "infill_angles", "top_thickness", "bottom_thickness"}
+        extruder_keys = {"wall_line_width_0", "wall_line_width_x", "wall_line_width", "line_width", "wall_line_count", "skin_angles", "top_layers", "bottom_layers", "infill_pattern",
+                         "infill_sparse_density", "infill_angles"}
 
         self._extruder_cache = {}
 
@@ -109,8 +109,8 @@ class SmartSlicePropertyHandler(QObject):
         for property in self._global_cache:
             self._globalStack.setProperty(property, "value", self._global_cache[property])
 
-        #for property in self._extruder_cache:
-        #    self._activeExtruder.setProperty(property, "value", self._extruder_cache[property])
+        for property in self._extruder_cache:
+            self._activeExtruder.setProperty(property, "value", self._extruder_cache[property])
 
         print ("\nTest Property Cache:  " + str(self._activeExtruder.getProperty("infill_sparse_density", "value")) + "\n")
 
