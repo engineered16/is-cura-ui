@@ -81,7 +81,7 @@ class SmartSlicePropertyHandler(QObject):
 
     def cacheGlobal(self):
 
-        global_keys = {"layer_height"}
+        global_keys = {"layer_height_0", "layer_height"}
 
         self._global_cache = {}
 
@@ -92,8 +92,10 @@ class SmartSlicePropertyHandler(QObject):
 
     def cacheExtruder(self):
         
-        extruder_keys = {"wall_line_width_0", "wall_line_width_x", "wall_line_width", "line_width", "wall_line_count", "skin_angles", "top_layers", "bottom_layers", "infill_pattern",
-                         "infill_sparse_density", "infill_angles"}
+        extruder_keys = {"wall_line_width_0", "wall_line_width_x", "wall_line_width", "line_width", "wall_line_count", 
+                         "skin_angles", "top_layers", "bottom_layers", 
+                         "infill_pattern", "infill_sparse_density", "infill_angles", 
+                         "alternate_extra_perimeter", "wall_thickness"}
 
         self._extruder_cache = {}
 
