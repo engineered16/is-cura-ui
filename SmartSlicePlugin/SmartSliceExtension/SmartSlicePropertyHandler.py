@@ -216,7 +216,7 @@ class SmartSlicePropertyHandler(QObject):
     #  LOCAL TRANSFORMATION PROPERTIES
     #
 
-    def connectMeshSignals(self, dummy):
+    def connectMeshSignals(self, unused):
         i = 0
         _root = self._sceneRoot 
 
@@ -314,7 +314,7 @@ class SmartSlicePropertyHandler(QObject):
     selectedFacesChanged = pyqtSignal() 
 
     def confirmFaceDraw(self, force=None):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
             self._propertiesChanged.append(SmartSliceValidationProperty.SelectedFace)
             self.connector._confirmValidation()
         else:

@@ -12,8 +12,9 @@
 #
 
 #   Ultimaker/Cura Imports
+from UM.Application import Application
 from UM.Tool import Tool
-
+from UM.PluginRegistry import PluginRegistry
 
 #   Smart Slice Requirements Tool:
 #     When Pressed, this tool produces the "Requirements Dialog"
@@ -22,3 +23,11 @@ class SmartSliceRequirements(Tool):
     #  Class Initialization
     def __init__(self):
         super().__init__()
+
+        self._connector = PluginRegistry.getInstance().getPluginObject("SmartSliceExtension").cloud
+
+        self._controller.activeToolChanged.connect(self._onToolSelected)
+
+    def _onToolSelected(self):
+        self._connector._proxy.confirmationWindowEnabled = False
+        self._connector._proxy.confirmationWindowEnabledChanged.emit()

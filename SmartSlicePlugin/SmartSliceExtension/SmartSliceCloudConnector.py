@@ -255,6 +255,8 @@ class SmartSliceCloudJob(Job):
                 error_message.setTitle("SmartSlice plugin")
                 error_message.setText(i18n_catalog.i18nc("@info:status", "Error while processing the job:\n{}".format(task.error)))
                 error_message.show()
+                self.connector.status = SmartSliceCloudStatus.ReadyToVerify
+
 
                 Logger.log("e", "An error occured while sending and receiving cloud job: {}".format(task.error))
                 return None
@@ -267,6 +269,7 @@ class SmartSliceCloudJob(Job):
                 error_message.setTitle("SmartSlice plugin")
                 error_message.setText(i18n_catalog.i18nc("@info:status", "Unexpected status occured:\n{}".format(task.error)))
                 error_message.show()
+                self.connector.status = SmartSliceCloudStatus.ReadyToVerify
 
                 Logger.log("e", "An unexpected status occured while sending and receiving cloud job: {}".format(task.status))
                 return None
@@ -282,6 +285,7 @@ class SmartSliceCloudJob(Job):
             error_message.setTitle("SmartSlice plugin")
             error_message.setText(i18n_catalog.i18nc("@info:status", "Job type not set for processing:\nDon't know what to do!"))
             error_message.show()
+            self.connector.status = SmartSliceCloudStatus.ReadyToVerify
 
         # TODO: Add instructions how to send a verification job here
         previous_connector_status = self.connector.status
@@ -637,6 +641,9 @@ class SmartSliceCloudConnector(QObject):
 
     def _onApplicationActivityChanged(self):
         slicable_nodes_count = len(self.getSliceableNodes())
+        for node in self.getSliceableNodes():
+            if node.getName() == "SmartSliceMeshModifier":
+                sliceable_nodes_count -= 1
 
         #  If no model is reported... 
         #   This needs to be reported *first*
@@ -748,24 +755,25 @@ class SmartSliceCloudConnector(QObject):
         * Preview
     '''
     def onSecondaryButtonClicked(self):
-        if self.status is SmartSliceCloudStatus.BusyOptimizing:
-            #
-            #  CANCEL SMART SLICE JOB HERE
-            #    Any connection to AWS server should be severed here
-            #
-            self._jobs[self._current_job].cancled = True
-            self._jobs[self._current_job] = None
-            self.status = SmartSliceCloudStatus.ReadyToVerify
-            Application.getInstance().activityChanged.emit()
-        elif self.status is SmartSliceCloudStatus.BusyValidating:
-            #
-            #  CANCEL SMART SLICE JOB HERE
-            #    Any connection to AWS server should be severed here
-            #
-            self._jobs[self._current_job].cancled = True
-            self._jobs[self._current_job] = None
-            self.status = SmartSliceCloudStatus.ReadyToVerify
-            Application.getInstance().activityChanged.emit()
+        if self._jobs[self._current_job] is not None:
+            if self.status is SmartSliceCloudStatus.BusyOptimizing:
+                #
+                #  CANCEL SMART SLICE JOB HERE
+                #    Any connection to AWS server should be severed here
+                #
+                self._jobs[self._current_job].cancled = True
+                self._jobs[self._current_job] = None
+                self.status = SmartSliceCloudStatus.ReadyToVerify
+                Application.getInstance().activityChanged.emit()
+            elif self.status is SmartSliceCloudStatus.BusyValidating:
+                #
+                #  CANCEL SMART SLICE JOB HERE
+                #    Any connection to AWS server should be severed here
+                #
+                self._jobs[self._current_job].cancled = True
+                self._jobs[self._current_job] = None
+                self.status = SmartSliceCloudStatus.ReadyToVerify
+                Application.getInstance().activityChanged.emit()
         else:
             Application.getInstance().getController().setActiveStage("PreviewStage")
 
@@ -773,7 +781,6 @@ class SmartSliceCloudConnector(QObject):
     def onConfirmationConfirmClicked(self):
         #  Cancel Smart Slice Job
         if self._jobs[self._current_job] is not None:
-            self._jobs[self._current_job].Cancel()
             self._jobs[self._current_job].cancled = True
             self._jobs[self._current_job] = None
         if self._proxy._confirming_modmesh:

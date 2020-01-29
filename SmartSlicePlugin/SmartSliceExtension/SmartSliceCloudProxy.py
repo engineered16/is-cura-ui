@@ -397,7 +397,7 @@ class SmartSliceCloudProxy(QObject):
             self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.FactorOfSafety)
             self.connector.propertyHandler._changedValues.append(value)
             self.connector._confirmValidation()
-        elif self.connector.status in SmartSliceCloudStatus.Optimizable:
+        elif self.connector.status in SmartSliceCloudStatus.Optimizable or (self.connector.status is SmartSliceCloudStatus.Optimized):
             self._targetFactorOfSafety = value
             self.reqsSafetyFactor = value # SET CACHE
             self.targetFactorOfSafetyChanged.emit()
@@ -410,8 +410,6 @@ class SmartSliceCloudProxy(QObject):
             self._targetFactorOfSafety = value
             self.reqsSafetyFactor = value # SET CACHE
             self.targetFactorOfSafetyChanged.emit()
-            if self.connector.status is SmartSliceCloudStatus.Optimized:
-                self.connector._prepareValidation()
 
     @pyqtProperty(float, notify=resultSafetyFactorChanged)
     def resultSafetyFactor(self):
@@ -435,14 +433,14 @@ class SmartSliceCloudProxy(QObject):
     @pyqtProperty(float, notify=targetMaximalDisplacementChanged)
     def targetMaximalDisplacement(self):
         return self._targetMaximalDisplacement
-
+    
     @targetMaximalDisplacement.setter
     def targetMaximalDisplacement(self, value):
         if self.connector.status is SmartSliceCloudStatus.BusyOptimizing:
             self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.MaxDisplacement)
             self.connector.propertyHandler._changedValues.append(value)
             self.connector._confirmValidation()
-        elif self.connector.status in SmartSliceCloudStatus.Optimizable:
+        elif self.connector.status in SmartSliceCloudStatus.Optimizable or (self.connector.status is SmartSliceCloudStatus.Optimized):
             self._targetMaximalDisplacement = value
             self.reqsMaxDeflect = value # SET CACHE
             self.targetMaximalDisplacementChanged.emit()

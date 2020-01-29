@@ -69,11 +69,11 @@ class SmartSliceStage(CuraStage):
         application.getPreferences().setValue(self._overhang_visible_preference, False)
 
         # Ensure we have tools defined and apply them here
+        use_tool = self._our_toolset[0]
         req_tool = self._our_toolset[1]
-        our_tool = self._our_toolset[0]
         self.setToolVisibility(True)
+        application.getController().setFallbackTool(use_tool)
         application.getController().setFallbackTool(req_tool) # Force __init__()
-        application.getController().setFallbackTool(our_tool)
         self._previous_tool = application.getController().getActiveTool()
         #if self._previous_tool:
         #    application.getController().setActiveTool(our_tool)
