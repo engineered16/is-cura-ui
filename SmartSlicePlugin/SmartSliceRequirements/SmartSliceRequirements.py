@@ -16,6 +16,8 @@ from UM.Application import Application
 from UM.Tool import Tool
 from UM.PluginRegistry import PluginRegistry
 
+from .SmartSliceValidationProperty import SmartSliceValidationProperty
+
 #   Smart Slice Requirements Tool:
 #     When Pressed, this tool produces the "Requirements Dialog"
 #
@@ -29,5 +31,8 @@ class SmartSliceRequirements(Tool):
         self._controller.activeToolChanged.connect(self._onToolSelected)
 
     def _onToolSelected(self):
-        self._connector._proxy.confirmationWindowEnabled = False
-        self._connector._proxy.confirmationWindowEnabledChanged.emit()
+        if not self._connector._proxy.shouldRaiseWarning:
+            print ("TRIGGERED REQUIREMENTS TOOL!!")
+            self._connector._proxy.confirmationWindowEnabled = False
+            self._connector._proxy.confirmationWindowEnabledChanged.emit()
+            

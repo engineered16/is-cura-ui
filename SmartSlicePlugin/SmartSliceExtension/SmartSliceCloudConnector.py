@@ -145,6 +145,8 @@ class SmartSliceCloudJob(Job):
         self._job_status = None
         self._wait_time = 1.0
 
+        self.shouldRaiseWarning = True
+
         self.ui_status_per_job_type = {pywim.smartslice.job.JobType.validation : SmartSliceCloudStatus.BusyValidating,
                                        pywim.smartslice.job.JobType.optimization : SmartSliceCloudStatus.BusyOptimizing,
                                        }
@@ -799,6 +801,7 @@ class SmartSliceCloudConnector(QObject):
         self._proxy.confirmationWindowEnabledChanged.emit()
         self._proxy._validationRaised = False
         self.propertyHandler._confirming = False
+        self._proxy.shouldRaiseWarning = False
 
     '''
       onConfirmationCancelClicked()
@@ -816,6 +819,7 @@ class SmartSliceCloudConnector(QObject):
         self._proxy.confirmationWindowEnabledChanged.emit()
         self._proxy._validationRaised = False
         self.propertyHandler._confirming = False
+        self._proxy.shouldRaiseWarning = False
 
 
     #

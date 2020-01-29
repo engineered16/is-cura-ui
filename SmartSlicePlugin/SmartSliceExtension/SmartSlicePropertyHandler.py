@@ -36,6 +36,7 @@ class SmartSlicePropertyHandler(QObject):
         #  Callback
         self.connector = connector
         self._confirming = False
+        self._initialized = False
         
         self._activeMachineManager = CuraApplication.getInstance().getMachineManager()
         self._globalStack = self._activeMachineManager.activeMachine
@@ -49,7 +50,11 @@ class SmartSlicePropertyHandler(QObject):
 
         #  Mesh Properties
         self.meshScale    = None
+        self.newScale = None
         self.meshRotation = None
+        self.newRotation = None
+
+
         self._selection_mode = 1 # Default to AnchorMode
         self._changedMesh = None
         self._changedFaces = None
@@ -58,6 +63,7 @@ class SmartSlicePropertyHandler(QObject):
         self._anchoredFaces = None
         self._loadedMesh = None
         self._loadedFaces = None
+
         self._sceneNode = None
         self._sceneRoot = Application.getInstance().getController().getScene().getRoot()
 
@@ -74,10 +80,8 @@ class SmartSlicePropertyHandler(QObject):
 
         self._sceneRoot.childrenChanged.connect(self.connectMeshSignals)
         
-
         self._global_cache = {}
         self._extruder_cache = {}
-
 
 
     def cacheGlobal(self):
@@ -88,7 +92,7 @@ class SmartSlicePropertyHandler(QObject):
 
         for key in global_keys:
             self._global_cache[key] = self._globalStack.getProperty(key, "value")
-            print ("\nSetting State:  " + str(self._globalStack.getProperty(key, "state")) + "\n")
+            #print ("\nSetting State:  " + str(self._globalStack.getProperty(key, "state")) + "\n")
             
 
 
@@ -224,14 +228,15 @@ class SmartSlicePropertyHandler(QObject):
             print ("Node Found:  " + node.getName())
             if node.getName() == "3d":
                 if (self._sceneNode is None) or (self._sceneNode.getName() != _root.getAllChildren()[i+1].getName()):
+                    if self._sceneNode is not None:
+                        self._sceneNode.transformationChanged.disconnectAll()
+
                     self._sceneNode = _root.getAllChildren()[i+1]
                     print ("\nFile Found:  " + self._sceneNode.getName() + "\n")
 
                     #  Set Initial Scale/Rotation
                     self.meshScale    = self._sceneNode.getScale()
                     self.meshRotation = self._sceneNode.getOrientation()
-                    
-                    #self._sceneNode.childrenChanged.connect(self._onMeshChildrenChanged)
 
                     #  TODO: Properly Disconnect this Signal, when figure out where to do so
                     self._sceneNode.transformationChanged.connect(self._onLocalTransformationChanged)
@@ -254,28 +259,31 @@ class SmartSlicePropertyHandler(QObject):
             self.onMeshRotationChanged()
 
     def setMeshScale(self):
-        print ("\nMesh Scale Set\n")
+        #print ("\nMesh Scale Set\n")
         self._sceneNode.setScale(self.meshScale)
         self._sceneNode.transformationChanged.emit(self._sceneNode)
-        
 
     def onMeshScaleChanged(self):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
-            self._propertiesChanged.append(SmartSliceValidationProperty.MeshScale)
-            self._changedValues.append(self._sceneNode.getScale())
             self.connector._confirmValidation()
+            self.connector._proxy.shouldRaiseWarning = True
+            print ("Mesh Scale Change Confirmed")
+            self._propertiesChanged.append(SmartSliceValidationProperty.MeshScale)
+            self.newScale = self._sceneNode.getScale()
         else:
+            print ("\nMesh Scale Set\n")
             self.connector._prepareValidation()
             self.meshScale = self._sceneNode.getScale()
 
     def setMeshRotation(self):
-        print ("\nMesh Rotation Set\n")
+        #print ("\nMesh Rotation Set\n")
         self._sceneNode.setOrientation(self.meshRotation)
         self._sceneNode.transformationChanged.emit(self._sceneNode)
 
     def onMeshRotationChanged(self):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
             self._propertiesChanged.append(SmartSliceValidationProperty.MeshRotation)
+            self.connector._proxy.shouldRaiseWarning = True
             self._changedValues.append(self._sceneNode.getOrientation())
             self.connector._confirmValidation()
         else:
@@ -361,32 +369,3 @@ class SmartSlicePropertyHandler(QObject):
                 self.connector._prepareValidation()
                 self.cacheExtruder()
         
-
-
-    '''
-      _onSceneNodesChanged()
-        Executed when a node is changed relative to the root node.
-        Confirms that only one sliceable model is connected to scene and
-          reports any modifier meshes that are currently loaded for model
-    '''
-    def _onSceneNodesChanged(self, root):
-        models = 0
-
-        for node in root.getAllChildren():
-            print ("Node Found:  " + node.getName())
-            if node.getName() == "3d":
-                if (self._sceneNode is None) or (self._sceneNode.getName() != root.getAllChildren()[i+1].getName()):
-                    self._sceneNode = _root.getAllChildren()[i+1]
-                    print ("\nFile Found:  " + self._sceneNode.getName() + "\n")
-
-                    #  Set Initial Scale/Rotation
-                    self.meshScale    = self._sceneNode.getScale()
-                    self.meshRotation = self._sceneNode.getOrientation()
-                    
-                    #self._sceneNode.childrenChanged.connect(self._onMeshChildrenChanged)
-
-                    #  TODO: Properly Disconnect this Signal, when figure out where to do so
-                    self._sceneNode.transformationChanged.connect(self._onLocalTransformationChanged)
-                    i += 1
-
-            i += 1
