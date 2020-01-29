@@ -47,6 +47,7 @@ from UM.Settings.SettingInstance import SettingInstance, InstanceState
 from UM.Signal import Signal
 
 # Cura
+from cura.CuraApplication import CuraApplication
 from cura.OneAtATimeIterator import OneAtATimeIterator
 from cura.Operations.SetParentOperation import SetParentOperation
 from cura.Settings.ExtruderManager import ExtruderManager
@@ -396,7 +397,8 @@ class SmartSliceCloudJob(Job):
                 #self.connector._proxy.resultTimeSkirt = QTime(0, 1, 0, 0)
                 #self.connector._proxy.resultTimeTravel = QTime(0, 30, 0, 0)
 
-                material_volumina = [analyse.mass]  # TODO: rename mass to volume and provide per extruder volume on the future
+                #material_volumina = [analyse.extruders[0].material_volume]  
+                material_volumina = [analyse.mass] # TODO: rename mass to volume and provide per extruder volume on the future
                 material_extra_info = self.connector._calculateAdditionalMaterialInfo(material_volumina)
                 Logger.log("d", "material_extra_info: {}".format(material_extra_info))
 
