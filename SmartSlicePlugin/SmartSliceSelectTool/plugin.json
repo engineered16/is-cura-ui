@@ -1,8 +1,0 @@
-{
-    "name": "Smart Slice SelectTool",
-    "author": "Teton Simulation, Inc.",
-    "version": "19.0.5.0",
-    "description": "Optimizes your model and slicing properties based on given boudary conditions set by the user.",
-    "supported_sdk_versions": ["7.0.0", "6.3.0"],
-    "i18n-catalog": "smartslice"
-}
