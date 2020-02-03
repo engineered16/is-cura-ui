@@ -767,7 +767,10 @@ class SmartSliceCloudConnector(QObject):
                 #
                 self._jobs[self._current_job].cancled = True
                 self._jobs[self._current_job] = None
-                self.status = SmartSliceCloudStatus.ReadyToVerify
+                if self._proxy.reqsSafetyFactor < self._proxy.resultSafetyFactor and (self._proxy.reqsMaxDeflect > self._proxy.resultMaximalDisplacement):
+                    self.status = SmartSliceCloudStatus.Overdimensioned
+                else:
+                    self.status = SmartSliceCloudStatus.Underdimensioned
                 Application.getInstance().activityChanged.emit()
             elif self.status is SmartSliceCloudStatus.BusyValidating:
                 #
@@ -787,9 +790,20 @@ class SmartSliceCloudConnector(QObject):
         if self._jobs[self._current_job] is not None:
             self._jobs[self._current_job].cancled = True
             self._jobs[self._current_job] = None
+
         if self._proxy._confirming_modmesh:
             self.doOptimization.emit()
             self._proxy._confirming_modmesh = False
+        elif self.status is SmartSliceCloudStatus.BusyOptimizing:
+            if {SmartSliceValidationProperty.FactorOfSafety, SmartSliceValidationProperty.MaxDisplacement} in self.propertyHandler._propertiesChanged:
+                if self._proxy.reqsSafetyFactor < self._proxy.resultSafetyFactor and (self._proxy.reqsMaxDeflect < self._proxy.resultMaximalDisplacement):
+                    self.status = SmartSliceCloudStatus.Overdimensioned
+                else:
+                    self.status = SmartSliceCloudStatus.Underdimensioned
+                self.updateSliceWidget()
+            else:
+                self._prepareValidation()
+
         else:
             # Forget current Validation
             self._proxy._hasActiveValidate = False

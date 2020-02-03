@@ -394,22 +394,27 @@ class SmartSliceCloudProxy(QObject):
 
     @targetFactorOfSafety.setter
     def targetFactorOfSafety(self, value):
-        if self.connector.status is SmartSliceCloudStatus.BusyOptimizing:
+        if self.connector.status is SmartSliceCloudStatus.BusyOptimizing or (self.connector.status is SmartSliceCloudStatus.Optimized):
             self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.FactorOfSafety)
             self.connector.propertyHandler._changedValues.append(value)
-            self.connector._confirmValidation()
-        elif self.connector.status in SmartSliceCloudStatus.Optimizable or (self.connector.status is SmartSliceCloudStatus.Optimized):
+            if value < self.resultSafetyFactor:
+                self.connector.status = SmartSliceCloudStatus.Overdimensioned
+            else:
+                self.connector.status = SmartSliceCloudStatus.Underdimensioned
+            self.connector._confirmOptimization()
+        elif self.connector.status in SmartSliceCloudStatus.Optimizable:
             self._targetFactorOfSafety = value
             self.reqsSafetyFactor = value # SET CACHE
             self.targetFactorOfSafetyChanged.emit()
+            #  Check if status has changed form the change
             if value < self.resultSafetyFactor:
                 self.connector.status = SmartSliceCloudStatus.Overdimensioned
             else:
                 self.connector.status = SmartSliceCloudStatus.Underdimensioned
             self.connector.updateSliceWidget()
         else:
-            self._targetFactorOfSafety = value
             self.reqsSafetyFactor = value # SET CACHE
+            self._targetFactorOfSafety = value
             self.targetFactorOfSafetyChanged.emit()
 
     @pyqtProperty(float, notify=resultSafetyFactorChanged)
@@ -437,25 +442,29 @@ class SmartSliceCloudProxy(QObject):
     
     @targetMaximalDisplacement.setter
     def targetMaximalDisplacement(self, value):
-        if self.connector.status is SmartSliceCloudStatus.BusyOptimizing:
+        if self.connector.status is SmartSliceCloudStatus.BusyOptimizing or (self.connector.status is SmartSliceCloudStatus.Optimized):
             self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.MaxDisplacement)
             self.connector.propertyHandler._changedValues.append(value)
-            self.connector._confirmValidation()
-        elif self.connector.status in SmartSliceCloudStatus.Optimizable or (self.connector.status is SmartSliceCloudStatus.Optimized):
+            if value < self.resultMaximalDisplacement:
+                self.connector.status = SmartSliceCloudStatus.Overdimensioned
+            else:
+                self.connector.status = SmartSliceCloudStatus.Underdimensioned
+            self.connector._confirmOptimization()
+        elif self.connector.status in SmartSliceCloudStatus.Optimizable:
             self._targetMaximalDisplacement = value
             self.reqsMaxDeflect = value # SET CACHE
             self.targetMaximalDisplacementChanged.emit()
+            #  Check if status has changed form the change
             if value < self.resultMaximalDisplacement:
-                self.connector.status = SmartSliceCloudStatus.Underdimensioned
-            else:
                 self.connector.status = SmartSliceCloudStatus.Overdimensioned
+            else:
+                self.connector.status = SmartSliceCloudStatus.Underdimensioned
             self.connector.updateSliceWidget()
         else:
-            self.reqsMaxDeflect = value
+            self.reqsMaxDeflect = value # SET CACHE
             self._targetMaximalDisplacement = value
             self.targetMaximalDisplacementChanged.emit()
-            if self.connector.status is SmartSliceCloudStatus.Optimized:
-                self.connector._prepareValidation()
+
 
     @pyqtProperty(float, notify=resultMaximalDisplacementChanged)
     def resultMaximalDisplacement(self):
