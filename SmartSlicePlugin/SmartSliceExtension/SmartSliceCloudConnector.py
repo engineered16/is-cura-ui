@@ -423,8 +423,7 @@ class SmartSliceCloudJob(Job):
 
         #else:
             #self.connector.status = previous_connector_status
-        self.connector._proxy.confirmationWindowEnabled = False
-        self.connector._proxy.confirmationWindowEnabledChanged.emit()
+        self.connector.propertyHandler.prepareCache()
 
 
 class SmartSliceCloudVerificationJob(SmartSliceCloudJob):
@@ -497,6 +496,8 @@ class SmartSliceCloudConnector(QObject):
         self.resetAnchor0FacesPoc()
         self.resetForce0FacesPoc()
         self.resetForce0VectorPoc()
+
+        self.ConfirmationConcluded.connect(self.onConfirmationConcluded)
 
     SmartSlicePrepared = pyqtSignal()
 
@@ -675,8 +676,16 @@ class SmartSliceCloudConnector(QObject):
         elif not self._jobs[self._current_job].cancled:
             self.propertyHandler._propertiesChanged = []
             self._jobs[self._current_job] = None
-            
+        
 
+    #
+    #   CONFIRMATION PROMPT
+    #
+    ConfirmationConcluded = pyqtSignal()
+
+    def onConfirmationConcluded(self):
+        self.propertyHandler.prepareCache()
+        self.updateSliceWidget()
 
     confirmValidation = pyqtSignal()
     doVerification = pyqtSignal()
@@ -795,29 +804,25 @@ class SmartSliceCloudConnector(QObject):
             self.doOptimization.emit()
             self._proxy._confirming_modmesh = False
         elif self.status is SmartSliceCloudStatus.BusyOptimizing:
-            if {SmartSliceValidationProperty.FactorOfSafety, SmartSliceValidationProperty.MaxDisplacement} in self.propertyHandler._propertiesChanged:
-                if self._proxy.reqsSafetyFactor < self._proxy.resultSafetyFactor and (self._proxy.reqsMaxDeflect < self._proxy.resultMaximalDisplacement):
-                    self.status = SmartSliceCloudStatus.Overdimensioned
-                else:
+            self.propertyHandler._onConfirmRequirements()
+            if SmartSliceValidationProperty.FactorOfSafety in self.propertyHandler._propertiesChanged or (SmartSliceValidationProperty.MaxDisplacement in self.propertyHandler._propertiesChanged):
+                print ("FoS or Max Displace was in _propertiesChanged")
+                
+                if self._proxy.resultSafetyFactor < self._proxy.reqsSafetyFactor and (self._proxy.resultMaximalDisplacement > self._proxy.reqsMaxDeflect):
                     self.status = SmartSliceCloudStatus.Underdimensioned
+                else:
+                    self.status = SmartSliceCloudStatus.Overdimensioned
                 self.updateSliceWidget()
             else:
-                self._prepareValidation()
+                self._prepareValidation()   
 
         else:
-            # Forget current Validation
-            self._proxy._hasActiveValidate = False
-            self.status = SmartSliceCloudStatus.ReadyToVerify
-            Application.getInstance().activityChanged.emit()
-
-            self.propertyHandler._onConfirmChanges()
+            self._prepareValidation()
+        
+        self.propertyHandler._onConfirmChanges()
 
         # Close Dialog
-        self._proxy.confirmationWindowEnabled = False
-        self._proxy.confirmationWindowEnabledChanged.emit()
-        self._proxy._validationRaised = False
-        self.propertyHandler._confirming = False
-        self._proxy.shouldRaiseWarning = False
+        self.ConfirmationConcluded.emit()
 
     '''
       onConfirmationCancelClicked()
@@ -831,11 +836,7 @@ class SmartSliceCloudConnector(QObject):
             self.propertyHandler._onCancelChanges()
         
         # Close Dialog
-        self._proxy.confirmationWindowEnabled = False
-        self._proxy.confirmationWindowEnabledChanged.emit()
-        self._proxy._validationRaised = False
-        self.propertyHandler._confirming = False
-        self._proxy.shouldRaiseWarning = False
+        self.ConfirmationConcluded.emit()
 
 
     #

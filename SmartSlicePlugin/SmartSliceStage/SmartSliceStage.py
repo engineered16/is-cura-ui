@@ -84,6 +84,7 @@ class SmartSliceStage(CuraStage):
 
         if not self._connector.propertyHandler._initialized:
             self._connector.propertyHandler.cacheChanges()
+            self._connector.propertyHandler._initialized = True
         
     #   onStageDeselected:
     #       Sets attributes that allow the Smart Slice Stage to properly deactivate

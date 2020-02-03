@@ -397,10 +397,6 @@ class SmartSliceCloudProxy(QObject):
         if self.connector.status is SmartSliceCloudStatus.BusyOptimizing or (self.connector.status is SmartSliceCloudStatus.Optimized):
             self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.FactorOfSafety)
             self.connector.propertyHandler._changedValues.append(value)
-            if value < self.resultSafetyFactor:
-                self.connector.status = SmartSliceCloudStatus.Overdimensioned
-            else:
-                self.connector.status = SmartSliceCloudStatus.Underdimensioned
             self.connector._confirmOptimization()
         elif self.connector.status in SmartSliceCloudStatus.Optimizable:
             self._targetFactorOfSafety = value
@@ -445,10 +441,7 @@ class SmartSliceCloudProxy(QObject):
         if self.connector.status is SmartSliceCloudStatus.BusyOptimizing or (self.connector.status is SmartSliceCloudStatus.Optimized):
             self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.MaxDisplacement)
             self.connector.propertyHandler._changedValues.append(value)
-            if value < self.resultMaximalDisplacement:
-                self.connector.status = SmartSliceCloudStatus.Overdimensioned
-            else:
-                self.connector.status = SmartSliceCloudStatus.Underdimensioned
+            self.reqsMaxDeflect = value
             self.connector._confirmOptimization()
         elif self.connector.status in SmartSliceCloudStatus.Optimizable:
             self._targetMaximalDisplacement = value
@@ -456,9 +449,9 @@ class SmartSliceCloudProxy(QObject):
             self.targetMaximalDisplacementChanged.emit()
             #  Check if status has changed form the change
             if value < self.resultMaximalDisplacement:
-                self.connector.status = SmartSliceCloudStatus.Overdimensioned
-            else:
                 self.connector.status = SmartSliceCloudStatus.Underdimensioned
+            else:
+                self.connector.status = SmartSliceCloudStatus.Overdimensioned
             self.connector.updateSliceWidget()
         else:
             self.reqsMaxDeflect = value # SET CACHE
@@ -483,6 +476,7 @@ class SmartSliceCloudProxy(QObject):
     loadDirectionChanged = pyqtSignal()
 
     def setLoadMagnitude(self):
+
         self._loadMagnitude = self.reqsLoadMagnitude
         self.loadMagnitudeChanged.emit()
 
@@ -504,9 +498,11 @@ class SmartSliceCloudProxy(QObject):
 
     def setLoadDirection(self):
         self._loadDirection = self.reqsLoadDirection
+        self.loadDirectionChanged.emit()
 
     @pyqtProperty(bool, notify=loadDirectionChanged)
     def loadDirection(self):
+        print ("Load Direction has been set to " + str(self._loadDirection))
         return self._loadDirection
 
     @loadDirection.setter
@@ -785,6 +781,4 @@ class SmartSliceCloudProxy(QObject):
             self._materialCost = value
             self.materialCostChanged.emit()
 
-    def _onMeshChildrenChanged(self):
-        mesh = Application.getInstance().getController().getScene()
 
