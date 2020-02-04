@@ -84,6 +84,13 @@ class SmartSlicePropertyHandler(QObject):
         self._global_cache = {}
         self._extruder_cache = {}
 
+        self.global_keys = {"layer_height_0", "layer_height"}
+
+        self.extruder_keys = {"wall_line_width_0", "wall_line_width_x", "wall_line_width", "line_width", "wall_line_count", "wall_thickness", 
+                         "skin_angles", "top_layers", "bottom_layers", 
+                         "infill_pattern", "infill_sparse_density", "infill_angles", 
+                         "alternate_extra_perimeter"}
+
     def clearChangedProperties(self):
         for p in self._propertiesChanged:
             self._propertiesChanged.pop()
@@ -93,26 +100,20 @@ class SmartSlicePropertyHandler(QObject):
 
     def cacheGlobal(self):
 
-        global_keys = {"layer_height_0", "layer_height"}
 
         self._global_cache = {}
 
-        for key in global_keys:
+        for key in self.global_keys:
             self._global_cache[key] = self._globalStack.getProperty(key, "value")
             #print ("\nSetting State:  " + str(self._globalStack.getProperty(key, "state")) + "\n")
             
 
 
     def cacheExtruder(self):
-        
-        extruder_keys = {"wall_line_width_0", "wall_line_width_x", "wall_line_width", "line_width", "wall_line_count", 
-                         "skin_angles", "top_layers", "bottom_layers", 
-                         "infill_pattern", "infill_sparse_density", "infill_angles", 
-                         "alternate_extra_perimeter", "wall_thickness"}
 
         self._extruder_cache = {}
 
-        for key in extruder_keys:
+        for key in self.extruder_keys:
             self._extruder_cache[key] = self._activeExtruder.getProperty(key, "value")
 
     def cacheSmartSlice(self):
@@ -231,13 +232,13 @@ class SmartSlicePropertyHandler(QObject):
 
     def _onConfirmChanges(self):
         self.cacheChanges()
-        self.prepareCache()
         self.connector.ConfirmationConcluded.emit()
 
     def _onCancelChanges(self):
+        self._cancelChanges = True
         self.restoreCache()
-        self.prepareCache()
         self.connector.ConfirmationConcluded.emit()
+        self._cancelChanges = False
 
 
     def getGlobalProperty(self, key):
@@ -336,7 +337,8 @@ class SmartSlicePropertyHandler(QObject):
     def _onMaterialChanged(self):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
             #print("\n\nMATERIAL CHANGE CONFIRMED HERE\n\n")
-            if len(self._propertiesChanged) > 1:
+            #if len(self._propertiesChanged) > 1:
+            if self._material is not self._activeExtruder.material:
                 self._propertiesChanged.append(SmartSliceValidationProperty.Material)
                 self._changedValues.append(self._activeExtruder.material)
                 self.connector._confirmValidation()
@@ -380,18 +382,28 @@ class SmartSlicePropertyHandler(QObject):
     # On GLOBAL Property Changed
     def _onGlobalPropertyChanged(self, key: str, property_name: str):
 
-        if not self._cancelChanges:
+        if key not in self.global_keys:
+            print (str(key) + "\n")
+            return
+        if self._globalStack.getProperty(key, property_name) == self._global_cache[key]:
+            return
+
+        if not self._cancelChanges:        
             if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
                 self.connector._confirmValidation()
             else:
                 self.connector._prepareValidation()
                 self.cacheGlobal()
 
-        else: 
-            return
 
     # On EXTRUDER Property Changed
     def _onExtruderPropertyChanged(self, key: str, property_name: str):
+
+        if key not in self.extruder_keys:
+            return
+        if self._activeExtruder.getProperty(key, property_name) == self._extruder_cache[key]:
+            return
+
         if not self._cancelChanges:        
             if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
                 #  Confirm Settings Changes
