@@ -45,6 +45,8 @@ from UM.Scene.SceneNode import SceneNode
 from UM.Scene.Iterator.DepthFirstIterator import DepthFirstIterator
 from UM.Settings.SettingInstance import SettingInstance
 
+from UM.Platform import Platform
+
 # Cura
 from cura.OneAtATimeIterator import OneAtATimeIterator
 from cura.Operations.SetParentOperation import SetParentOperation
@@ -52,6 +54,7 @@ from cura.Settings.ExtruderManager import ExtruderManager
 from cura.Scene.BuildPlateDecorator import BuildPlateDecorator
 from cura.Scene.CuraSceneNode import CuraSceneNode
 from cura.Scene.SliceableObjectDecorator import SliceableObjectDecorator
+from cura.UI.PrintInformation import PrintInformation
 
 # Our extension
 from .SmartSliceCloudProxy import SmartSliceCloudStatus
@@ -192,16 +195,18 @@ class SmartSliceCloudJob(Job):
         return abs_private_subdirectory_name
 
     # Sending jobs to AWS
-    # - jtype: Job type to be sent. Can be either:
-    #          > pywim.smartslice.job.JobType.validation
-    #          > pywim.smartslice.job.JobType.optimization
-    def prepareJob(self, jtype):
+    # - job_type: Job type to be sent. Can be either:
+    #             > pywim.smartslice.job.JobType.validation
+    #             > pywim.smartslice.job.JobType.optimization
+    def prepareJob(self, job_type, filename = None, filedir = None):
         # Using tempfile module to probe for a temporary file path
         # TODO: We can do this more elegant of course, too.
 
         # Setting up file output
-        filename = "{}.3mf".format(uuid.uuid1())
-        filedir = self.determineTempDirectory()
+        if not filename:
+            filename = "{}.3mf".format(uuid.uuid1())
+        if not filedir:
+            filedir = self.determineTempDirectory()
         filepath = os.path.join(filedir, filename)
 
         Logger.log("d", "Saving temporary (and custom!) 3MF file at: {}".format(filepath))
@@ -217,7 +222,7 @@ class SmartSliceCloudJob(Job):
         Logger.log("d", "Adding additional job info")
         self.connector.extend3mf(filepath,
                                  mesh_nodes,
-                                 jtype)
+                                 job_type)
 
         if not os.path.exists(filepath):
             return None
@@ -433,6 +438,10 @@ class SmartSliceCloudConnector(QObject):
     http_port_preference = "smartslice/http_port"
     http_token_preference = "smartslice/token"
 
+    debug_save_smartslice_package_preference = "smartslice/debug_save_smartslice_package"
+    debug_save_smartslice_package_location = "smartslice/debug_save_smartslice_package_location"
+    
+
     def __init__(self, extension):
         super().__init__()
         self.extension = extension
@@ -454,11 +463,23 @@ class SmartSliceCloudConnector(QObject):
         self.doOptimization.connect(self._doOptimization)
 
         # Application stuff
-        preferences = Application.getInstance().getPreferences()
-        preferences.addPreference(self.http_protocol_preference, "https")
-        preferences.addPreference(self.http_hostname_preference, "api-19.fea.cloud")
-        preferences.addPreference(self.http_port_preference, 443)
-        preferences.addPreference(self.http_token_preference, "")
+        self.app_preferences = Application.getInstance().getPreferences()
+        self.app_preferences.addPreference(self.http_protocol_preference, "https")
+        self.app_preferences.addPreference(self.http_hostname_preference, "api-19.fea.cloud")
+        self.app_preferences.addPreference(self.http_port_preference, 443)
+        self.app_preferences.addPreference(self.http_token_preference, "")
+        
+        # Debug stuff
+        self.app_preferences.addPreference(self.debug_save_smartslice_package_preference, False)
+        if Platform.isLinux():
+            default_save_smartslice_package_location = os.path.expandvars("$HOME")
+        elif Platform.isWindows():
+            default_save_smartslice_package_location = os.path.join("$HOMEDRIVE", "$HOMEPATH")
+            default_save_smartslice_package_location = os.path.expandvars(default_save_smartslice_package_location)
+        self.app_preferences.addPreference(self.debug_save_smartslice_package_location, default_save_smartslice_package_location)
+        self.debug_save_smartslice_package_message = None
+
+        # Executing a set of function when some activitiy has changed
         Application.getInstance().activityChanged.connect(self._onApplicationActivityChanged)
 
         # Caches
@@ -472,6 +493,23 @@ class SmartSliceCloudConnector(QObject):
         
         Application.getInstance().engineCreatedSignal.connect(self._onEngineCreated)
 
+    def _onSaveDebugPackage(self, messageId: str, actionId: str) -> None:
+        dummy_job = SmartSliceCloudVerificationJob(self)
+        if self.status == SmartSliceCloudStatus.ReadyToVerify:
+            dummy_job.job_type = pywim.smartslice.job.JobType.validation
+        elif self.status in SmartSliceCloudStatus.Optimizable:
+            dummy_job.job_type = pywim.smartslice.job.JobType.optimization
+        else:
+            Logger.log("e", "DEBUG: This is not a defined state. Provide all input to create the debug package.")
+            return
+        
+        jobname = Application.getInstance().getPrintInformation().jobName
+        debug_filename = "{}_smartslice.3mf".format(jobname)
+        debug_filedir = self.app_preferences.getValue(self.debug_save_smartslice_package_location)
+        dummy_job = dummy_job.prepareJob(dummy_job.job_type,
+                                         filename= debug_filename,
+                                         filedir= debug_filedir)
+
     def getProxy(self, engine, script_engine):
         return self._proxy
 
@@ -484,6 +522,21 @@ class SmartSliceCloudConnector(QObject):
                                  )
 
         self.status = SmartSliceCloudStatus.NoModel
+        
+        if self.app_preferences.getValue(self.debug_save_smartslice_package_preference):
+            self.debug_save_smartslice_package_message = Message(title="[DEBUG] SmartSlicePlugin",
+                                                                 text= "Click on the button below to generate a debug package, which contains all data as sent to the cloud. Make sure you provide all input as confirmed by an active button in the action menu in the SmartSlice tab.\nThanks!",
+                                                                 lifetime= 0,
+                                                                 )
+            self.debug_save_smartslice_package_message.addAction("",  # action_id
+                                                                 i18n_catalog.i18nc("@action",
+                                                                                    "Save package"
+                                                                                    ),  # name
+                                                                 "",  # icon
+                                                                 ""  # description
+                                                                 )
+            self.debug_save_smartslice_package_message.actionTriggered.connect(self._onSaveDebugPackage)
+            self.debug_save_smartslice_package_message.show()
 
     def updateSliceWidget(self):
         if self.status is SmartSliceCloudStatus.NoModel:
