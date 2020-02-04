@@ -59,7 +59,6 @@ class SmartSliceExtension(Extension):
         return dialog, context, component
 
     def _onEngineCreated(self):
-        self.cloud._onEngineCreated()
         # Registering our type in QML for direct interaction.
         # Needed for separate windows for example.
         # NOTE: Unused at the moment!

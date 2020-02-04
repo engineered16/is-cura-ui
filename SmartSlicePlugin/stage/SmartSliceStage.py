@@ -32,12 +32,12 @@ from cura.CuraApplication import CuraApplication
 #   Stage Class Definition
 #
 class SmartSliceStage(CuraStage):
-    def __init__(self, parent=None):
+    def __init__(self, extension, parent=None):
         super().__init__(parent)
 
         #   Connect Stage to Cura Application
         Application.getInstance().engineCreatedSignal.connect(self._engineCreated)
-        self._connector = PluginRegistry.getInstance().getPluginObject("SmartSliceExtension").cloud
+        self._connector = extension
 
         #   Set Default Attributes
         self._was_buildvolume_hidden = None
@@ -45,8 +45,8 @@ class SmartSliceStage(CuraStage):
         self._overhang_visible_preference = "view/show_overhang"
         self._default_toolset = None
         self._default_fallback_tool = None
-        self._our_toolset = ("SmartSliceSelectTool",
-                             "SmartSliceRequirements",
+        self._our_toolset = ("SmartSlicePlugin_SelectTool",
+                             "SmartSlicePlugin_RequirementsTool",
                              )
         #self._tool_blacklist = ("SelectionTool", "CameraTool")
         self._our_last_tool = None
@@ -113,30 +113,72 @@ class SmartSliceStage(CuraStage):
 
     def getVisibleTools(self):
         visible_tools = []
-        tools = Application.getInstance().getController().getAllTools().keys()
+        tools = Application.getInstance().getController().getAllTools()
+        """
+        plugin_registry = PluginRegistry.getInstance()
         for tool in tools:
             visible = True
-            tool_metainfo = PluginRegistry.getInstance().getMetaData(tool).get("tool", {})
-            keys = tool_metainfo.keys()
-            if "visible" in keys:
+            tool_metainfos = plugin_registry.getMetaData(tool).get("tool", {})
+            if type(tool_metainfos) is dict:
+                tool_metainfos = [tool_metainfos]
+            for tool_metainfo in tool_metainfos:
+                keys = tool_metainfo.keys()
+                if "visible" in keys:
+                    visible = tool_metainfo["visible"]
+    
+                if visible and tool not in visible_tools:
+                    visible_tools.append(tool)
+        """
+        for name in tools:
+            visible = True
+            tool_metainfo = tools[name].getMetaData()
+
+            if "visible" in tool_metainfo.keys():
                 visible = tool_metainfo["visible"]
 
             if visible:
-                visible_tools.append(tool)
+                visible_tools.append(name)
+            
+            Logger.log("d", "Visibility of <{}>: {}".format(name,
+                                                            visible,
+                                                            )
+            )
+
         return visible_tools
 
+    # Function to make our tools either visible or not and the other tools the opposite
     def setToolVisibility(self, our_tools_visible):
+        """
         plugin_registry = PluginRegistry.getInstance()
         for tool_id in Application.getInstance().getController().getAllTools().keys():
-            tool_metadata = plugin_registry.getMetaData(tool_id)
-            if tool_id in self._our_toolset:
-                tool_metadata.get("tool", {})["visible"] = our_tools_visible
-            elif tool_id in self._default_toolset:
-                tool_metadata.get("tool", {})["visible"] = not our_tools_visible
-
-            if "visible" in tool_metadata.get("tool", {}).keys():
-                state = tool_metadata.get("tool", {})["visible"]
-                Logger.log("d", "Visibility of <{}>: {}".format(tool_id, state))
+            plugin_metadata = plugin_registry.getMetaData(tool_id)
+            tool_metadatas = plugin_metadata.get("tool", {})
+            if type(tool_metadatas) is dict:
+                tool_metadatas = [tool_metadatas]
+            for tool_metadata in tool_metadatas:
+                if tool_id in self._our_toolset:
+                    tool_metadata["visible"] = our_tools_visible
+                elif tool_id in self._default_toolset:
+                    tool_metadata["visible"] = not our_tools_visible
+                
+                Logger.log("d", "Visibility of <{}>: {}".format(plugin_metadata["id"],
+                                                                tool_metadata["visible"],
+                                                                )
+                )
+        """
+        tools = Application.getInstance().getController().getAllTools()
+        for name in tools:
+            tool_meta_data = tools[name].getMetaData()
+            
+            if name in self._our_toolset:
+                tool_meta_data["visible"] = our_tools_visible
+            elif name in self._default_toolset:
+                tool_meta_data["visible"] = not our_tools_visible
+            
+            Logger.log("d", "Visibility of <{}>: {}".format(name,
+                                                            tool_meta_data["visible"],
+                                                            )
+            )
 
         Application.getInstance().getController().toolsChanged.emit()
 
@@ -164,14 +206,14 @@ class SmartSliceStage(CuraStage):
         This is at the time when all plugins are loaded, slots registered and basic signals connected.
         """
 
-        base_path = PluginRegistry.getInstance().getPluginPath("SmartSliceStage")
+        base_path = PluginRegistry.getInstance().getPluginPath("SmartSlicePlugin")
 
         # Slicing windows in lower right corner
-        component_path = os.path.join(base_path, "ui", "SmartSliceMain.qml")
+        component_path = os.path.join(base_path, "stage", "ui", "SmartSliceMain.qml")
         self.addDisplayComponent("main", component_path)
 
         # Top menu bar of stage
-        component_path = os.path.join(base_path, "ui", "SmartSliceMenu.qml")
+        component_path = os.path.join(base_path, "stage", "ui", "SmartSliceMenu.qml")
         self.addDisplayComponent("menu", component_path)
 
         # Setting state after all plugins are loaded

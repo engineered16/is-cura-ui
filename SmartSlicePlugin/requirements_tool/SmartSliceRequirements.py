@@ -23,10 +23,10 @@ from .SmartSliceValidationProperty import SmartSliceValidationProperty
 #
 class SmartSliceRequirements(Tool):
     #  Class Initialization
-    def __init__(self):
+    def __init__(self, extension):
         super().__init__()
 
-        self._connector = PluginRegistry.getInstance().getPluginObject("SmartSliceExtension").cloud
+        self._connector = extension.cloud
 
         self._controller.activeToolChanged.connect(self._onToolSelected)
 

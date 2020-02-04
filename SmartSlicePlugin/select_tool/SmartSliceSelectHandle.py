@@ -36,11 +36,11 @@ class SelectionMode:
 
 class SmartSliceSelectHandle(ToolHandle):
 #  CONSTRUCTORS
-    def __init__(self, parent = None, tri: SelectableFace = None):
+    def __init__(self, extension, parent = None, tri: SelectableFace = None):
         super().__init__(parent)
 
         self._name = "SmartSliceSelectHandle"
-        self._connector = PluginRegistry.getInstance().getPluginObject("SmartSliceExtension").cloud
+        self._connector = extension.cloud
 
         #  Default Line Properties
         self._edge_width = 0.8

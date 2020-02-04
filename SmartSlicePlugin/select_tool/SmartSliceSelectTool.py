@@ -40,9 +40,10 @@ i18n_catalog = i18nCatalog("smartslice")
 #
 #   The tool exposes a ToolHint to show the rotation angle of the current operation
 class SmartSliceSelectTool(Tool):
-    def __init__(self):
+    def __init__(self, extension):
         super().__init__()
-        self._handle = SmartSliceSelectHandle()
+        self.extension = extension
+        self._handle = SmartSliceSelectHandle(self.extension)
 
         #self._shortcut_key = Qt.Key_S
 
@@ -92,7 +93,8 @@ class SmartSliceSelectTool(Tool):
 
     def _onSelectedFaceChanged(self):
         curr_sf = Selection.getSelectedFace()
-        #cloud_connector = PluginRegistry.getInstance().getPluginObject("SmartSliceExtension").cloud
+        #cloud_connector = PluginRegistry.getInstance().getPluginObject("SmartSlicePlugin").cloud
+        cloud_connector = self.extension.cloud
 
         if curr_sf is not None:
             scene_node, face_id = curr_sf

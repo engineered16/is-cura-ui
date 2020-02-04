@@ -496,6 +496,8 @@ class SmartSliceCloudConnector(QObject):
         self.resetAnchor0FacesPoc()
         self.resetForce0FacesPoc()
         self.resetForce0VectorPoc()
+        
+        Application.getInstance().engineCreatedSignal.connect(self._onEngineCreated)
 
         self.ConfirmationConcluded.connect(self.onConfirmationConcluded)
 
@@ -585,8 +587,8 @@ class SmartSliceCloudConnector(QObject):
             self._proxy.secondaryButtonFillWidth = False
 
         # Setting icon path
-        stage_path = PluginRegistry.getInstance().getPluginPath("SmartSliceStage")
-        stage_images_path = os.path.join(stage_path, "images")
+        stage_path = PluginRegistry.getInstance().getPluginPath("SmartSlicePlugin")
+        stage_images_path = os.path.join(stage_path, "stage", "images")
         icon_done_green = os.path.join(stage_images_path, "done_green.png")
         icon_error_red = os.path.join(stage_images_path, "error_red.png")
         icon_warning_yellow = os.path.join(stage_images_path, "warning_yellow.png")
