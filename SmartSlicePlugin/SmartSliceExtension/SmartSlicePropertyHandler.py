@@ -19,6 +19,7 @@ from UM.Application import Application
 from UM.Preferences import Preferences
 from UM.Settings.ContainerStack import ContainerStack
 from UM.Scene.Selection import Selection
+from UM.Signal import Signal
 from UM.Logger import Logger
 from cura.CuraApplication import CuraApplication
 from cura.Settings.SettingOverrideDecorator import SettingOverrideDecorator
@@ -187,7 +188,6 @@ class SmartSlicePropertyHandler(QObject):
 
           #  Face Selection
             elif prop is SmartSliceValidationProperty.SelectedFace:
-                self.updateMeshes()
                 self.selectedFacesChanged.emit()
 
           #  Material
@@ -203,7 +203,6 @@ class SmartSlicePropertyHandler(QObject):
                 self._newRotation = self.meshRotation
                 self._propertiesChanged.pop()
 
-        self.clearChangedProperties()
         
         #print ("\nTest Property Cache:  " + str(self._activeExtruder.getProperty("infill_sparse_density", "value")) + "\n")
 
@@ -212,9 +211,7 @@ class SmartSlicePropertyHandler(QObject):
         self.connector._proxy.confirmationWindowEnabled = False
         self.connector._proxy.confirmationWindowEnabledChanged.emit()
 
-    def cancelChanges(self):
-        self.restoreCache()
-
+    cacheRestored = pyqtSignal()
 
     #
     #   CONFIRM/CANCEL PROPERTY CHANGES
@@ -234,41 +231,12 @@ class SmartSlicePropertyHandler(QObject):
 
     def _onConfirmChanges(self):
         self.cacheChanges()
+        self.prepareCache()
         self.connector.ConfirmationConcluded.emit()
 
     def _onCancelChanges(self):
-        self._cancelChanges = True
-        #Logger.log(str(prop))
-        for prop in self._propertiesChanged:
-            #print (str(prop))
-          #  REQUIREMENTS / USE-CASE
-            if prop is SmartSliceValidationProperty.FactorOfSafety:
-                self.connector._proxy.setFactorOfSafety()
-            elif prop is SmartSliceValidationProperty.MaxDisplacement:
-                self.connector._proxy.setMaximalDisplacement()
-            elif prop is SmartSliceValidationProperty.LoadMagnitude:
-                self.connector._proxy.setLoadMagnitude()
-            elif prop is SmartSliceValidationProperty.LoadDirection:
-                self.connector._proxy.setLoadDirection()
-
-            elif prop is SmartSliceValidationProperty.MeshScale:
-                self.setMeshScale()
-            elif prop is SmartSliceValidationProperty.MeshRotation:
-                self.setMeshRotation()
-
-          #  FACE SELECTION
-            #  Selected Face(s)
-                # Do Nothing
-        
-            #  Material Properties
-            elif prop is SmartSliceValidationProperty.Material:
-                self.setMaterial()
-
-        self.cancelChanges()
-        self._cancelChanges = False
-
-        self.clearChangedProperties()
-
+        self.restoreCache()
+        self.prepareCache()
         self.connector.ConfirmationConcluded.emit()
 
 

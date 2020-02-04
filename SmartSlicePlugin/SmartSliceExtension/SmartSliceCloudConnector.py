@@ -793,7 +793,14 @@ class SmartSliceCloudConnector(QObject):
         else:
             Application.getInstance().getController().setActiveStage("PreviewStage")
 
-
+    '''
+      onConfirmationConfirmClicked()
+        * Confirm change to Parameter/Setting
+        * Store change to SmartSlice Cache
+        * Close Confirmation Dialog
+        * If change was made to SoF/Max Displace, change to optimize state
+            - Otherwise, change to validate state
+    '''
     def onConfirmationConfirmClicked(self):
         #  Cancel Smart Slice Job
         if self._jobs[self._current_job] is not None:
@@ -830,8 +837,11 @@ class SmartSliceCloudConnector(QObject):
         * Signal to UI to refresh with previous Validation Property Value
     '''
     def onConfirmationCancelClicked(self):
+        #  If asking the user to proceed and remove current modifier meshes
         if self._proxy._confirming_modmesh:
-            '''Do Nothing'''
+            '''
+                Remove Modifier Mesh Here
+            '''
         else:
             self.propertyHandler._onCancelChanges()
         
