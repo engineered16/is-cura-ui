@@ -976,6 +976,7 @@ class SmartSliceCloudConnector(QObject):
         print_config.layer_width = self.propertyHandler.getExtruderProperty("line_width")
         print_config.layer_height = self.propertyHandler.getGlobalProperty("layer_height")
         print_config.walls = self.propertyHandler.getExtruderProperty("wall_line_count")
+        print("\nWALL LINE COUNT CHECK:  " + str(print_config.walls) + "\n")
 
         # skin angles - CuraEngine vs. pywim
         # > https://github.com/Ultimaker/CuraEngine/blob/master/src/FffGcodeWriter.cpp#L402
