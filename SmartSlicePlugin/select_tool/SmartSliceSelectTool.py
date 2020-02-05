@@ -61,6 +61,8 @@ class SmartSliceSelectTool(Tool):
         self._scene_node_name = None
         self._selectable_mesh = None
 
+        self._cachedFace = None
+
         self._controller.activeToolChanged.connect(self._onActiveStateChanged)
 
 
@@ -93,10 +95,12 @@ class SmartSliceSelectTool(Tool):
 
     def _onSelectedFaceChanged(self):
         curr_sf = Selection.getSelectedFace()
-        #cloud_connector = PluginRegistry.getInstance().getPluginObject("SmartSlicePlugin").cloud
-        cloud_connector = self.extension.cloud
 
-        if curr_sf is not None:
+        if curr_sf is None or (curr_sf is self._cachedFace):
+            return
+
+        else:
+            self._cachedFace = curr_sf
             scene_node, face_id = curr_sf
 
             selmesh = SelectableMesh( scene_node.getMeshData() )

@@ -809,9 +809,12 @@ class SmartSliceCloudConnector(QObject):
             self._jobs[self._current_job].cancled = True
             self._jobs[self._current_job] = None
 
+        #  When asking "Is okay to remove Modifier Mesh?"
         if self._proxy._confirming_modmesh:
             self.doOptimization.emit()
             self._proxy._confirming_modmesh = False
+        
+        #  For handling requirements changes during optimization
         elif self.status is SmartSliceCloudStatus.BusyOptimizing:
             if SmartSliceValidationProperty.FactorOfSafety in self.propertyHandler._propertiesChanged or (SmartSliceValidationProperty.MaxDisplacement in self.propertyHandler._propertiesChanged):
                 self.propertyHandler._onConfirmRequirements()    #print ("FoS or Max Displace was in _propertiesChanged")
