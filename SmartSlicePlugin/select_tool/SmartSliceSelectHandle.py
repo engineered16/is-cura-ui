@@ -74,7 +74,7 @@ class SmartSliceSelectHandle(ToolHandle):
     def _onSmartSlicePrepared(self):
         #  Connect to UI 'Cancel Changes' Signal
         self._connector.propertyHandler.selectedFacesChanged.connect(self.drawSelection)
-        self._connector.propertyHandler._selection_mode = SelectionMode.AnchorMode
+        self._connector.propertyHandler._selection_mode = SelectionMode.LoadMode
 
 
 #  ACCESSORS

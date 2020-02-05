@@ -416,7 +416,7 @@ class SmartSliceCloudJob(Job):
                 else:
                     if self.connector._proxy.resultSafetyFactor < self.connector._proxy.reqsSafetyFactor or (self.connector._proxy.resultMaximalDisplacement > self.connector._proxy.reqsMaxDeflect):
                         self.connector.status = SmartSliceCloudStatus.Underdimensioned
-                    elif self.connector._proxy.resultSafetyFactor > self.connector._proxy.reqsSafetyFactor or (self.connector._proxy.resultMaximalDisplacement < self.connector._proxy.reqsMaxDeflect):
+                    elif self.connector._proxy.resultSafetyFactor > self.connector._proxy.reqsSafetyFactor and (self.connector._proxy.resultMaximalDisplacement < self.connector._proxy.reqsMaxDeflect):
                         self.connector.status = SmartSliceCloudStatus.Overdimensioned
                     else:
                         self.connector.status = SmartSliceCloudStatus.Optimized
@@ -813,14 +813,14 @@ class SmartSliceCloudConnector(QObject):
             self.doOptimization.emit()
             self._proxy._confirming_modmesh = False
         elif self.status is SmartSliceCloudStatus.BusyOptimizing:
-            self.propertyHandler._onConfirmRequirements()
             if SmartSliceValidationProperty.FactorOfSafety in self.propertyHandler._propertiesChanged or (SmartSliceValidationProperty.MaxDisplacement in self.propertyHandler._propertiesChanged):
-                print ("FoS or Max Displace was in _propertiesChanged")
-                
-                if self._proxy.resultSafetyFactor < self._proxy.reqsSafetyFactor and (self._proxy.resultMaximalDisplacement > self._proxy.reqsMaxDeflect):
+                self.propertyHandler._onConfirmRequirements()    #print ("FoS or Max Displace was in _propertiesChanged")
+                if self._proxy.resultSafetyFactor < self._proxy.reqsSafetyFactor or (self._proxy.resultMaximalDisplacement > self._proxy.reqsMaxDeflect):
                     self.status = SmartSliceCloudStatus.Underdimensioned
-                else:
+                elif self._proxy.resultSafetyFactor > self._proxy.reqsSafetyFactor and (self._proxy.resultMaximalDisplacement < self._proxy.reqsMaxDeflect):
                     self.status = SmartSliceCloudStatus.Overdimensioned
+                else:
+                    self.status = SmartSliceCloudStatus.Optimized
                 self.updateSliceWidget()
             else:
                 self._prepareValidation()   

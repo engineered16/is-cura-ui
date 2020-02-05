@@ -403,7 +403,7 @@ class SmartSliceCloudProxy(QObject):
             self.reqsSafetyFactor = value # SET CACHE
             self.targetFactorOfSafetyChanged.emit()
             #  Check if status has changed form the change
-            if value < self.resultSafetyFactor:
+            if value < self.resultSafetyFactor and (self.reqsMaxDeflect > self.resultMaximalDisplacement):
                 self.connector.status = SmartSliceCloudStatus.Overdimensioned
             else:
                 self.connector.status = SmartSliceCloudStatus.Underdimensioned
@@ -448,7 +448,7 @@ class SmartSliceCloudProxy(QObject):
             self.reqsMaxDeflect = value # SET CACHE
             self.targetMaximalDisplacementChanged.emit()
             #  Check if status has changed form the change
-            if value < self.resultMaximalDisplacement:
+            if value < self.resultMaximalDisplacement or (self.reqsSafetyFactor > self.resultSafetyFactor):
                 self.connector.status = SmartSliceCloudStatus.Underdimensioned
             else:
                 self.connector.status = SmartSliceCloudStatus.Overdimensioned

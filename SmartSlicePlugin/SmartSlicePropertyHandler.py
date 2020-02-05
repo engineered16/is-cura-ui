@@ -222,9 +222,11 @@ class SmartSlicePropertyHandler(QObject):
         i = 0
         for prop in self._propertiesChanged:
             if prop is SmartSliceValidationProperty.MaxDisplacement:
+                self.connector._proxy.reqsMaxDeflect = self._changedValues.pop(i)
                 self.connector._proxy.setMaximalDisplacement()
                 self._propertiesChanged.pop(i)
             elif prop is SmartSliceValidationProperty.FactorOfSafety:
+                self.connector._proxy.reqsSafetyFactor = self._changedValues.pop(i)
                 self.connector._proxy.setFactorOfSafety()
                 self._propertiesChanged.pop(i)
             i += 1
