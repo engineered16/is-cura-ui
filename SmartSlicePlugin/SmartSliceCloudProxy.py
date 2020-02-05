@@ -486,7 +486,7 @@ class SmartSliceCloudProxy(QObject):
 
     @loadMagnitude.setter
     def loadMagnitude(self, value):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing or (self.connector.status is SmartSliceCloudStatus.Optimized)):
             self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.LoadMagnitude)
             self.connector.propertyHandler._changedValues.append(value)
             self.connector._confirmValidation()
@@ -507,7 +507,7 @@ class SmartSliceCloudProxy(QObject):
 
     @loadDirection.setter
     def loadDirection(self, value):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
             self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.LoadDirection)
             self.connector.propertyHandler._changedValues.append(value)
             self.connector._confirmValidation()

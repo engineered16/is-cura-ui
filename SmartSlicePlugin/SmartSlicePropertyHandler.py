@@ -297,7 +297,7 @@ class SmartSlicePropertyHandler(QObject):
         self._sceneNode.transformationChanged.emit(self._sceneNode)
 
     def onMeshScaleChanged(self):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
             self._propertiesChanged.append(SmartSliceValidationProperty.MeshScale)
             self._changedValues.append(0)
             self._newScale = self._sceneNode.getScale()
@@ -315,7 +315,7 @@ class SmartSlicePropertyHandler(QObject):
         self._sceneNode.transformationChanged.emit(self._sceneNode)
 
     def onMeshRotationChanged(self):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
             self._propertiesChanged.append(SmartSliceValidationProperty.MeshRotation)
             self._changedValues.append(0)
             self._newRotation = self._sceneNode.getOrientation()
@@ -337,7 +337,7 @@ class SmartSlicePropertyHandler(QObject):
        
 
     def _onMaterialChanged(self):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
             #print("\n\nMATERIAL CHANGE CONFIRMED HERE\n\n")
             #if len(self._propertiesChanged) > 1:
             if self._material is not self._activeExtruder.material:
@@ -357,7 +357,7 @@ class SmartSlicePropertyHandler(QObject):
     selectedFacesChanged = pyqtSignal() 
 
     def confirmFaceDraw(self, force=None):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
             self._propertiesChanged.append(SmartSliceValidationProperty.SelectedFace)
             self.connector._confirmValidation()
         else:
@@ -391,7 +391,7 @@ class SmartSlicePropertyHandler(QObject):
             return
 
         if not self._cancelChanges:        
-            if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
+            if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
                 self.connector._confirmValidation()
             else:
                 self.connector._prepareValidation()
@@ -407,7 +407,7 @@ class SmartSlicePropertyHandler(QObject):
             return
 
         if not self._cancelChanges:        
-            if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing):
+            if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
                 #  Confirm Settings Changes
                 self.connector._confirmValidation()
             else:
