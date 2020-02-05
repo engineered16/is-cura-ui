@@ -138,7 +138,10 @@ Item {
             text: "Flip Direction"
 
             checked: SmartSlice.Selection.loadMagnitudeInverted
-            onCheckedChanged: SmartSlice.Selection.loadMagnitudeInverted = checked
+            onCheckedChanged: {
+				SmartSlice.Selection.loadMagnitudeInverted = checked;
+				UM.ActiveTool.triggerAction("_onSelectedFaceChanged");
+			}
         }
 
         Label {
