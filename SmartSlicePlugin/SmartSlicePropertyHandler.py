@@ -377,6 +377,7 @@ class SmartSlicePropertyHandler(QObject):
 
 
 
+
     #
     #   SIGNAL LISTENERS
     #
