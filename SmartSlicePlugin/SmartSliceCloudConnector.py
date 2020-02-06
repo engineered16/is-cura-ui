@@ -286,7 +286,7 @@ class SmartSliceCloudJob(Job):
             notification_message.setTitle("SmartSlice plugin")
             notification_message.setText(i18n_catalog.i18nc("@info:status", "Job has been canceled!".format(task.error)))
             notification_message.show()
-            self.connector.confirming = False
+            self.connector.propertyHandler._cancelChanges = False
 
     def run(self) -> None:
         if not self.job_type:
@@ -768,6 +768,7 @@ class SmartSliceCloudConnector(QObject):
             self._proxy.confirmationWindowEnabledChanged.emit()
 
     def _doVerfication(self):
+        self.propertyHandler._cancelChanges = False
         if self._proxy._validate_confirmed:
             self._current_job += 1
             self._jobs[self._current_job] = SmartSliceCloudVerificationJob(self)
