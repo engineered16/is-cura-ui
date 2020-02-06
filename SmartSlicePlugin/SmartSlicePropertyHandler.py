@@ -97,24 +97,29 @@ class SmartSlicePropertyHandler(QObject):
         for i in self._changedValues:
             self._changedValues.pop()
 
-
     def cacheGlobal(self):
-
 
         self._global_cache = {}
 
         for key in self.global_keys:
-            self._global_cache[key] = self._globalStack.getProperty(key, "value")
-            #print ("\nSetting State:  " + str(self._globalStack.getProperty(key, "state")) + "\n")
+            if key not in self._global_cache:
+                self._global_cache[key] = self._globalStack.getProperty(key, "value")
+            if self._global_cache[key] != self._globalStack.getProperty(key, "value"):
+                self._global_cache[key] = self._globalStack.getProperty(key, "value")
+                self.connector._proxy._confirmationWindowEnabled = False
+                self.connector._proxy._confirmationWindowEnabledChanged.emit()
+                #print ("\nSetting State:  " + str(self._globalStack.getProperty(key, "state")) + "\n")
             
-
 
     def cacheExtruder(self):
 
         self._extruder_cache = {}
 
         for key in self.extruder_keys:
-            self._extruder_cache[key] = self._activeExtruder.getProperty(key, "value")
+            if key not in self._extruder_cache:
+                self._extruder_cache[key] = self._activeExtruder.getProperty(key, "value")
+            if self._extruder_cache[key] != self._activeExtruder.getProperty(key, "value"):
+                self._extruder_cache[key] = self._activeExtruder.getProperty(key, "value")
 
     def cacheSmartSlice(self):
         i = 0
@@ -212,7 +217,7 @@ class SmartSlicePropertyHandler(QObject):
         self.connector._proxy.confirmationWindowEnabled = False
         self.connector._proxy.confirmationWindowEnabledChanged.emit()
 
-    cacheRestored = pyqtSignal()
+    cacheRestored = Signal()
 
     #
     #   CONFIRM/CANCEL PROPERTY CHANGES
@@ -301,9 +306,9 @@ class SmartSlicePropertyHandler(QObject):
             self._propertiesChanged.append(SmartSliceValidationProperty.MeshScale)
             self._changedValues.append(0)
             self._newScale = self._sceneNode.getScale()
-            self.connector._confirmValidation()
             #print ("Mesh Scale Change Confirmed")
             self.connector._proxy.shouldRaiseWarning = True
+            self.connector.confirmValidation.emit()
         else:
             #print ("\nMesh Scale Set\n")
             self.meshScale = self._sceneNode.getScale()
@@ -319,8 +324,8 @@ class SmartSlicePropertyHandler(QObject):
             self._propertiesChanged.append(SmartSliceValidationProperty.MeshRotation)
             self._changedValues.append(0)
             self._newRotation = self._sceneNode.getOrientation()
-            self.connector._confirmValidation()
             self.connector._proxy.shouldRaiseWarning = True
+            self.connector.confirmValidation.emit()
         else:
             self.meshRotation = self._sceneNode.getOrientation()
             self.connector._prepareValidation()
@@ -330,7 +335,7 @@ class SmartSlicePropertyHandler(QObject):
     #
     #   MATERIAL CHANGES
     #
-    activeMaterialChanged = pyqtSignal()
+    activeMaterialChanged = Signal()
 
     def setMaterial(self):
        self._activeExtruder.material = self._material
@@ -343,7 +348,7 @@ class SmartSlicePropertyHandler(QObject):
             if self._material is not self._activeExtruder.material:
                 self._propertiesChanged.append(SmartSliceValidationProperty.Material)
                 self._changedValues.append(self._activeExtruder.material)
-                self.connector._confirmValidation()
+                self.connector.confirmValidation.emit()
         else:
             #print("\n\nMATERIAL CHANGED HERE\n\n")
             #  TODO:  Next line is commented because there are two signals that are thrown
@@ -354,12 +359,12 @@ class SmartSlicePropertyHandler(QObject):
     #   FACE SELECTION
     #
 
-    selectedFacesChanged = pyqtSignal() 
+    selectedFacesChanged = Signal() 
 
     def confirmFaceDraw(self, force=None):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
             self._propertiesChanged.append(SmartSliceValidationProperty.SelectedFace)
-            self.connector._confirmValidation()
+            self.connector.confirmValidation.emit()
         else:
             self.connector._prepareValidation()
             self.updateMeshes()
@@ -374,8 +379,6 @@ class SmartSlicePropertyHandler(QObject):
         else:
             self._loadedMesh = self._changedMesh
             self._loadedFaces = self._changedFaces
-
-
 
 
     #
@@ -393,10 +396,10 @@ class SmartSlicePropertyHandler(QObject):
 
         if not self._cancelChanges:        
             if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
-                self.connector._confirmValidation()
+                self.connector.confirmValidation.emit()
             else:
                 self.connector._prepareValidation()
-                self.cacheGlobal()
+                self._global_cache[key] = self._globalStack.getProperty(key, "value")
 
 
     # On EXTRUDER Property Changed
@@ -410,8 +413,8 @@ class SmartSlicePropertyHandler(QObject):
         if not self._cancelChanges:        
             if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
                 #  Confirm Settings Changes
-                self.connector._confirmValidation()
+                self.connector.confirmValidation.emit()
             else:
                 self.connector._prepareValidation()
-                self.cacheExtruder()
+                self._extruder_cache[key] = self._activeExtruder.getProperty(key, "value")
         

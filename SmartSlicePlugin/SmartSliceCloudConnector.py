@@ -286,6 +286,7 @@ class SmartSliceCloudJob(Job):
             notification_message.setTitle("SmartSlice plugin")
             notification_message.setText(i18n_catalog.i18nc("@info:status", "Job has been canceled!".format(task.error)))
             notification_message.show()
+            self.connector.confirming = False
 
     def run(self) -> None:
         if not self.job_type:
@@ -520,6 +521,10 @@ class SmartSliceCloudConnector(QObject):
         
         Application.getInstance().engineCreatedSignal.connect(self._onEngineCreated)
 
+        self.confirming = False
+        self.confirmValidation.connect(self._confirmValidation)
+        self.confirmOptimization.connect(self._confirmOptimization)
+
         self.ConfirmationConcluded.connect(self.onConfirmationConcluded)
 
     SmartSlicePrepared = pyqtSignal()
@@ -741,6 +746,7 @@ class SmartSliceCloudConnector(QObject):
     def onConfirmationConcluded(self):
         self.propertyHandler.prepareCache()
         self.updateSliceWidget()
+        self.confirming = False
 
     confirmValidation = pyqtSignal()
     doVerification = pyqtSignal()
@@ -751,13 +757,15 @@ class SmartSliceCloudConnector(QObject):
         Application.getInstance().activityChanged.emit()
 
     def _confirmValidation(self):
-        if self.status is SmartSliceCloudStatus.BusyValidating:
-            self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose the current\n validation results?"
-        elif self.status is SmartSliceCloudStatus.BusyOptimizing:
-            self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose your \noptimization results?"
-        
-        self._proxy.confirmationWindowEnabled = True
-        self._proxy.confirmationWindowEnabledChanged.emit()
+        if not self.confirming:
+            self.confirming = True
+            if self.status is SmartSliceCloudStatus.BusyValidating:
+                self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose the current\n validation results?"
+            elif self.status is SmartSliceCloudStatus.BusyOptimizing:
+                self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose your \noptimization results?"
+            
+            self._proxy.confirmationWindowEnabled = True
+            self._proxy.confirmationWindowEnabledChanged.emit()
 
     def _doVerfication(self):
         if self._proxy._validate_confirmed:
@@ -771,11 +779,13 @@ class SmartSliceCloudConnector(QObject):
     confirmModMeshRemove = pyqtSignal()
 
     def _confirmOptimization(self):
-        #  If a modifier mesh has already been applied,
-        #   Display confirmation prompt before optimizing
-        self._proxy.confirmationWindowEnabled = True
-        self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose your \noptimization results?"
-        self._proxy.confirmationWindowEnabledChanged.emit()
+        if not self.confirming:
+            self.confirming = True
+            #  If a modifier mesh has already been applied,
+            #   Display confirmation prompt before optimizing
+            self._proxy.confirmationWindowEnabled = True
+            self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose your \noptimization results?"
+            self._proxy.confirmationWindowEnabledChanged.emit()
 
     def _confirmModMeshRemove(self):
         #  If a modifier mesh has already been applied,
@@ -1228,8 +1238,7 @@ class SmartSliceCloudConnector(QObject):
     #   \param value A piece of g-code to replace tokens in.
     #   \param default_extruder_nr Stack nr to use when no stack nr is specified, defaults to the global stack
     def _expandGcodeTokens(self, value, default_extruder_nr) -> str:
-        if not self._all_extruders_settings:
-            self._cacheAllExtruderSettings()
+        self._cacheAllExtruderSettings()
 
         try:
             # any setting can be used as a token
@@ -1266,8 +1275,7 @@ class SmartSliceCloudConnector(QObject):
         if not stack:
             return
 
-        if not self._all_extruders_settings:
-            self._cacheAllExtruderSettings()
+        self._cacheAllExtruderSettings()
 
         if self._all_extruders_settings is None:
             return
@@ -1460,8 +1468,7 @@ class SmartSliceCloudConnector(QObject):
     def _buildExtruderMessage(self, stack) -> dict:
         extruder_message = {}
         extruder_message["id"] = int(stack.getMetaDataEntry("position"))
-        if not self._all_extruders_settings:
-            self._cacheAllExtruderSettings()
+        self._cacheAllExtruderSettings()
 
         if self._all_extruders_settings is None:
             return
