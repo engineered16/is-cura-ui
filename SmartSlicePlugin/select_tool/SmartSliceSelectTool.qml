@@ -136,10 +136,12 @@ Item {
             anchors.leftMargin: UM.Theme.getSize("default_margin").width
 
             text: "Flip Direction"
-
-            checked: SmartSlice.Cloud.loadDirection
-            onCheckedChanged: SmartSlice.Cloud.loadDirection = checked
             
+            checked: SmartSlice.Cloud.loadDirection
+            onCheckedChanged: {
+				SmartSlice.Cloud.loadDirection = checked;
+				UM.ActiveTool.triggerAction("_onSelectedFaceChanged");
+			}
         }
 
         Label {

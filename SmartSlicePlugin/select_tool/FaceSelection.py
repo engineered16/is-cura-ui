@@ -203,6 +203,44 @@ class SelectableFace:
         self._normal = Vector(cross_x/mag, cross_y/mag, cross_z/mag)
         return self._normal
      
+    def isPointContained(self, point):
+        """
+        Check whether given point lies inside this selectable face.
+        Inputs:
+            point (SelectablePoint) is single point.
+        Output:
+            Boolean (bool) True means point lies within face. False means point is outside of face.
+        Notes:
+            The tolerance expansion near end makes this method not 100% accurate.
+        """
+        for i, p1 in enumerate(self._points[:-2]):
+            p2 = self._points[i + 1]
+            p3 = self._points[i + 2]
+            
+            area_2 = self.findArea(p1, p2, p3)
+            alpha = self.findArea(point, p2, p3) / area_2
+            beta = self.findArea(point, p3, p1) / area_2
+            gama = self.findArea(point, p1, p2) / area_2
+            
+            total = gama + alpha + beta
+            #This algorithm does not count line edge intersections.  Expand tolerance to include.
+            return total > 0.99 and total < 1.01
+
+    def findArea(self, p, q, r):
+        """
+        Finds area times two.
+        Input:
+            p1, p2, p3  (SelectablePoint) each is a 3D point.
+        Output:
+            (float) the area of triangle multiplied by 2.
+        Notes:
+            To get the actual area, the user must divide answer by 2!
+        """
+        pq = (q.x - p.x, q.y - p.y, q.z - p.z)
+        pr = (r.x - p.x, r.y - p.y, r.z - p.z)
+        vect = numpy.cross(pq, pr)
+        area_2 = numpy.sqrt(vect[0]**2 + vect[1]**2 + vect[2]**2)
+        return area_2
 
 '''
   SelectableEdge(p1, p2)
