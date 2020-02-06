@@ -728,8 +728,6 @@ class SmartSliceCloudConnector(QObject):
 
         mesh_node_stack = mesh_node.callDecoration("getStack")
 
-        decs = mesh_node.getDecorators()
-
         active_extruder_position = mesh_node.callDecoration("getActiveExtruderPosition")
         if active_extruder_position is None:
             active_extruder_position = 0
