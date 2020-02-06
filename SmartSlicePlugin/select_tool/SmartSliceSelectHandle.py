@@ -122,11 +122,13 @@ class SmartSliceSelectHandle(ToolHandle):
             self._load_magnitude = self._connector._proxy._loadMagnitude
             _selected_mesh = self._connector.propertyHandler._loadedMesh
             #  TODO: Generalize this for more than one Active Load
-            self.setFace(self._connector.propertyHandler._loadedFaces[0])
+            if self._connector.propertyHandler._loadedFaces[0] is not None:
+                self.setFace(self._connector.propertyHandler._loadedFaces[0])
         else:
             _selected_mesh = self._connector.propertyHandler._anchoredMesh
             #  TODO: Generalize this for more than one Active Anchor
-            self.setFace(self._connector.propertyHandler._anchoredFaces[0])
+            if self._connector.propertyHandler._anchoredFaces[0] is not None:
+                self.setFace(self._connector.propertyHandler._anchoredFaces[0])
         self._face = set()
         
         #if draw_arrow:
