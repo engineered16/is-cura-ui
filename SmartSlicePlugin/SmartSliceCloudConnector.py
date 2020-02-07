@@ -267,6 +267,7 @@ class SmartSliceCloudJob(Job):
 
 
                 Logger.log("e", "An error occured while sending and receiving cloud job: {}".format(task.error))
+                self.connector.propertyHandler._cancelChanges = False
                 return None
             elif task.status == pywim.http.thor.TaskStatus.finished:
                 # Get the task again, but this time with the results included
@@ -280,6 +281,7 @@ class SmartSliceCloudJob(Job):
                 self.connector.status = SmartSliceCloudStatus.ReadyToVerify
 
                 Logger.log("e", "An unexpected status occured while sending and receiving cloud job: {}".format(task.status))
+                self.connector.propertyHandler._cancelChanges = False
                 return None
         else:
             notification_message = Message()
@@ -295,6 +297,7 @@ class SmartSliceCloudJob(Job):
             error_message.setText(i18n_catalog.i18nc("@info:status", "Job type not set for processing:\nDon't know what to do!"))
             error_message.show()
             self.connector.status = SmartSliceCloudStatus.ReadyToVerify
+            self.connector.propertyHandler._cancelChanges = False
 
         # TODO: Add instructions how to send a verification job here
         previous_connector_status = self.connector.status
@@ -757,8 +760,7 @@ class SmartSliceCloudConnector(QObject):
         Application.getInstance().activityChanged.emit()
 
     def _confirmValidation(self):
-        if not self.confirming:
-            self.confirming = True
+        if self.propertyHandler._cancelChanges is False:
             if self.status is SmartSliceCloudStatus.BusyValidating:
                 self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose the current\n validation results?"
             elif self.status is SmartSliceCloudStatus.BusyOptimizing:
