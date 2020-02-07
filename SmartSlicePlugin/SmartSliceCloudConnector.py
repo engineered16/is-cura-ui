@@ -144,7 +144,7 @@ class SmartSliceCloudJob(Job):
         self.job_type = None
         self._id = 0
 
-        self.cancled = False
+        self.canceled = False
 
         self._job_status = None
         self._wait_time = 1.0
@@ -251,13 +251,13 @@ class SmartSliceCloudJob(Job):
         # a while (minutes).
         while task.status not in (pywim.http.thor.TaskStatus.failed,
                                   pywim.http.thor.TaskStatus.finished
-                                  ) and not self.cancled:
+                                  ) and not self.canceled:
             self.job_status = task.status
 
             time.sleep(self._wait_time)
             task = self._client.status.get(id=task.id)
 
-        if not self.cancled:
+        if not self.canceled:
             if task.status == pywim.http.thor.TaskStatus.failed:
                 error_message = Message()
                 error_message.setTitle("SmartSlice plugin")
@@ -736,7 +736,7 @@ class SmartSliceCloudConnector(QObject):
     def _onJobFinished(self, job):
         if self._jobs[self._current_job] is None:
             print("\nJOB WAS CANCELED!!!!\n")
-        elif not self._jobs[self._current_job].cancled:
+        elif not self._jobs[self._current_job].canceled:
             self.propertyHandler._propertiesChanged = []
             self._jobs[self._current_job] = None
         
@@ -842,7 +842,7 @@ class SmartSliceCloudConnector(QObject):
                 #  CANCEL SMART SLICE JOB HERE
                 #    Any connection to AWS server should be severed here
                 #
-                self._jobs[self._current_job].cancled = True
+                self._jobs[self._current_job].canceled = True
                 self._jobs[self._current_job] = None
                 if self._proxy.reqsSafetyFactor < self._proxy.resultSafetyFactor and (self._proxy.reqsMaxDeflect > self._proxy.resultMaximalDisplacement):
                     self.status = SmartSliceCloudStatus.Overdimensioned
@@ -854,7 +854,7 @@ class SmartSliceCloudConnector(QObject):
                 #  CANCEL SMART SLICE JOB HERE
                 #    Any connection to AWS server should be severed here
                 #
-                self._jobs[self._current_job].cancled = True
+                self._jobs[self._current_job].canceled = True
                 self._jobs[self._current_job] = None
                 self.status = SmartSliceCloudStatus.ReadyToVerify
                 Application.getInstance().activityChanged.emit()
@@ -872,7 +872,7 @@ class SmartSliceCloudConnector(QObject):
     def onConfirmationConfirmClicked(self):
         #  Cancel Smart Slice Job
         if self._jobs[self._current_job] is not None:
-            self._jobs[self._current_job].cancled = True
+            self._jobs[self._current_job].canceled = True
             self._jobs[self._current_job] = None
 
         #  When asking "Is okay to remove Modifier Mesh?"
