@@ -258,13 +258,15 @@ class SmartSliceCloudJob(Job):
             task = self._client.status.get(id=task.id)
 
         if not self.canceled:
+            if self.connector._proxy.confirmationWindowEnabled is False:
+                self.connector.propertyHandler._cancelChanges = False
+
             if task.status == pywim.http.thor.TaskStatus.failed:
                 error_message = Message()
                 error_message.setTitle("SmartSlice plugin")
                 error_message.setText(i18n_catalog.i18nc("@info:status", "Error while processing the job:\n{}".format(task.error)))
                 error_message.show()
                 self.connector.status = SmartSliceCloudStatus.ReadyToVerify
-
 
                 Logger.log("e", "An error occured while sending and receiving cloud job: {}".format(task.error))
                 self.connector.propertyHandler._cancelChanges = False
@@ -560,11 +562,11 @@ class SmartSliceCloudConnector(QObject):
                                  self.getProxy
                                  )
 
-        self.status = SmartSliceCloudStatus.NoModel
         self.active_machine = Application.getInstance().getMachineManager().activeMachine
         self.propertyHandler = SmartSlicePropertyHandler(self)
         self.SmartSlicePrepared.emit()
         self.propertyHandler.cacheChanges() # Setup Cache
+        self.status = SmartSliceCloudStatus.NoModel
         
         if self.app_preferences.getValue(self.debug_save_smartslice_package_preference):
             self.debug_save_smartslice_package_message = Message(title="[DEBUG] SmartSlicePlugin",
@@ -1045,7 +1047,7 @@ class SmartSliceCloudConnector(QObject):
         print_config.layer_width = self.propertyHandler.getExtruderProperty("line_width")
         print_config.layer_height = self.propertyHandler.getGlobalProperty("layer_height")
         print_config.walls = self.propertyHandler.getExtruderProperty("wall_line_count")
-        print("\nWALL LINE COUNT CHECK:  " + str(print_config.walls) + "\n")
+        #print("\nWALL LINE COUNT CHECK:  " + str(print_config.walls) + "\n")
 
         # skin angles - CuraEngine vs. pywim
         # > https://github.com/Ultimaker/CuraEngine/blob/master/src/FffGcodeWriter.cpp#L402
@@ -1219,6 +1221,7 @@ class SmartSliceCloudConnector(QObject):
     #   \return A dictionary of replacement tokens to the values they should be
     #   replaced with.
     def _buildReplacementTokens(self, stack):
+
         result = {}
         for key in stack.getAllKeys():
             value = stack.getProperty(key, "value")

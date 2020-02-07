@@ -8,6 +8,7 @@
 #
 
 import copy
+import time, threading
 from copy import copy
 
 from asyncio import Lock
@@ -255,9 +256,19 @@ class SmartSlicePropertyHandler(QObject):
     def _onCancelChanges(self):
         print ("\nCancelling Change")
         self._cancelChanges = True
+        x = threading.Thread(target=self.resetCancelCheck)
+        x.start()
         self.restoreCache()
         self.connector.ConfirmationConcluded.emit()
         print ("Change Cancelled\n")
+
+
+    def resetCancelCheck(self):
+        #  NOTE: Increase delay if a setting change 
+        #         erroneously raises a second confirmation prompt 
+        time.sleep(0.35)
+        self._cancelChanges = False
+
 
 
     def getGlobalProperty(self, key):
