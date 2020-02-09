@@ -116,7 +116,7 @@ class SmartSliceSelectHandle(ToolHandle):
 
         #Logger.log("d", "Root Face: {}".format(self._tri))
 
-        print("DRAWING!!!")
+        Logger.log("d", "Drawing Face Selection")
 
         if self._connector.propertyHandler._selection_mode == SelectionMode.LoadMode:
             self._load_magnitude = self._connector._proxy._loadMagnitude

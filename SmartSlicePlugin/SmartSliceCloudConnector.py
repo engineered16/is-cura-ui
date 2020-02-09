@@ -737,7 +737,7 @@ class SmartSliceCloudConnector(QObject):
 
     def _onJobFinished(self, job):
         if self._jobs[self._current_job] is None:
-            print("\nJOB WAS CANCELED!!!!\n")
+            Logger.log("d", "Smart Slice Job was Cancelled")
         elif not self._jobs[self._current_job].canceled:
             self.propertyHandler._propertiesChanged = []
             self._jobs[self._current_job] = None
@@ -1047,7 +1047,6 @@ class SmartSliceCloudConnector(QObject):
         print_config.layer_width = self.propertyHandler.getExtruderProperty("line_width")
         print_config.layer_height = self.propertyHandler.getGlobalProperty("layer_height")
         print_config.walls = self.propertyHandler.getExtruderProperty("wall_line_count")
-        #print("\nWALL LINE COUNT CHECK:  " + str(print_config.walls) + "\n")
 
         # skin angles - CuraEngine vs. pywim
         # > https://github.com/Ultimaker/CuraEngine/blob/master/src/FffGcodeWriter.cpp#L402
