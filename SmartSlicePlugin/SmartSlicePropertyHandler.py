@@ -8,6 +8,7 @@
 #
 
 import copy
+import time, threading
 from copy import copy
 
 from asyncio import Lock
@@ -73,6 +74,7 @@ class SmartSlicePropertyHandler(QObject):
         self._material = self._activeMachineManager._global_container_stack.extruderList[0].material #  Cura Material Node
 
         self._cancelChanges = False
+        self._doneCancelling = False
         self._cancellingChanges = Lock()
         
         #  Connect Signals
@@ -94,6 +96,10 @@ class SmartSlicePropertyHandler(QObject):
                          "infill_pattern", "infill_sparse_density", "infill_angles", 
                          "alternate_extra_perimeter"}
 
+        
+        self._currCancel = None
+        self._lastCancel = None
+
     def clearChangedProperties(self):
         for p in self._propertiesChanged:
             self._propertiesChanged.pop()
@@ -111,7 +117,6 @@ class SmartSlicePropertyHandler(QObject):
                 self._global_cache[key] = self._globalStack.getProperty(key, "value")
                 self.connector._proxy._confirmationWindowEnabled = False
                 self.connector._proxy._confirmationWindowEnabledChanged.emit()
-                #print ("\nSetting State:  " + str(self._globalStack.getProperty(key, "state")) + "\n")
             
 
     def cacheExtruder(self):
@@ -176,21 +181,23 @@ class SmartSlicePropertyHandler(QObject):
 
         for property in self._global_cache:
             if self._global_cache[property] != self._globalStack.getProperty(property, "value"):
+                self._lastCancel = property
                 self._globalStack.setProperty(property, "value", self._global_cache[property])
                 #self._globalStack.setProperty(property, "state", InstanceState.Default)
 
         for property in self._extruder_cache:
             if self._extruder_cache[property] != self._activeExtruder.getProperty(property, "value"):
+                self._lastCancel = property
                 self._activeExtruder.setProperty(property, "value", self._extruder_cache[property])
                 #self._activeExtruder.setProperty(property, "state", InstanceState.Default)
 
         for prop in self._propertiesChanged:
+            self._lastCancel = prop
             if prop is SmartSliceValidationProperty.MaxDisplacement:
                 self.connector._proxy.setMaximalDisplacement()
             elif prop is SmartSliceValidationProperty.FactorOfSafety:
                 self.connector._proxy.setFactorOfSafety()
             elif prop is SmartSliceValidationProperty.LoadDirection:
-                #print ("Load Direction Stats:  " + str(self.connector._proxy._loadDirection) +", " + str(self.connector._proxy.reqsLoadDirection))
                 self.connector._proxy.setLoadDirection()
             elif prop is SmartSliceValidationProperty.LoadMagnitude:
                 self.connector._proxy.setLoadMagnitude()
@@ -212,9 +219,7 @@ class SmartSlicePropertyHandler(QObject):
                 self._newRotation = self.meshRotation
             
 
-
         
-        #print ("\nTest Property Cache:  " + str(self._activeExtruder.getProperty("infill_sparse_density", "value")) + "\n")
 
     def prepareCache(self):
         self.clearChangedProperties()
@@ -246,21 +251,21 @@ class SmartSlicePropertyHandler(QObject):
         self.connector.ConfirmationConcluded.emit()
 
     def _onCancelChanges(self):
+        Logger.log ("d", "Cancelling Change in Smart Slice Environment")
+        self._cancelChanges = True
+        x = threading.Thread(target=self.resetCancelCheck)
+        x.start()
+        self.restoreCache()
+        self.connector.ConfirmationConcluded.emit()
+        Logger.log ("d", "Cancelled Change in Smart Slice Environment")
 
-        self._cancellingChanges.acquire()
 
-        try:
-            print ("Cancelling Change!!!")
-            self._cancellingChanges._locked = True
-            self._cancelChanges = True
-            self.restoreCache()
-            print ("Change Cancelled!!!")
+    def resetCancelCheck(self):
+        #  NOTE: Increase delay if a setting change 
+        #         erroneously raises a second confirmation prompt 
+        time.sleep(0.35)
+        self._cancelChanges = False
 
-        finally:
-            self.connector.ConfirmationConcluded.emit()
-            if self._cancellingChanges.locked():
-                self._cancellingChanges.release()
-            print("Finished Restoring")
 
 
     def getGlobalProperty(self, key):
@@ -278,14 +283,13 @@ class SmartSlicePropertyHandler(QObject):
         _root = self._sceneRoot 
 
         for node in _root.getAllChildren():
-            print ("Node Found:  " + node.getName())
             if node.getName() == "3d":
                 if (self._sceneNode is None) or (self._sceneNode.getName() != _root.getAllChildren()[i+1].getName()):
                     if self._sceneNode is not None:
                         self._sceneNode.transformationChanged.disconnectAll()
 
                     self._sceneNode = _root.getAllChildren()[i+1]
-                    print ("\nFile Found:  " + self._sceneNode.getName() + "\n")
+                    Logger.log ("d", "\nFile Found:  " + self._sceneNode.getName() + "\n")
 
                     #  Set Initial Scale/Rotation
                     self.meshScale    = self._sceneNode.getScale()
@@ -312,7 +316,6 @@ class SmartSlicePropertyHandler(QObject):
             self.onMeshRotationChanged()
 
     def setMeshScale(self):
-        #print ("\nMesh Scale Set\n")
         self._sceneNode.setScale(self.meshScale)
         self._sceneNode.transformationChanged.emit(self._sceneNode)
 
@@ -321,16 +324,13 @@ class SmartSlicePropertyHandler(QObject):
             self._propertiesChanged.append(SmartSliceValidationProperty.MeshScale)
             self._changedValues.append(0)
             self._newScale = self._sceneNode.getScale()
-            #print ("Mesh Scale Change Confirmed")
             self.connector._proxy.shouldRaiseWarning = True
             self.connector.confirmValidation.emit()
         else:
-            #print ("\nMesh Scale Set\n")
             self.meshScale = self._sceneNode.getScale()
             self.connector._prepareValidation()
 
     def setMeshRotation(self):
-        #print ("\nMesh Rotation Set\n")
         self._sceneNode.setOrientation(self.meshRotation)
         self._sceneNode.transformationChanged.emit(self._sceneNode)
 
@@ -403,44 +403,31 @@ class SmartSlicePropertyHandler(QObject):
     # On GLOBAL Property Changed
     def _onGlobalPropertyChanged(self, key: str, property_name: str):
 
-        print ("Checking Property:  " + key)
-
-        if self._cancellingChanges.locked():
+        if key not in self.global_keys:
+            return
+        if self._globalStack.getProperty(key, property_name) == self._global_cache[key]:
             return
 
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
+            self.connector.confirmValidation.emit()
         else:
-            if key not in self.global_keys:
-                print (str(key) + "\n")
-                return
-            if self._globalStack.getProperty(key, property_name) == self._global_cache[key]:
-                return
-
-            if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
-                self.connector.confirmValidation.emit()
-            else:
-                self.connector._prepareValidation()
-                self._global_cache[key] = self._globalStack.getProperty(key, "value")
+            self.connector._prepareValidation()
+            self._global_cache[key] = self._globalStack.getProperty(key, "value")
 
 
     # On EXTRUDER Property Changed
     def _onExtruderPropertyChanged(self, key: str, property_name: str):
 
-        if self._cancellingChanges.locked():
-            print ("LOCKED OUT!!!")
+        if key not in self.extruder_keys:
             return
-        
-        else:
-            if key not in self.extruder_keys:
-                return
-            elif self._activeExtruder.getProperty(key, property_name) == self._extruder_cache[key]:
-                return
+        elif self._activeExtruder.getProperty(key, property_name) == self._extruder_cache[key]:
+            return
 
-            elif not self._cancelChanges:        
-                print ("Checking Property:  " + key)
-                if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
-                    #  Confirm Settings Changes
-                    self.connector.confirmValidation.emit()
-                else:
-                    self.connector._prepareValidation()
-                    self._extruder_cache[key] = self._activeExtruder.getProperty(key, "value")
-        
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
+            #  Confirm Settings Changes
+            if not self.connector._proxy.confirmationWindowEnabled:
+                self.connector.confirmValidation.emit()
+        else:
+            self.connector._prepareValidation()
+            self._extruder_cache[key] = self._activeExtruder.getProperty(key, "value")
+

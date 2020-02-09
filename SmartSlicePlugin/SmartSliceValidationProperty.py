@@ -81,7 +81,11 @@ class SmartSliceValidationProperty(Enum):
     SkinAngles      =  164
 
   # Material
-    Material        =  150
+    Material        =  170
+
+  # Global Props
+    GlobalProperty   = 1000
+    ExtruderProperty = 1001
     
 
 class SmartSliceLoadDirection(Enum):

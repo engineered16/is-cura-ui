@@ -258,6 +258,9 @@ class SmartSliceCloudJob(Job):
             task = self._client.status.get(id=task.id)
 
         if not self.canceled:
+            if self.connector._proxy.confirmationWindowEnabled is False:
+                self.connector.propertyHandler._cancelChanges = False
+
             if task.status == pywim.http.thor.TaskStatus.failed:
                 error_message = Message()
                 error_message.setTitle("SmartSlice plugin")
@@ -265,8 +268,8 @@ class SmartSliceCloudJob(Job):
                 error_message.show()
                 self.connector.status = SmartSliceCloudStatus.ReadyToVerify
 
-
                 Logger.log("e", "An error occured while sending and receiving cloud job: {}".format(task.error))
+                self.connector.propertyHandler._cancelChanges = False
                 return None
             elif task.status == pywim.http.thor.TaskStatus.finished:
                 # Get the task again, but this time with the results included
@@ -280,6 +283,7 @@ class SmartSliceCloudJob(Job):
                 self.connector.status = SmartSliceCloudStatus.ReadyToVerify
 
                 Logger.log("e", "An unexpected status occured while sending and receiving cloud job: {}".format(task.status))
+                self.connector.propertyHandler._cancelChanges = False
                 return None
         else:
             notification_message = Message()
@@ -295,6 +299,7 @@ class SmartSliceCloudJob(Job):
             error_message.setText(i18n_catalog.i18nc("@info:status", "Job type not set for processing:\nDon't know what to do!"))
             error_message.show()
             self.connector.status = SmartSliceCloudStatus.ReadyToVerify
+            self.connector.propertyHandler._cancelChanges = False
 
         # TODO: Add instructions how to send a verification job here
         previous_connector_status = self.connector.status
@@ -566,11 +571,11 @@ class SmartSliceCloudConnector(QObject):
                                  self.getProxy
                                  )
 
-        self.status = SmartSliceCloudStatus.NoModel
         self.active_machine = Application.getInstance().getMachineManager().activeMachine
         self.propertyHandler = SmartSlicePropertyHandler(self)
         self.SmartSlicePrepared.emit()
         self.propertyHandler.cacheChanges() # Setup Cache
+        self.status = SmartSliceCloudStatus.NoModel
         
         if self.app_preferences.getValue(self.debug_save_smartslice_package_preference):
             self.debug_save_smartslice_package_message = Message(title="[DEBUG] SmartSlicePlugin",
@@ -741,7 +746,7 @@ class SmartSliceCloudConnector(QObject):
 
     def _onJobFinished(self, job):
         if self._jobs[self._current_job] is None:
-            print("\nJOB WAS CANCELED!!!!\n")
+            Logger.log("d", "Smart Slice Job was Cancelled")
         elif not self._jobs[self._current_job].canceled:
             self.propertyHandler._propertiesChanged = []
             self._jobs[self._current_job] = None
@@ -766,8 +771,7 @@ class SmartSliceCloudConnector(QObject):
         Application.getInstance().activityChanged.emit()
 
     def _confirmValidation(self):
-        if not self.confirming:
-            self.confirming = True
+        if self.propertyHandler._cancelChanges is False:
             if self.status is SmartSliceCloudStatus.BusyValidating:
                 self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose the current\n validation results?"
             elif self.status is SmartSliceCloudStatus.BusyOptimizing:
@@ -849,7 +853,7 @@ class SmartSliceCloudConnector(QObject):
                 #  CANCEL SMART SLICE JOB HERE
                 #    Any connection to AWS server should be severed here
                 #
-                self._jobs[self._current_job].cancled = True
+                self._jobs[self._current_job].canceled = True
                 self._jobs[self._current_job] = None
                 if self._proxy.reqsSafetyFactor < self._proxy.resultSafetyFactor and (self._proxy.reqsMaxDeflect > self._proxy.resultMaximalDisplacement):
                     self.status = SmartSliceCloudStatus.Overdimensioned
@@ -861,7 +865,7 @@ class SmartSliceCloudConnector(QObject):
                 #  CANCEL SMART SLICE JOB HERE
                 #    Any connection to AWS server should be severed here
                 #
-                self._jobs[self._current_job].cancled = True
+                self._jobs[self._current_job].canceled = True
                 self._jobs[self._current_job] = None
                 self.status = SmartSliceCloudStatus.ReadyToVerify
                 Application.getInstance().activityChanged.emit()
@@ -879,7 +883,7 @@ class SmartSliceCloudConnector(QObject):
     def onConfirmationConfirmClicked(self):
         #  Cancel Smart Slice Job
         if self._jobs[self._current_job] is not None:
-            self._jobs[self._current_job].cancled = True
+            self._jobs[self._current_job].canceled = True
             self._jobs[self._current_job] = None
 
         #  When asking "Is okay to remove Modifier Mesh?"
@@ -1061,7 +1065,6 @@ class SmartSliceCloudConnector(QObject):
         print_config.layer_width = self.propertyHandler.getExtruderProperty("line_width")
         print_config.layer_height = self.propertyHandler.getGlobalProperty("layer_height")
         print_config.walls = self.propertyHandler.getExtruderProperty("wall_line_count")
-        print("\nWALL LINE COUNT CHECK:  " + str(print_config.walls) + "\n")
 
         # skin angles - CuraEngine vs. pywim
         # > https://github.com/Ultimaker/CuraEngine/blob/master/src/FffGcodeWriter.cpp#L402
@@ -1249,6 +1252,7 @@ class SmartSliceCloudConnector(QObject):
     #   \return A dictionary of replacement tokens to the values they should be
     #   replaced with.
     def _buildReplacementTokens(self, stack):
+
         result = {}
         for key in stack.getAllKeys():
             value = stack.getProperty(key, "value")

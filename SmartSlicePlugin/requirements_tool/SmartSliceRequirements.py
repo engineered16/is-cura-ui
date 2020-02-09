@@ -32,7 +32,6 @@ class SmartSliceRequirements(Tool):
 
     def _onToolSelected(self):
         if not self._connector._proxy.shouldRaiseWarning:
-            print ("TRIGGERED REQUIREMENTS TOOL!!")
             self._connector._proxy.confirmationWindowEnabled = False
             self._connector._proxy.confirmationWindowEnabledChanged.emit()
             

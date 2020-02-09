@@ -502,7 +502,7 @@ class SmartSliceCloudProxy(QObject):
 
     @pyqtProperty(bool, notify=loadDirectionChanged)
     def loadDirection(self):
-        print ("Load Direction has been set to " + str(self._loadDirection))
+        Logger.log("d", "Load Direction has been set to " + str(self._loadDirection))
         return self._loadDirection
 
     @loadDirection.setter
