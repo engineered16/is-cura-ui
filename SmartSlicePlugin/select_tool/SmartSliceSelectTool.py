@@ -43,11 +43,10 @@ class SmartSliceSelectTool(Tool):
     def __init__(self, extension):
         super().__init__()
         self.extension = extension
-        self._handle = SmartSliceSelectHandle()
+        self._handle = SmartSliceSelectHandle(self.extension)
 
         #self._shortcut_key = Qt.Key_S
 
-        self._selection_mode = SelectionMode.AnchorMode
         self.setExposedProperties("AnchorSelectionActive",
                                   "LoadSelectionActive",
                                   "SelectionMode",
@@ -61,6 +60,8 @@ class SmartSliceSelectTool(Tool):
         self._scene = self.getController().getScene()
         self._scene_node_name = None
         self._selectable_mesh = None
+
+        self._cachedFace = None
 
         self._controller.activeToolChanged.connect(self._onActiveStateChanged)
 
@@ -76,6 +77,7 @@ class SmartSliceSelectTool(Tool):
 
         if len(nodes) > 0:
             sn = nodes[0]
+            #self._handle._connector._proxy._activeExtruderStack = nodes[0].callDecoration("getExtruderStack")
 
             if self._scene_node_name is None or sn.getName() != self._scene_node_name:
 
@@ -93,13 +95,15 @@ class SmartSliceSelectTool(Tool):
 
     def _onSelectedFaceChanged(self):
         curr_sf = Selection.getSelectedFace()
-        #cloud_connector = PluginRegistry.getInstance().getPluginObject("SmartSlicePlugin").cloud
-        cloud_connector = self.extension.cloud
 
-        if curr_sf is not None and self._selectable_mesh is not None:
+        if curr_sf is None or (curr_sf is self._cachedFace):
+            return
+
+        else:
+            self._cachedFace = curr_sf
             scene_node, face_id = curr_sf
 
-            selmesh = self._selectable_mesh
+            selmesh = SelectableMesh( scene_node.getMeshData() )
             
             #  Construct Selectable Face && Draw Selection in canvas
             #sf = SelectableFace(tri_pts, mesh_data._normals, face_id)
@@ -107,20 +111,10 @@ class SmartSliceSelectTool(Tool):
             # Get the SelectableFace by matching the face Id - is this consistent??
             sf = selmesh.faces[face_id]
 
-            self.selected_faces = [sf] # TODO: Rewrite for >1 concurrently selected faces
+            selected_faces = [sf] # TODO: Rewrite for >1 concurrently selected faces
             #self._visualizer.changeSelection([sf])
 
             self._handle.setFace(sf)
-
-            #  If Load Mode is Active
-            if self.getLoadSelectionActive():
-                #  Set/Draw Load Selection in Scene
-                self._handle.drawFaceSelection(SelectionMode.LoadMode, selmesh, draw_arrow=True)
-
-            #  If Anchor Mode is Active
-            else:
-                #  Set/Draw Anchor Selection in Scene
-                self._handle.drawFaceSelection(SelectionMode.AnchorMode, selmesh)
 
             self._handle.scale(scene_node.getScale(), transform_space=CuraSceneNode.TransformSpace.World)
 
@@ -131,7 +125,7 @@ class SmartSliceSelectTool(Tool):
             load_vector = self._handle.getLoadVector()
             # -> After clicking on a face, I get a crash below, that my load_vector is None.
             
-            if load_vector and self._handle._connector._proxy.loadMagnitudeInverted:
+            if load_vector and self._handle._connector._proxy.loadDirection:
                 load_vector = load_vector * -1
             
             loaded_faces = [face._id for face in self._handle._loaded_faces]
@@ -139,35 +133,51 @@ class SmartSliceSelectTool(Tool):
             Logger.log("d", "loaded_faces: {}".format(loaded_faces))
             Logger.log("d", "anchored_faces: {}".format(anchored_faces))
             
-            if self._selection_mode is SelectionMode.AnchorMode:
-                print ("\n\nANCHOR APPLIED RIGHT HERE\n\n")
-                cloud_connector._proxy._anchorsApplied = 1
+            if self.getAnchorSelectionActive():
+                #  Set/Draw Anchor Selection in Scene
+                self._handle._connector._proxy._anchorsApplied = 1
+                self._handle._arrow = False
+                
+                #  Set mesh
+                self._handle._connector.propertyHandler._changedMesh = selmesh
+                self._handle._connector.propertyHandler._changedFaces = selected_faces
+
+                #  Draw Selection
+                self._handle._connector.propertyHandler.confirmFaceDraw()
 
                 #
                 #   TODO: Change _anchorsApplied from ' = 1' to arbitrary # of loads
                 #           * Check for multiple selection key, e.g. Shift
                 #
                 
-                cloud_connector.appendAnchor0FacesPoc(anchored_faces)
-                Logger.log("d", "cloud_connector.getAnchor0FacesPoc(): {}".format(cloud_connector.getAnchor0FacesPoc()))
+                self._handle._connector.appendAnchor0FacesPoc(anchored_faces)
+                Logger.log("d", "cloud_connector.getAnchor0FacesPoc(): {}".format(self._handle._connector.getAnchor0FacesPoc()))
 
                 Application.getInstance().activityChanged.emit()
             else:
-                print ("\nLOAD APPLIED RIGHT HERE\n\n")
-                cloud_connector._proxy._loadsApplied = 1
+                #  Set/Draw Scene Properties
+                self._handle._connector._proxy._loadsApplied = 1
+                self._handle._arrow = True
+                
+                #  Set mesh
+                self._handle._connector.propertyHandler._changedMesh = selmesh
+                self._handle._connector.propertyHandler._changedFaces = selected_faces
+
+                #  Draw Selection
+                self._handle._connector.propertyHandler.confirmFaceDraw()
 
                 #
                 #   TODO: Change _loadsApplied from ' = 1' to arbitrary # of loads
                 #           * Check for multiple selection key, e.g. Shift
                 #
 
-                cloud_connector.setForce0VectorPoc(load_vector.x,
+                self._handle._connector.setForce0VectorPoc(load_vector.x,
                                                    load_vector.y,
                                                    load_vector.z
                                                    )
-                cloud_connector.appendForce0FacesPoc(loaded_faces)
-                Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(cloud_connector.getForce0VectorPoc()))
-                Logger.log("d", "cloud_connector.getForce0FacesPoc(): {}".format(cloud_connector.getForce0FacesPoc()))
+                self._handle._connector.appendForce0FacesPoc(loaded_faces)
+                Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(self._handle._connector.getForce0VectorPoc()))
+                Logger.log("d", "cloud_connector.getForce0FacesPoc(): {}".format(self._handle._connector.getForce0FacesPoc()))
 
                 Application.getInstance().activityChanged.emit()
             
@@ -184,7 +194,7 @@ class SmartSliceSelectTool(Tool):
             Selection.setFaceSelectMode(False)
             Logger.log("d", "Disabled faceSelectMode!")
 
-        self._calculateMesh()
+        #self._calculateMesh()
 
     ##  Get whether the select face feature is supported.
     #   \return True if it is supported, or False otherwise.
@@ -193,26 +203,26 @@ class SmartSliceSelectTool(Tool):
         return Version(OpenGL.getInstance().getOpenGLVersion()) >= Version("4.1 dummy-postfix")
 
     def setSelectionMode(self, mode):
-        if self._selection_mode is not mode:
-            self._selection_mode = mode
-
-            Logger.log("d", "Changed selection mode to enum: {}".format(mode))
+        self._handle._connector.propertyHandler._selection_mode = mode
+        Logger.log("d", "Changed selection mode to enum: {}".format(mode))
 
     def getSelectionMode(self):
-        return self._selection_mode
+        return self._handle._connector.propertyHandler._selection_mode
 
     def setAnchorSelection(self):
         self._handle.clearSelection()
-        self._handle.paintAnchoredFaces()
         self.setSelectionMode(SelectionMode.AnchorMode)
+        if self._handle._connector._proxy._anchorsApplied > 0:
+            self._handle._connector.propertyHandler.selectedFacesChanged.emit()
 
     def getAnchorSelectionActive(self):
-        return self._selection_mode is SelectionMode.AnchorMode
+        return self._handle._connector.propertyHandler._selection_mode is SelectionMode.AnchorMode
 
     def setLoadSelection(self):
         self._handle.clearSelection()
-        self._handle.paintLoadedFaces()
         self.setSelectionMode(SelectionMode.LoadMode)
+        if self._handle._connector._proxy._loadsApplied > 0:
+            self._handle._connector.propertyHandler.selectedFacesChanged.emit()
 
     def getLoadSelectionActive(self):
-        return self._selection_mode is SelectionMode.LoadMode
+        return self._handle._connector.propertyHandler._selection_mode is SelectionMode.LoadMode

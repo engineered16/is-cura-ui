@@ -17,6 +17,7 @@ from UM.Scene.ToolHandle import ToolHandle
 from UM.Scene.SceneNode import SceneNode
 from UM.Mesh.MeshBuilder import MeshBuilder
 from UM.Mesh.MeshData import MeshData
+from UM.PluginRegistry import PluginRegistry
 
 from UM.Math.Color import Color
 from UM.Math.Matrix import Matrix
@@ -27,7 +28,6 @@ from UM.Math.Vector import Vector
 from .FaceSelection import SelectableFace, SelectableMesh
 from .FaceSelection import toCalculatableFace
 from .Detessellate import isCoplanar, isJointed
-from .SmartSliceSelectionProxy import SmartSliceSelectionConnector
 
 # Provides enums
 class SelectionMode:
@@ -36,16 +36,16 @@ class SelectionMode:
 
 class SmartSliceSelectHandle(ToolHandle):
 #  CONSTRUCTORS
-    def __init__(self, parent = None, tri: SelectableFace = None):
+    def __init__(self, extension, parent = None, tri: SelectableFace = None):
         super().__init__(parent)
 
         self._name = "SmartSliceSelectHandle"
-        self._connector = SmartSliceSelectionConnector()
+        self._connector = extension.cloud
 
         #  Default Line Properties
         self._edge_width = 0.8
         self._edge_length = [] # TODO: GET THIS FROM FACE EDGES
-        self._selected_color = self.AllAxisSelectionColor
+        self._selected_color = Color(0, 0, 255, 255)
         self._anchored_color = self._y_axis_color
         self._loaded_color = self._y_axis_color
 
@@ -59,8 +59,12 @@ class SmartSliceSelectHandle(ToolHandle):
         self._load_magnitude = 0
         self._anchored_faces = []
 
+        #  For Performance
+        self._has_anchor = False
+        self._has_loads  = False
+
         #   Arrow Mesh
-        self._arrow = None
+        self._arrow = False
         self._arrow_head_length = 8
         self._arrow_tail_length = 22
         self._arrow_total_length = self._arrow_head_length + self._arrow_tail_length
@@ -70,6 +74,14 @@ class SmartSliceSelectHandle(ToolHandle):
         #  Disable auto scale
         self._auto_scale = False
 
+        self._connector.SmartSlicePrepared.connect(self._onSmartSlicePrepared)
+
+
+    def _onSmartSlicePrepared(self):
+        #  Connect to UI 'Cancel Changes' Signal
+        self._connector.propertyHandler.selectedFacesChanged.connect(self.drawSelection)
+        self._connector.propertyHandler._selection_mode = SelectionMode.LoadMode
+        self._connector._proxy.loadDirectionChanged.connect(self.drawSelection)
 
 
 #  ACCESSORS
@@ -85,30 +97,40 @@ class SmartSliceSelectHandle(ToolHandle):
     def getLoadVector(self):
         if len(self._loaded_faces) > 0:
             load_mag = self._connector._proxy._loadMagnitude
-            if self._connector._proxy.loadMagnitudeInverted:
+            if self._connector._proxy.loadDirection:
                 load_mag *= -1
             lf = toCalculatableFace(list(self._loaded_faces)[0])
             n = lf.normal
             return Vector(load_mag*n.x, load_mag*n.y, load_mag*n.z)
         return Vector(0., 0., 0.) # no load face available to determine vector
 
-
     '''
-      drawFaceSelection()
+      drawSelection()
 
         Uses UM's MeshBuilder to construct 3D Arrow mesh and translates/rotates as to be normal to the selected face
     '''
-    def drawFaceSelection(self, mode, selmesh : SelectableMesh, draw_arrow = False):
+    def drawSelection(self):
         #  Construct Edges using MeshBuilder Cubes
         mb = MeshBuilder()
+        _selected_mesh = None
 
         #Logger.log("d", "Root Face: {}".format(self._tri))
 
+        print("DRAWING!!!")
+
+        if self._connector.propertyHandler._selection_mode == SelectionMode.LoadMode:
+            self._load_magnitude = self._connector._proxy._loadMagnitude
+            _selected_mesh = self._connector.propertyHandler._loadedMesh
+            #  TODO: Generalize this for more than one Active Load
+            if self._connector.propertyHandler._loadedFaces[0] is not None:
+                self.setFace(self._connector.propertyHandler._loadedFaces[0])
+        else:
+            _selected_mesh = self._connector.propertyHandler._anchoredMesh
+            #  TODO: Generalize this for more than one Active Anchor
+            if self._connector.propertyHandler._anchoredFaces[0] is not None:
+                self.setFace(self._connector.propertyHandler._anchoredFaces[0])
         self._face = set()
-
-        if mode == SelectionMode.LoadMode:
-            self._load_magnitude = 10 # is this being used??
-
+        
         #if draw_arrow:
         #    self.drawNormalArrow()
         #    self.addChild(self._arrow)
@@ -119,7 +141,7 @@ class SmartSliceSelectHandle(ToolHandle):
 
         start = time.time()
 
-        for fid in selmesh.faces.keys():
+        for fid in _selected_mesh.faces.keys():
             if fid in checked:
                 continue
 
@@ -127,7 +149,7 @@ class SmartSliceSelectHandle(ToolHandle):
 
             #Logger.log('d', '{} ->\n{}\n {}'.format(self._tri, _tri, self._tri.normal.angleToVector(_tri.normal)))
 
-            if isCoplanar(self._tri, selmesh.faces[fid]):
+            if isCoplanar(self._tri, _selected_mesh.faces[fid]):
                 possible_faces.add(fid)
                 
                 #  Paint Faces that are recursively coplanar/jointed
@@ -148,7 +170,7 @@ class SmartSliceSelectHandle(ToolHandle):
                     combo = (f1, f2)
                     if combo not in face_combos_checked:
                         face_combos_checked.add(combo)
-                        if isJointed(selmesh.faces[f1], selmesh.faces[f2]):
+                        if isJointed(_selected_mesh.faces[f1], _selected_mesh.faces[f2]):
                             connected.add(f1)
             faces_added = len(connected)
             for f in connected:
@@ -159,14 +181,16 @@ class SmartSliceSelectHandle(ToolHandle):
 
         face_list = []
         for fid in coplanar_faces:
-            face_list.append(selmesh.faces[fid])
-            self.paintFace(selmesh.faces[fid], mb)
+            face_list.append(_selected_mesh.faces[fid])
+            self.paintFace(_selected_mesh.faces[fid], mb)
 
-        if mode == SelectionMode.LoadMode:
+        if self._connector.propertyHandler._selection_mode == SelectionMode.LoadMode:
             self._loaded_faces = face_list
+            self._connector.propertyHandler._selection_mode = SelectionMode.LoadMode
             self.paintArrow(face_list, mb)
         else:
             self._anchored_faces = face_list
+            self._connector.propertyHandler._selection_mode = SelectionMode.AnchorMode
 
         #  Add to Cura Scene
         self.setSolidMesh(mb.build())
@@ -205,7 +229,7 @@ class SmartSliceSelectHandle(ToolHandle):
         p = tri.points
         tri.generateNormalVector()
         n = tri.normal
-        invert_arrow = self._connector._proxy.loadMagnitudeInverted
+        invert_arrow = self._connector._proxy.loadDirection
         center = self.findFaceCenter(face_list)
         
         p_base0 = Vector(center.x + n.x * self._arrow_head_length,
@@ -326,7 +350,7 @@ class SmartSliceSelectHandle(ToolHandle):
         Paints all SelectableFaces in 'possible' that are jointed/coplanar with 'face'
         NOTE:  This assumes all entries in 'possible' are coplanar with 'face'
     '''
-    def paintPossibleFaces(self, mode, mb, face, possible : set):
+    def paintPossibleFaces(self, mode, mb, face, possible):
         for _tri in possible:
             if isJointed(face, _tri):
                 self.paintFace(_tri, mb)
@@ -423,5 +447,4 @@ class SmartSliceSelectHandle(ToolHandle):
         mb = MeshBuilder()
         self.setSolidMesh(mb.build())  
 
-    def _onEngineCreated(self):
-        self._connector._onEngineCreated()
+

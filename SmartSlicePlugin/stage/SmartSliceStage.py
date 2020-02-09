@@ -26,16 +26,18 @@ from UM.Application import Application
 from UM.PluginRegistry import PluginRegistry
 
 from cura.Stages.CuraStage import CuraStage
+from cura.CuraApplication import CuraApplication
 
 #
 #   Stage Class Definition
 #
 class SmartSliceStage(CuraStage):
-    def __init__(self, parent=None):
+    def __init__(self, extension, parent=None):
         super().__init__(parent)
 
         #   Connect Stage to Cura Application
         Application.getInstance().engineCreatedSignal.connect(self._engineCreated)
+        self._connector = extension
 
         #   Set Default Attributes
         self._was_buildvolume_hidden = None
@@ -67,14 +69,23 @@ class SmartSliceStage(CuraStage):
         application.getPreferences().setValue(self._overhang_visible_preference, False)
 
         # Ensure we have tools defined and apply them here
-        our_tool = self._our_toolset[0]
+        req_tool = self._our_toolset[1] # Force Init
+        use_tool = self._our_toolset[0]
         self.setToolVisibility(True)
-        application.getController().setFallbackTool(our_tool)
+        application.getController().setFallbackTool(use_tool)
+        application.getController().setFallbackTool(req_tool) # Force __init__()
         self._previous_tool = application.getController().getActiveTool()
         if self._previous_tool:
-            application.getController().setActiveTool(our_tool)
+            application.getController().setActiveTool(req_tool)
 
+        #  Set the Active Extruder for the Cloud interactions
+        self._connector._proxy._activeMachineManager = CuraApplication.getInstance().getMachineManager()
+        self._connector._proxy._activeExtruder = self._connector._proxy._activeMachineManager._global_container_stack.extruderList[0]
 
+        if not self._connector.propertyHandler._initialized:
+            self._connector.propertyHandler.cacheChanges()
+            self._connector.propertyHandler._initialized = True
+        
     #   onStageDeselected:
     #       Sets attributes that allow the Smart Slice Stage to properly deactivate
     #       This occurs before the next Cura Stage is activated
@@ -95,6 +106,10 @@ class SmartSliceStage(CuraStage):
         application.getController().setFallbackTool(self._default_fallback_tool)
         if self._previous_tool:
             application.getController().setActiveTool(self._default_fallback_tool)
+
+        #  Hide all visible SmartSlice UI Components
+
+        
 
     def getVisibleTools(self):
         visible_tools = []
@@ -210,7 +225,7 @@ class SmartSliceStage(CuraStage):
             if tool in self._our_toolset:
                 self._default_toolset.remove(tool)
                 
-        #self._default_fallback_tool = Application.getInstance().getController().getFallbackTool()
+        self._default_fallback_tool = Application.getInstance().getController().getFallbackTool()
 
         # Undisplay our tools!
         self.setToolVisibility(False)

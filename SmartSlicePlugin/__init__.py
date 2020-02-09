@@ -24,7 +24,7 @@ from .stage import SmartSliceStage
 
 extension = SmartSliceExtension.SmartSliceExtension()
 extension._name = "Extension"
-requirements_tool = SmartSliceRequirements.SmartSliceRequirements()
+requirements_tool = SmartSliceRequirements.SmartSliceRequirements(extension)
 requirements_tool._name = "RequirementsTool"
 select_tool = SmartSliceSelectTool.SmartSliceSelectTool(extension)
 select_tool._name = "SelectTool"
@@ -54,7 +54,7 @@ def getMetaData():
 def register(app):
     return {
         "extension": extension,
-        "stage": SmartSliceStage.SmartSliceStage(),
+        "stage": SmartSliceStage.SmartSliceStage(extension.cloud),
         "tool": [requirements_tool,
                  select_tool,
                  ]
