@@ -11,8 +11,6 @@ import copy
 import time, threading
 from copy import copy
 
-from asyncio import Lock
-
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import pyqtProperty
 from PyQt5.QtCore import QObject
@@ -75,7 +73,6 @@ class SmartSlicePropertyHandler(QObject):
 
         self._cancelChanges = False
         self._doneCancelling = False
-        self._cancellingChanges = Lock()
         
         #  Connect Signals
         self._globalStack.propertyChanged.connect(self._onGlobalPropertyChanged)
