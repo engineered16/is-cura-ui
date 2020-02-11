@@ -539,9 +539,9 @@ class SmartSliceCloudConnector(QObject):
         self.confirmValidation.connect(self._confirmValidation)
         self.confirmOptimization.connect(self._confirmOptimization)
 
-        self.ConfirmationConcluded.connect(self.onConfirmationConcluded)
+        self.confirmationConcluded.connect(self.onConfirmationConcluded)
 
-    SmartSlicePrepared = pyqtSignal()
+    onSmartSlicePrepared = pyqtSignal()
     
     def _onSaveDebugPackage(self, messageId: str, actionId: str) -> None:
         dummy_job = SmartSliceCloudVerificationJob(self)
@@ -573,7 +573,7 @@ class SmartSliceCloudConnector(QObject):
 
         self.active_machine = Application.getInstance().getMachineManager().activeMachine
         self.propertyHandler = SmartSlicePropertyHandler(self)
-        self.SmartSlicePrepared.emit()
+        self.onSmartSlicePrepared.emit()
         self.propertyHandler.cacheChanges() # Setup Cache
         self.status = SmartSliceCloudStatus.NoModel
         
@@ -755,7 +755,7 @@ class SmartSliceCloudConnector(QObject):
     #
     #   CONFIRMATION PROMPT
     #
-    ConfirmationConcluded = pyqtSignal()
+    confirmationConcluded = pyqtSignal()
 
     def onConfirmationConcluded(self):
         self.propertyHandler.prepareCache()
@@ -911,7 +911,7 @@ class SmartSliceCloudConnector(QObject):
         self.propertyHandler._onConfirmChanges()
 
         # Close Dialog
-        self.ConfirmationConcluded.emit()
+        self.confirmationConcluded.emit()
 
     '''
       onConfirmationCancelClicked()
@@ -928,7 +928,7 @@ class SmartSliceCloudConnector(QObject):
             self.propertyHandler._onCancelChanges()
         
         # Close Dialog
-        self.ConfirmationConcluded.emit()
+        self.confirmationConcluded.emit()
 
 
     #
