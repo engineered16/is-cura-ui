@@ -461,6 +461,20 @@ class SmartSliceCloudOptimizeJob(SmartSliceCloudVerificationJob):
 
         self.job_type = pywim.smartslice.job.JobType.optimization
 
+class Force: # TODO - Move this or replace
+    def __init__(self, normal : Vector = None, magnitude : float = 0.0, pull : bool = True):
+        self.normal = normal if normal else Vector(1.0, 0.0, 0.0)
+        self.magnitude = magnitude
+        self.pull = pull
+
+    def loadVector(self) -> Vector:
+        scale = self.magnitude if self.pull else -self.magnitude
+
+        return Vector(
+            self.normal.x * scale,
+            self.normal.y * scale,
+            self.normal.z * scale,
+        )
 
 class SmartSliceCloudConnector(QObject):
     http_protocol_preference = "smartslice/http_protocol"
@@ -495,6 +509,9 @@ class SmartSliceCloudConnector(QObject):
         #Re-Optimize
         self._proxy.confirmationConfirmClicked.connect(self.onConfirmationConfirmClicked)
         self._proxy.confirmationCancelClicked.connect(self.onConfirmationCancelClicked)
+
+        self._proxy.loadMagnitudeChanged.connect(self._updateForce0Magnitude)
+        self._proxy.loadDirectionChanged.connect(self._updateForce0Direction)
         
         # Connecting signals
         self.doVerification.connect(self._doVerfication)
@@ -1149,22 +1166,31 @@ class SmartSliceCloudConnector(QObject):
 
         return True
 
-    def setForce0VectorPoc(self, x, y, z):
-        load_vector = (x, y, z)
-        if load_vector != self._poc_force0_vector:
-            Logger.log("d", "Changing load vector to: {}".format(load_vector))
-            self._poc_force0_vector = load_vector
+    def _updateForce0Magnitude(self):
+        self._poc_force.magnitude = self._proxy.loadMagnitude
+        Logger.log("d", "Load magnitude changed, new force vector: {}".format(self._poc_force.loadVector()))
+
+    def _updateForce0Direction(self):
+        self._poc_force.pull = self._proxy.loadDirection
+        Logger.log("d", "Load direction changed, new force vector: {}".format(self._poc_force.loadVector()))
+
+    def updateForce0Vector(self, normal : Vector):
+        self._poc_force.normal = normal
+        Logger.log("d", "Load normal changed, new force vector: {}".format(self._poc_force.loadVector()))
 
     def resetForce0VectorPoc(self):
-        self._poc_force0_vector = (0, 0, 0)
+        self._poc_force = Force(
+            magnitude=self._proxy.loadMagnitude,
+            pull=self._proxy.loadDirection
+        )
 
     def getForce0VectorPoc(self):
-        native_vector = []
-        for component in self._poc_force0_vector:
-            if type(component) is numpy.float64:
-                component = component.item()
-            native_vector += [float(component)]
-        return native_vector
+        vec = self._poc_force.loadVector()
+        return [
+            float(vec.x),
+            float(vec.y),
+            float(vec.z)
+        ]
 
     def appendForce0FacesPoc(self, face_ids):
         for face_id in face_ids:

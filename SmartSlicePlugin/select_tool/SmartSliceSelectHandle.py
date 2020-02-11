@@ -1,15 +1,4 @@
-# SmartSliceSelectHandle.py
-# Teton Simulation
-# Last Modified November 12, 2019
-
-# Copyright (c) 2015 Ultimaker B.V.
-# Uranium is released under the terms of the LGPLv3 or higher.
-
-#
-#   Contains functionality to be triggered upon face selection
-#
-
-import time
+import numpy
 
 #  UM/Cura Imports
 from UM.Logger import Logger
@@ -49,7 +38,7 @@ class SmartSliceSelectHandle(ToolHandle):
         self._face = []
         #  Previously Selected Faces
         self._loaded_faces = []
-        self._load_magnitude = 0
+        #self._load_magnitude = 0
         self._anchored_faces = []
 
         #  For Performance
@@ -86,15 +75,6 @@ class SmartSliceSelectHandle(ToolHandle):
     def setFace(self, f):
         self._tri = f
 
-    #def getLoadVector(self) -> Vector:
-    #    if len(self._loaded_faces) > 0:
-    #        load_mag = self._connector._proxy._loadMagnitude
-    #        if self._connector._proxy.loadDirection:
-    #            load_mag *= -1
-    #        n = self._loaded_faces[0].normal * load_mag
-    #        return Vector(n.r, n.s, n.t)
-    #    return Vector(0., 0., 0.) # no load face available to determine vector
-
     '''
       drawSelection()
 
@@ -106,47 +86,17 @@ class SmartSliceSelectHandle(ToolHandle):
 
         #  Construct Edges using MeshBuilder Cubes
         mb = MeshBuilder()
-        #_selected_mesh = None
-
-        #Logger.log("d", "Root Face: {}".format(self._tri))
 
         Logger.log("d", "Drawing Face Selection")
-
-        #if self._connector.propertyHandler._selection_mode == SelectionMode.LoadMode:
-            #self._load_magnitude = self._connector._proxy._loadMagnitude
-            #_selected_mesh = self._connector.propertyHandler._loadedMesh
-            #  TODO: Generalize this for more than one Active Load
-            # TODO-BRADY Commented below out - what is it for?
-            #if self._connector.propertyHandler._loadedFaces[0] is not None:
-            #    self.setFace(self._connector.propertyHandler._loadedFaces[0])
-        #else:
-            #_selected_mesh = self._connector.propertyHandler._anchoredMesh
-            #  TODO: Generalize this for more than one Active Anchor
-            # TODO-BRADY Commented below out - what is it for?
-            #if self._connector.propertyHandler._anchoredFaces[0] is not None:
-            #    self.setFace(self._connector.propertyHandler._anchoredFaces[0])
-        
-        # TODO-BRADY - is self._face used for anything?
-        #self._face = set()
 
         for tri in self._tri:
             mb.addFace(tri.v1, tri.v2, tri.v3, color=self._selected_color)
 
         if self._connector.propertyHandler._selection_mode == SelectionMode.LoadMode:
-            self._load_magnitude = self._connector._proxy._loadMagnitude
-            #self._loaded_faces = self._tri
-            #self._connector.propertyHandler._selection_mode = SelectionMode.LoadMode
             self.paintArrow(self._tri, mb)
-        #else:
-            #self._anchored_faces = self._tri
-            #self._connector.propertyHandler._selection_mode = SelectionMode.AnchorMode
 
         #  Add to Cura Scene
         self.setSolidMesh(mb.build())
-
-        #Logger.log("d", "Anchor Faces: {}".format([f._id for f in self._anchored_faces]))
-        #Logger.log("d", "Load Faces: {}".format([f._id for f in self._loaded_faces]))
-        #Logger.log("d", "Load Vector: {}".format(self.getLoadVector()))
 
 
     def paintArrow(self, face_list, mb):
@@ -268,9 +218,7 @@ class SmartSliceSelectHandle(ToolHandle):
         """
         c_point = self.findPointsCenter([point for tri in triangles for point in tri.points]) # List comprehension creates list of points.
         for tri in triangles:
-            # TODO-BRADY
-            #if tri.isPointContained(c_point):
-            if True:
+            if SmartSliceSelectHandle._triangleContainsPoint(tri, c_point):
                 return c_point
         
         # When center point is not on face, choose instead center point of middle triangle.
@@ -281,4 +229,27 @@ class SmartSliceSelectHandle(ToolHandle):
     def clearSelection(self):
         self.setSolidMesh(MeshBuilder().build())  
 
+    @staticmethod
+    def _triangleContainsPoint(triangle, point):
+        v1 = triangle.v1
+        v2 = triangle.v2
+        v3 = triangle.v3
 
+        area_2 = SmartSliceSelectHandle._threePointArea2(v1, v2, v3)
+        alpha = SmartSliceSelectHandle._threePointArea2(point, v2, v3) / area_2
+        beta = SmartSliceSelectHandle._threePointArea2(point, v3, v1) / area_2
+        gamma = SmartSliceSelectHandle._threePointArea2(point, v1, v2) / area_2
+
+        total = alpha + beta + gamma
+
+        return total > 0.99 and total < 1.01
+    
+    @staticmethod
+    def _threePointArea2(p, q, r):
+        pq = (q.x - p.x, q.y - p.y, q.z - p.z)
+        pr = (r.x - p.x, r.y - p.y, r.z - p.z)
+
+        vect = numpy.cross(pq, pr)
+
+        # Return area X 2
+        return numpy.sqrt(vect[0]**2 + vect[1]**2 + vect[2]**2)

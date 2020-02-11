@@ -1,10 +1,3 @@
-# Copyright (c) 2018 Ultimaker B.V.
-# Uranium is released under the terms of the LGPLv3 or higher.
-
-
-#   Filesystem Control
-import os.path
-
 #  Ultimaker Imports
 from UM.i18n import i18nCatalog
 
@@ -32,9 +25,6 @@ from ..utils import makeInteractiveMesh
 from ..SmartSliceExtension import SmartSliceExtension
 from .SmartSliceSelectHandle import SelectionMode
 from .SmartSliceSelectHandle import SmartSliceSelectHandle
-#from .SmartSliceDrawSelection import SmartSliceSelectionVisualizer
-#from .FaceSelection import SelectablePoint, SelectableFace, SelectableMesh
-#from .SmartSliceNormalArrow import SmartSliceNormalArrow
 
 i18n_catalog = i18nCatalog("smartslice")
 
@@ -113,16 +103,6 @@ class SmartSliceSelectTool(Tool):
 
         self._handle.setFace(selected_triangles)
         self._handle.scale(scene_node.getScale(), transform_space=CuraSceneNode.TransformSpace.World)
-        
-        #if load_vector and self._handle._connector._proxy.loadDirection:
-        #    load_vector = load_vector * -1
-        
-        # TODO-Brady Commented out - why does the handle need this info
-        # and why do we need to get it back here?
-        #loaded_faces = [face._id for face in self._handle._loaded_faces]
-        #anchored_faces = [face._id for face in self._handle._anchored_faces]
-        #Logger.log("d", "loaded_faces: {}".format(loaded_faces))
-        #Logger.log("d", "anchored_faces: {}".format(anchored_faces))
             
         #  Set mesh
         self._handle._connector.propertyHandler._changedMesh = selmesh
@@ -149,12 +129,10 @@ class SmartSliceSelectTool(Tool):
             self._handle._connector._proxy._loadsApplied = 1
             self._handle._arrow = True
 
-            load_vector = self.getLoadVector(selected_triangles[0])
+            load_vector = selected_triangles[0].normal
 
-            self._handle._connector.setForce0VectorPoc(
-                load_vector.x,
-                load_vector.y,
-                load_vector.z
+            self._handle._connector.updateForce0Vector(
+                Vector(load_vector.r, load_vector.s, load_vector.t)
             )
 
             self._handle._connector.resetForce0FacesPoc()
@@ -215,10 +193,3 @@ class SmartSliceSelectTool(Tool):
 
     def getLoadSelectionActive(self):
         return self._handle._connector.propertyHandler._selection_mode is SelectionMode.LoadMode
-
-    def getLoadVector(self, tri) -> Vector:
-        load_mag = self._handle._connector._proxy._loadMagnitude
-        if not self._handle._connector._proxy.loadDirection:
-            load_mag *= -1
-        n = tri.normal * load_mag
-        return Vector(n.r, n.s, n.t)
