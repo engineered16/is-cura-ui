@@ -1,9 +1,9 @@
 
-import pywim
-
 from UM.Mesh.MeshData import MeshData
 
-def makeInteractiveMesh(mesh_data : MeshData) -> pywim.geom.tri.Mesh:
+def makeInteractiveMesh(mesh_data : MeshData) -> 'pywim.geom.tri.Mesh':
+    import pywim
+
     int_mesh = pywim.geom.tri.Mesh()
 
     verts = mesh_data.getVertices()
