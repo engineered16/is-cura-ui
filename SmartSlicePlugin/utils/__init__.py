@@ -13,7 +13,7 @@ def makeInteractiveMesh(mesh_data : MeshData) -> 'pywim.geom.tri.Mesh':
     
     faces = mesh_data.getIndices()
 
-    if faces:
+    if faces is not None:
         for i in range(mesh_data.getFaceCount()):
             v1 = int_mesh.vertices[faces[i][0]]
             v2 = int_mesh.vertices[faces[i][1]]
