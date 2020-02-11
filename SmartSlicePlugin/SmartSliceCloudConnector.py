@@ -61,7 +61,7 @@ from cura.UI.PrintInformation import PrintInformation
 # Our extension
 from .SmartSliceCloudProxy import SmartSliceCloudStatus
 from .SmartSliceCloudProxy import SmartSliceCloudProxy
-from .SmartSliceValidationProperty import SmartSliceValidationProperty
+from .SmartSliceProperty import SmartSliceProperty
 from .SmartSlicePropertyHandler import SmartSlicePropertyHandler
 
 i18n_catalog = i18nCatalog("smartslice")
@@ -884,7 +884,7 @@ class SmartSliceCloudConnector(QObject):
         
         #  For handling requirements changes during optimization
         elif self.status is SmartSliceCloudStatus.BusyOptimizing:
-            if SmartSliceValidationProperty.FactorOfSafety in self.propertyHandler._propertiesChanged or (SmartSliceValidationProperty.MaxDisplacement in self.propertyHandler._propertiesChanged):
+            if SmartSliceProperty.FactorOfSafety in self.propertyHandler._propertiesChanged or (SmartSliceProperty.MaxDisplacement in self.propertyHandler._propertiesChanged):
                 self.propertyHandler._onConfirmRequirements()    #print ("FoS or Max Displace was in _propertiesChanged")
                 if self._proxy.resultSafetyFactor < self._proxy.reqsSafetyFactor or (self._proxy.resultMaximalDisplacement > self._proxy.reqsMaxDeflect):
                     self.status = SmartSliceCloudStatus.Underdimensioned

@@ -24,7 +24,7 @@ from cura.CuraApplication import CuraApplication
 from cura.Settings.MachineManager import MachineManager
 
 #  Smart Slice
-from .SmartSliceValidationProperty import SmartSliceValidationProperty
+from .SmartSliceProperty import SmartSliceProperty
 
 class SmartSliceCloudStatus():
     NoConnection = 1
@@ -395,7 +395,7 @@ class SmartSliceCloudProxy(QObject):
     @targetFactorOfSafety.setter
     def targetFactorOfSafety(self, value):
         if self.connector.status is SmartSliceCloudStatus.BusyOptimizing or (self.connector.status is SmartSliceCloudStatus.Optimized):
-            self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.FactorOfSafety)
+            self.connector.propertyHandler._propertiesChanged.append(SmartSliceProperty.FactorOfSafety)
             self.connector.propertyHandler._changedValues.append(value)
             self.connector._confirmOptimization()
         elif self.connector.status in SmartSliceCloudStatus.Optimizable:
@@ -439,7 +439,7 @@ class SmartSliceCloudProxy(QObject):
     @targetMaximalDisplacement.setter
     def targetMaximalDisplacement(self, value):
         if self.connector.status is SmartSliceCloudStatus.BusyOptimizing or (self.connector.status is SmartSliceCloudStatus.Optimized):
-            self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.MaxDisplacement)
+            self.connector.propertyHandler._propertiesChanged.append(SmartSliceProperty.MaxDisplacement)
             self.connector.propertyHandler._changedValues.append(value)
             self.reqsMaxDeflect = value
             self.connector._confirmOptimization()
@@ -487,7 +487,7 @@ class SmartSliceCloudProxy(QObject):
     @loadMagnitude.setter
     def loadMagnitude(self, value):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing or (self.connector.status is SmartSliceCloudStatus.Optimized)):
-            self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.LoadMagnitude)
+            self.connector.propertyHandler._propertiesChanged.append(SmartSliceProperty.LoadMagnitude)
             self.connector.propertyHandler._changedValues.append(value)
             self.connector._confirmValidation()
         else:
@@ -508,7 +508,7 @@ class SmartSliceCloudProxy(QObject):
     @loadDirection.setter
     def loadDirection(self, value):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
-            self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.LoadDirection)
+            self.connector.propertyHandler._propertiesChanged.append(SmartSliceProperty.LoadDirection)
             self.connector.propertyHandler._changedValues.append(value)
             self.connector._confirmValidation()
         else:
@@ -734,7 +734,7 @@ class SmartSliceCloudProxy(QObject):
     @materialName.setter
     def materialName(self, value):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating:
-            self._propertyChanged = SmartSliceValidationProperty.Material
+            self._propertyChanged = SmartSliceProperty.Material
             self._changedMaterial = value
             self.connector._confirmValidation()
         elif self._materialName is not value:
