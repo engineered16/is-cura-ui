@@ -532,7 +532,7 @@ class SmartSliceCloudConnector(QObject):
 
         self.confirmationConcluded.connect(self.onConfirmationConcluded)
 
-    SmartSlicePrepared = pyqtSignal()
+    onSmartSlicePrepared = pyqtSignal()
     
     def _onSaveDebugPackage(self, messageId: str, actionId: str) -> None:
         dummy_job = SmartSliceCloudVerificationJob(self)
@@ -564,7 +564,7 @@ class SmartSliceCloudConnector(QObject):
 
         self.active_machine = Application.getInstance().getMachineManager().activeMachine
         self.propertyHandler = SmartSlicePropertyHandler(self)
-        self.SmartSlicePrepared.emit()
+        self.onSmartSlicePrepared.emit()
         self.propertyHandler.cacheChanges() # Setup Cache
         self.status = SmartSliceCloudStatus.NoModel
         

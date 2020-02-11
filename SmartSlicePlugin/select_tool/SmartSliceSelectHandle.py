@@ -74,7 +74,7 @@ class SmartSliceSelectHandle(ToolHandle):
         #  Disable auto scale
         self._auto_scale = False
 
-        self._connector.SmartSlicePrepared.connect(self._onSmartSlicePrepared)
+        self._connector.onSmartSlicePrepared.connect(self._onSmartSlicePrepared)
 
 
     def _onSmartSlicePrepared(self):
