@@ -83,8 +83,15 @@ class SmartSlicePropertyHandler(QObject):
         self._global_cache = {}
         self._extruder_cache = {}
 
-        #  Cura Property Keys that explicitly affect SmartSlice results
+        '''  
+          Cura Property Keys that explicitly affect SmartSlice results
+            For list of settings that affect validation/optimization see:
+                https://tetoncomposites.atlassian.net/wiki/spaces/CURA/pages/99549204/Validation+Workflow
+                https://tetoncomposites.atlassian.net/wiki/spaces/CURA/pages/99549245/Optimization+Workflow
+        '''
+        #  Global Settings
         self.global_keys = {"layer_height_0", "layer_height"}
+        #  Per Extruder Settings
         self.extruder_keys = {"wall_line_width_0", "wall_line_width_x", "wall_line_width", "line_width", "wall_line_count", "wall_thickness", 
                          "skin_angles", "top_layers", "bottom_layers", 
                          "infill_pattern", "infill_sparse_density", "infill_angles", 

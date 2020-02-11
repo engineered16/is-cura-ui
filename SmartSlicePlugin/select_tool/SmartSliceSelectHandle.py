@@ -36,7 +36,7 @@ class SelectionMode:
 
 class SmartSliceSelectHandle(ToolHandle):
 #  CONSTRUCTORS
-    def __init__(self, extension, parent = None, tri: SelectableFace = None):
+    def __init__(self, extension, parent = None, tri = None):
         super().__init__(parent)
 
         self._name = "SmartSliceSelectHandle"
