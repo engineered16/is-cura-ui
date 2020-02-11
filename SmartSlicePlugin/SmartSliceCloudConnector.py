@@ -525,7 +525,7 @@ class SmartSliceCloudConnector(QObject):
         self.active_machine = None
         self.extruders = None
         self._all_extruders_settings = None
-        self.propertyHandler = None
+        self.propertyHandler = None # SmartSlicePropertyHandler
 
         # POC
         self._poc_default_infill_direction = 45
@@ -1167,10 +1167,10 @@ class SmartSliceCloudConnector(QObject):
         return native_vector
 
     def appendForce0FacesPoc(self, face_ids):
-        face_ids = tuple(face_ids)
         for face_id in face_ids:
+            if not isinstance(face_id, int):
+                face_id = face_id.id
             if face_id not in self._poc_force0_faces:
-                Logger.log("d", "Adding new face to force0: {}".format(face_id))
                 self._poc_force0_faces += (face_id, )
 
     def resetForce0FacesPoc(self):
@@ -1180,10 +1180,10 @@ class SmartSliceCloudConnector(QObject):
         return self._poc_force0_faces
 
     def appendAnchor0FacesPoc(self, face_ids):
-        face_ids = tuple(face_ids)
         for face_id in face_ids:
+            if not isinstance(face_id, int):
+                face_id = face_id.id
             if face_id not in self._poc_anchor0_faces:
-                Logger.log("d", "Adding new face to anchor0: {}".format(face_id))
                 self._poc_anchor0_faces += (face_id, )
 
     def resetAnchor0FacesPoc(self):
