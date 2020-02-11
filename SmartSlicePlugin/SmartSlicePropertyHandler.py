@@ -405,7 +405,7 @@ class SmartSlicePropertyHandler(QObject):
         if self._globalStack.getProperty(key, property_name) == self._global_cache[key]:
             return
 
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
+        if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
             self.connector.confirmValidation.emit()
         else:
             self.connector._prepareValidation()
@@ -420,7 +420,7 @@ class SmartSlicePropertyHandler(QObject):
         elif self._activeExtruder.getProperty(key, property_name) == self._extruder_cache[key]:
             return
 
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
+        if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
             #  Confirm Settings Changes
             if not self.connector._proxy.confirmationWindowEnabled:
                 self.connector.confirmValidation.emit()
