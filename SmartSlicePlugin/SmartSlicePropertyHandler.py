@@ -77,34 +77,35 @@ class SmartSlicePropertyHandler(QObject):
         #  Connect Signals
         self._globalStack.propertyChanged.connect(self._onGlobalPropertyChanged)
         self._activeExtruder.propertyChanged.connect(self._onExtruderPropertyChanged)
-
         self._activeMachineManager.activeMaterialChanged.connect(self._onMaterialChanged)
-        #Application.getInstance().getController().getScene().sceneChanged.connect(self._onModelChanged)
-
         self._sceneRoot.childrenChanged.connect(self.connectMeshSignals)
         
         self._global_cache = {}
         self._extruder_cache = {}
 
+        #  Cura Property Keys that explicitly affect SmartSlice results
         self.global_keys = {"layer_height_0", "layer_height"}
-
         self.extruder_keys = {"wall_line_width_0", "wall_line_width_x", "wall_line_width", "line_width", "wall_line_count", "wall_thickness", 
                          "skin_angles", "top_layers", "bottom_layers", 
                          "infill_pattern", "infill_sparse_density", "infill_angles", 
                          "alternate_extra_perimeter"}
-
         
         self._currCancel = None
         self._lastCancel = None
 
+    """
+      clearChangedProperties()
+        Clear all pending changed properties/values
+    """
     def clearChangedProperties(self):
-        for p in self._propertiesChanged:
-            self._propertiesChanged.pop()
-        for i in self._changedValues:
-            self._changedValues.pop()
+        self._propertiesChanged = []
+        self._changedValues = []
 
+    """
+      cacheGlobal()
+        Caches properties that are used throughout Cura's Global Environment
+    """
     def cacheGlobal(self):
-
         self._global_cache = {}
 
         for key in self.global_keys:
@@ -115,9 +116,11 @@ class SmartSlicePropertyHandler(QObject):
                 self.connector._proxy._confirmationWindowEnabled = False
                 self.connector._proxy._confirmationWindowEnabledChanged.emit()
             
-
+    """
+      cacheExtruder()
+        Caches properties that are used for the active extruder
+    """
     def cacheExtruder(self):
-
         self._extruder_cache = {}
 
         for key in self.extruder_keys:
@@ -126,6 +129,10 @@ class SmartSlicePropertyHandler(QObject):
             if self._extruder_cache[key] != self._activeExtruder.getProperty(key, "value"):
                 self._extruder_cache[key] = self._activeExtruder.getProperty(key, "value")
 
+    """
+      cacheSmartSlice()
+        Caches properties that are only used in SmartSlice Environment
+    """
     def cacheSmartSlice(self):
         i = 0
         for prop in self._propertiesChanged:
@@ -162,20 +169,23 @@ class SmartSlicePropertyHandler(QObject):
                 self.setMeshRotation()
                 self._newRotation = self.meshRotation
                 self._propertiesChanged.pop()
-            
-
             i += 0
-
-
         self.clearChangedProperties()
 
+    """
+      cacheChanges()
+        Stores all current values in Cura environment to SmartSlice cache
+    """
     def cacheChanges(self):
         self.cacheSmartSlice()
         self.cacheGlobal()
         self.cacheExtruder()
 
+    """
+      restoreCache()
+        Restores all cached values for properties upon user cancellation
+    """
     def restoreCache(self):
-
         for property in self._global_cache:
             if self._global_cache[property] != self._globalStack.getProperty(property, "value"):
                 self._lastCancel = property
@@ -215,9 +225,10 @@ class SmartSlicePropertyHandler(QObject):
                 self.setMeshRotation
                 self._newRotation = self.meshRotation
             
-
-        
-
+    """
+      prepareCache()
+        Clears any pending changes to cache and silences confirmation prompt
+    """
     def prepareCache(self):
         self.clearChangedProperties()
         self.connector._proxy.confirmationWindowEnabled = False
@@ -242,7 +253,6 @@ class SmartSlicePropertyHandler(QObject):
                 self._propertiesChanged.pop(i)
             i += 1
 
-
     def _onConfirmChanges(self):
         self.cacheChanges()
         self.connector.confirmationConcluded.emit()
@@ -256,26 +266,40 @@ class SmartSlicePropertyHandler(QObject):
         self.connector.confirmationConcluded.emit()
         Logger.log ("d", "Cancelled Change in Smart Slice Environment")
 
-
+    """
+      resetCancelCheck()
+        Silences second 'Confirm Changes' prompt after a user cancels
+    """ 
     def resetCancelCheck(self):
         #  NOTE: Increase delay if a setting change 
         #         erroneously raises a second confirmation prompt 
         time.sleep(0.35)
         self._cancelChanges = False
 
-
-
+    """
+      getGlobalProperty(key)
+        key: String 'key' value for referencing global property value
+    """
     def getGlobalProperty(self, key):
         return self._global_cache[key]
 
+    """
+      getExtruderProperty(key)
+        key: String 'key' value for referencing active extruder property value
+    """
     def getExtruderProperty(self, key):
         return self._extruder_cache[key]
+
 
     #
     #  LOCAL TRANSFORMATION PROPERTIES
     #
 
-    def connectMeshSignals(self, unused):
+    """
+      connectMeshSignals()
+        When a mesh is loaded, this method is called to connect signals for detecting mesh transform changes
+    """
+    def connectMeshSignals(self, unused=None):
         i = 0
         _root = self._sceneRoot 
 
@@ -410,7 +434,6 @@ class SmartSlicePropertyHandler(QObject):
         else:
             self.connector._prepareValidation()
             self._global_cache[key] = self._globalStack.getProperty(key, "value")
-
 
     # On EXTRUDER Property Changed
     def _onExtruderPropertyChanged(self, key: str, property_name: str):
