@@ -16,8 +16,6 @@ from UM.Application import Application
 from UM.Tool import Tool
 from UM.PluginRegistry import PluginRegistry
 
-from .SmartSliceValidationProperty import SmartSliceValidationProperty
-
 #   Smart Slice Requirements Tool:
 #     When Pressed, this tool produces the "Requirements Dialog"
 #

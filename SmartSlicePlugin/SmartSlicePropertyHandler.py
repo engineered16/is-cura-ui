@@ -245,7 +245,7 @@ class SmartSlicePropertyHandler(QObject):
 
     def _onConfirmChanges(self):
         self.cacheChanges()
-        self.connector.ConfirmationConcluded.emit()
+        self.connector.confirmationConcluded.emit()
 
     def _onCancelChanges(self):
         Logger.log ("d", "Cancelling Change in Smart Slice Environment")
@@ -253,7 +253,7 @@ class SmartSlicePropertyHandler(QObject):
         x = threading.Thread(target=self.resetCancelCheck)
         x.start()
         self.restoreCache()
-        self.connector.ConfirmationConcluded.emit()
+        self.connector.confirmationConcluded.emit()
         Logger.log ("d", "Cancelled Change in Smart Slice Environment")
 
 
