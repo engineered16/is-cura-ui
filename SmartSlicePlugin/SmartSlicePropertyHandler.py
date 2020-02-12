@@ -31,6 +31,15 @@ from UM.Settings.SettingInstance import InstanceState
 from .SmartSliceCloudProxy import SmartSliceCloudStatus
 from .SmartSliceProperty import SmartSliceProperty, SmartSliceLoadDirection, SmartSliceContainerProperties
 
+"""
+  SmartSlicePropertyHandler(connector)
+    connector: CloudConnector, used for interacting with rest of SmartSlice plugin
+
+    The Property Handler contains functionality for manipulating all settings that
+      affect Smart Slice validation/optimization results.  
+    It manages a cache of properties including Global/Extruder container properties 
+      retrieved from Cura's backend, as well as SmartSlice settings (e.g. Load/Anchor)
+"""
 class SmartSlicePropertyHandler(QObject):
     def __init__(self, connector):
         super().__init__()
@@ -40,23 +49,31 @@ class SmartSlicePropertyHandler(QObject):
         self._confirming = False
         self._initialized = False
         
+        #  Cura Setup
         self._activeMachineManager = CuraApplication.getInstance().getMachineManager()
         self._globalStack = self._activeMachineManager.activeMachine
         self._activeExtruder = self._globalStack.extruderList[0]
         
-        #  Cache Space
+        #  General Purpose Cache Space
         self._propertiesChanged = []
         self._changedValues     = []
         self._hasChanges = False
-
+        self._global_cache = {}
+        self._extruder_cache = {}
+        #  General Purpose properties which affect Smart Slice
+        self._container_properties = SmartSliceContainerProperties()
 
         #  Mesh Properties
         self.meshScale = None
         self._newScale = None
         self.meshRotation = None
         self._newRotation = None
+        self._material = self._activeMachineManager._global_container_stack.extruderList[0].material #  Cura Material Node
+        #  Scene (for mesh/transform signals)
+        self._sceneNode = None
+        self._sceneRoot = Application.getInstance().getController().getScene().getRoot()
 
-
+        #  Selection Proeprties
         self._selection_mode = 1 # Default to AnchorMode
         self._changedMesh = None
         self._changedFaces = None
@@ -66,29 +83,21 @@ class SmartSlicePropertyHandler(QObject):
         self._loadedMesh = None
         self._loadedFaces = None
 
-        self._sceneNode = None
-        self._sceneRoot = Application.getInstance().getController().getScene().getRoot()
-
-        self._material = self._activeMachineManager._global_container_stack.extruderList[0].material #  Cura Material Node
-
-        self._cancelChanges = False
-        self._doneCancelling = False
-        
         #  Connect Signals
-        self._globalStack.propertyChanged.connect(self._onGlobalPropertyChanged)
-        self._activeExtruder.propertyChanged.connect(self._onExtruderPropertyChanged)
-        self._activeMachineManager.activeMaterialChanged.connect(self._onMaterialChanged)
-        self._sceneRoot.childrenChanged.connect(self.connectMeshSignals)
+        self._globalStack.propertyChanged.connect(self._onGlobalPropertyChanged)            #  Global
+        self._activeExtruder.propertyChanged.connect(self._onExtruderPropertyChanged)       #  Extruder
+        self._activeMachineManager.activeMaterialChanged.connect(self._onMaterialChanged)   #  Material
+        self._sceneRoot.childrenChanged.connect(self.connectMeshSignals)                    #  Mesh Transform
         
-        #  Cura Settings which affect Smart Slice
-        self._global_cache = {}
-        self._extruder_cache = {}
-        self._container_properties = SmartSliceContainerProperties()
+        #  Cancellation Variable
+        self._cancelChanges = False
 
-        
-        self._currCancel = None
-        self._lastCancel = None
 
+    #
+    #   CACHE HANDLING
+    #
+
+    #  Refresh Cache State
     """
       clearChangedProperties()
         Clear all pending changed properties/values
@@ -96,6 +105,25 @@ class SmartSlicePropertyHandler(QObject):
     def clearChangedProperties(self):
         self._propertiesChanged = []
         self._changedValues = []
+            
+    """
+      prepareCache()
+        Clears any pending changes to cache and silences confirmation prompt
+    """
+    def prepareCache(self):
+        self.clearChangedProperties()
+        self.connector._proxy.confirmationWindowEnabled = False
+        self.connector._proxy.confirmationWindowEnabledChanged.emit()
+
+    #  Cache Changes
+    """
+      cacheChanges()
+        Stores all current values in Cura environment to SmartSlice cache
+    """
+    def cacheChanges(self):
+        self.cacheSmartSlice()
+        self.cacheGlobal()
+        self.cacheExtruder()
 
     """
       cacheGlobal()
@@ -166,14 +194,8 @@ class SmartSlicePropertyHandler(QObject):
             i += 0
         self.clearChangedProperties()
 
-    """
-      cacheChanges()
-        Stores all current values in Cura environment to SmartSlice cache
-    """
-    def cacheChanges(self):
-        self.cacheSmartSlice()
-        self.cacheGlobal()
-        self.cacheExtruder()
+    #  Restore Properties from Cache
+    cacheRestored = Signal()
 
     """
       restoreCache()
@@ -218,17 +240,7 @@ class SmartSlicePropertyHandler(QObject):
             elif prop is SmartSliceProperty.MeshRotation:
                 self.setMeshRotation
                 self._newRotation = self.meshRotation
-            
-    """
-      prepareCache()
-        Clears any pending changes to cache and silences confirmation prompt
-    """
-    def prepareCache(self):
-        self.clearChangedProperties()
-        self.connector._proxy.confirmationWindowEnabled = False
-        self.connector._proxy.confirmationWindowEnabledChanged.emit()
 
-    cacheRestored = Signal()
 
     #
     #   CONFIRM/CANCEL PROPERTY CHANGES
@@ -269,6 +281,11 @@ class SmartSlicePropertyHandler(QObject):
         #         erroneously raises a second confirmation prompt 
         time.sleep(0.35)
         self._cancelChanges = False
+
+
+    #
+    #   CURA PROPERTY ACCESSORS
+    #
 
     """
       getGlobalProperty(key)
@@ -313,10 +330,7 @@ class SmartSlicePropertyHandler(QObject):
                     #  TODO: Properly Disconnect this Signal, when figure out where to do so
                     self._sceneNode.transformationChanged.connect(self._onLocalTransformationChanged)
                     i += 1
-            
             i += 1
-
-        # STUB
         return 
 
 
@@ -361,7 +375,6 @@ class SmartSlicePropertyHandler(QObject):
             self.connector._prepareValidation()
 
 
-
     #
     #   MATERIAL CHANGES
     #
@@ -370,7 +383,6 @@ class SmartSlicePropertyHandler(QObject):
     def setMaterial(self):
        self._activeExtruder.material = self._material
        
-
     def _onMaterialChanged(self):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
             #print("\n\nMATERIAL CHANGE CONFIRMED HERE\n\n")
@@ -412,7 +424,7 @@ class SmartSlicePropertyHandler(QObject):
 
 
     #
-    #   SIGNAL LISTENERS
+    #   CURA PROPERTY SIGNAL LISTENERS
     #
 
     # On GLOBAL Property Changed
