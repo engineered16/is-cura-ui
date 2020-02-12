@@ -1,4 +1,5 @@
 import os
+import json
 
 from PyQt5.QtCore import QUrl
 from PyQt5.QtQml import qmlRegisterSingletonType
@@ -31,6 +32,12 @@ class SmartSliceExtension(Extension):
         self._proxy = SmartSliceProxy(self)
 
         Application.getInstance().engineCreatedSignal.connect(self._onEngineCreated)
+
+        #self.setMenuName(i18n_catalog.i18nc("@item:inmenu", "Smart Slice"))
+
+        # About Dialog
+        self._about_dialog = None
+        self.addMenuItem(i18n_catalog.i18nc("@item:inmenu", "About"), self._openAboutDialog)
         
         # Login Window
         self._login_dialog = None
@@ -40,23 +47,25 @@ class SmartSliceExtension(Extension):
 
     def _openLoginDialog(self):
         if not self._login_dialog:
-            self._login_dialog, self._login_context, self._login_component = self._createQmlDialog("SmartSliceCloudLogin.qml")
+            self._login_dialog = self._createQmlDialog("SmartSliceCloudLogin.qml")
         self._login_dialog.show()
 
-    def _createQmlDialog(self, dialog_qml, directory = None):
+    def _openAboutDialog(self):
+        if not self._about_dialog:
+            self._about_dialog = self._createQmlDialog("SmartSliceAbout.qml", vars={"aboutText": self._aboutText()})
+        self._about_dialog.show()
+
+    def _closeAboutDialog(self):
+        if not self._about_dialog:
+            self._about_dialog.close()
+
+    def _createQmlDialog(self, dialog_qml, directory = None, vars = None):
         if directory is None:
             directory = PluginRegistry.getInstance().getPluginPath(self.getPluginId())
-        path = QUrl.fromLocalFile(os.path.join(directory, dialog_qml))
-        component = QQmlComponent(Application.getInstance()._qml_engine, path)
 
-        # We need access to engine (although technically we can't)
-        context = QQmlContext(Application.getInstance()._qml_engine.rootContext())
-        #context.setContextProperty("manager", self)
-        dialog = component.create(context)
-        if dialog is None:
-            Logger.log("e", "QQmlComponent status %s", component.status())
-            Logger.log("e", "QQmlComponent errorString %s", component.errorString())
-        return dialog, context, component
+        mainApp = Application.getInstance()
+
+        return mainApp.createQmlComponent(os.path.join(directory, dialog_qml), vars)
 
     def _onEngineCreated(self):
         # Registering our type in QML for direct interaction.
@@ -76,6 +85,20 @@ class SmartSliceExtension(Extension):
                                  self.getVariables
                                  )
         '''
+
+    def _aboutText(self):
+        about = 'Smart Slice for Cura\n'
+
+        try:
+            plugin_json_path = os.path.dirname(os.path.abspath(__file__))
+            plugin_json_path = os.path.join(plugin_json_path, 'plugin.json')
+            with open(plugin_json_path, 'r') as f:
+                plugin_info = json.load(f)
+            about += 'Version: {}'.format(plugin_info['version'])
+        except:
+            pass
+
+        return about
 
     def getProxy(self, engine, script_engine):
         return self._proxy
