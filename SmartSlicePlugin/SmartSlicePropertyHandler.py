@@ -49,11 +49,6 @@ class SmartSlicePropertyHandler(QObject):
         self._confirming = False
         self._initialized = False
         
-        #  Cura Setup
-        self._activeMachineManager = CuraApplication.getInstance().getMachineManager()
-        self._globalStack = self._activeMachineManager.activeMachine
-        self._activeExtruder = self._globalStack.extruderList[0]
-        
         #  General Purpose Cache Space
         self._propertiesChanged = []
         self._changedValues     = []
@@ -68,7 +63,6 @@ class SmartSlicePropertyHandler(QObject):
         self._newScale = None
         self.meshRotation = None
         self._newRotation = None
-        self._material = self._activeMachineManager._global_container_stack.extruderList[0].material #  Cura Material Node
         #  Scene (for mesh/transform signals)
         self._sceneNode = None
         self._sceneRoot = Application.getInstance().getController().getScene().getRoot()
@@ -82,13 +76,16 @@ class SmartSlicePropertyHandler(QObject):
         self._anchoredFaces = None
         self._loadedMesh = None
         self._loadedFaces = None
-
-        #  Connect Signals
-        self._globalStack.propertyChanged.connect(self._onGlobalPropertyChanged)            #  Global
-        self._activeExtruder.propertyChanged.connect(self._onExtruderPropertyChanged)       #  Extruder
-        self._activeMachineManager.activeMaterialChanged.connect(self._onMaterialChanged)   #  Material
-        self._sceneRoot.childrenChanged.connect(self.connectMeshSignals)                    #  Mesh Transform
         
+        #  Cura Setup
+        self._activeMachineManager = CuraApplication.getInstance().getMachineManager()
+        self._globalStack = self._activeMachineManager.activeMachine
+        
+        #  Check that a printer has been set-up by the wizard.
+        #  TODO:  Add a signal listener for when Machine is added
+        if self._globalStack is not None:
+            self._onMachineChanged()
+
         #  Cancellation Variable
         self._cancelChanges = False
 
@@ -457,3 +454,15 @@ class SmartSlicePropertyHandler(QObject):
             self.connector._prepareValidation()
             self._extruder_cache[key] = self._activeExtruder.getProperty(key, "value")
 
+
+    #  Configure Extruder/Machine Settings for Smart Slice
+    def _onMachineChanged(self):
+        self._activeExtruder = self._globalStack.extruderList[0]
+
+        self._material = self._activeMachineManager._global_container_stack.extruderList[0].material #  Cura Material Node
+
+        #  Connect Signals
+        self._globalStack.propertyChanged.connect(self._onGlobalPropertyChanged)            #  Global
+        self._activeExtruder.propertyChanged.connect(self._onExtruderPropertyChanged)       #  Extruder
+        self._activeMachineManager.activeMaterialChanged.connect(self._onMaterialChanged)   #  Material
+        self._sceneRoot.childrenChanged.connect(self.connectMeshSignals)                    #  Mesh Transform

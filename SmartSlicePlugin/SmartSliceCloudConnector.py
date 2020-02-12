@@ -960,7 +960,7 @@ class SmartSliceCloudConnector(QObject):
         # Ignore any extruder that is not the active extruder.
         machine_extruders = list(filter(
             lambda extruder: extruder.position == active_extruder_position,
-            active_machine.extruderList
+            self.active_machine.extruderList
         ))
 
         material_guids_per_extruder = []
@@ -1134,7 +1134,7 @@ class SmartSliceCloudConnector(QObject):
         if len(extruders) == 0:
             Logger.error("Did not find the extruder with position %i", active_extruder_position)
 
-        printer = pywim.chop.machine.Printer(name=active_machine.getName(),
+        printer = pywim.chop.machine.Printer(name=self.active_machine.getName(),
                                              extruders=extruders
                                              )
 
