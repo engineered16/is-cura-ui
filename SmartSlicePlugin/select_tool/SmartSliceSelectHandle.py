@@ -3,14 +3,10 @@ import numpy
 #  UM/Cura Imports
 from UM.Logger import Logger
 from UM.Scene.ToolHandle import ToolHandle
-from UM.Scene.SceneNode import SceneNode
+from UM.Scene.Selection import Selection
 from UM.Mesh.MeshBuilder import MeshBuilder
-from UM.Mesh.MeshData import MeshData
-from UM.PluginRegistry import PluginRegistry
 
 from UM.Math.Color import Color
-from UM.Math.Matrix import Matrix
-from UM.Math.Quaternion import Quaternion
 from UM.Math.Vector import Vector
 
 # Provides enums
@@ -50,6 +46,12 @@ class SmartSliceSelectHandle(ToolHandle):
         self._connector.propertyHandler._selection_mode = SelectionMode.LoadMode
         self._connector._proxy.loadDirectionChanged.connect(self.drawSelection)
 
+    # Override ToolHandle._onSelectionCenterChanged so that we can set the full transformation
+    def _onSelectionCenterChanged(self) -> None:
+        if self._enabled:
+            #self.setPosition(Selection.getSelectionCenter())
+            obj = Selection.getSelectedObject(0) # which index to use?
+            self.setTransformation(obj.getLocalTransformation())
 
 #  ACCESSORS
     @property

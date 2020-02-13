@@ -88,7 +88,7 @@ class SmartSliceSelectTool(Tool):
                         camTool.setOrigin(aabb.center)
 
     def _onSelectedFaceChanged(self, curr_sf=None):
-        if not self._isActive():
+        if not self.getEnabled():
             return
 
         self._calculateMesh()
@@ -109,7 +109,6 @@ class SmartSliceSelectTool(Tool):
         selected_faces = None
 
         self._handle.setFace(selected_triangles)
-        self._handle.scale(scene_node.getScale(), transform_space=CuraSceneNode.TransformSpace.World)
             
         #  Set mesh
         self._handle._connector.propertyHandler._changedMesh = selmesh
@@ -149,9 +148,6 @@ class SmartSliceSelectTool(Tool):
             Logger.log("d", "cloud_connector.getForce0FacesPoc(): {}".format(self._handle._connector.getForce0FacesPoc()))
 
         Application.getInstance().activityChanged.emit()
-
-    def _isActive(self):
-        return self is Application.getInstance().getController().getActiveTool()
 
     def _onActiveStateChanged(self):
         controller = Application.getInstance().getController()
