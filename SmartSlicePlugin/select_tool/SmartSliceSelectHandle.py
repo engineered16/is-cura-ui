@@ -25,25 +25,10 @@ class SmartSliceSelectHandle(ToolHandle):
 
         self._name = "SmartSliceSelectHandle"
         self._connector = extension.cloud # SmartSliceCloudConnector
-
-        #  Default Line Properties
-        self._edge_width = 0.8
-        self._edge_length = [] # TODO: GET THIS FROM FACE EDGES
         self._selected_color = Color(0, 0, 255, 255)
-        self._anchored_color = self._y_axis_color
-        self._loaded_color = self._y_axis_color
 
         #  Selected Face Properties
         self._tri = tri
-        self._face = []
-        #  Previously Selected Faces
-        self._loaded_faces = []
-        #self._load_magnitude = 0
-        self._anchored_faces = []
-
-        #  For Performance
-        self._has_anchor = False
-        self._has_loads  = False
 
         #   Arrow Mesh
         self._arrow = False

@@ -78,6 +78,8 @@ class SmartSliceSelectTool(Tool):
                     
                     self._scene_node_name = sn.getName()
                     self._interactive_mesh = makeInteractiveMesh(mesh_data)
+                    self._load_face = None
+                    self._anchor_face = None
 
                     controller = Application.getInstance().getController()
                     camTool = controller.getCameraTool()
@@ -86,6 +88,11 @@ class SmartSliceSelectTool(Tool):
                         camTool.setOrigin(aabb.center)
 
     def _onSelectedFaceChanged(self, curr_sf=None):
+        if not self._isActive():
+            return
+
+        self._calculateMesh()
+
         curr_sf = Selection.getSelectedFace()
 
         if curr_sf is None:
@@ -143,6 +150,9 @@ class SmartSliceSelectTool(Tool):
 
         Application.getInstance().activityChanged.emit()
 
+    def _isActive(self):
+        return self is Application.getInstance().getController().getActiveTool()
+
     def _onActiveStateChanged(self):
         controller = Application.getInstance().getController()
         active_tool = controller.getActiveTool()
@@ -151,13 +161,9 @@ class SmartSliceSelectTool(Tool):
         if active_tool == self and Selection.hasSelection():
             Selection.setFaceSelectMode(True)
             Logger.log("d", "Enabled faceSelectMode!")
-
-            self._calculateMesh()
         else:
             Selection.setFaceSelectMode(False)
             Logger.log("d", "Disabled faceSelectMode!")
-
-        #self._calculateMesh()
 
     ##  Get whether the select face feature is supported.
     #   \return True if it is supported, or False otherwise.
