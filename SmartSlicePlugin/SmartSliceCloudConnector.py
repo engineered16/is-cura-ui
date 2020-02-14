@@ -1164,8 +1164,8 @@ class SmartSliceCloudConnector(QObject):
         for component in self._poc_force0_vector:
             if type(component) is numpy.float64:
                 component = component.item()
-            native_vector += (component, )
-        return native_vector
+            native_vector += (float(component), )
+        return list(native_vector)
 
     def appendForce0FacesPoc(self, face_ids):
         face_ids = tuple(face_ids)
