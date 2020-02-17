@@ -23,7 +23,7 @@ from .select_tool import SmartSliceSelectTool
 from .stage import SmartSliceStage
 
 extension = SmartSliceExtension.SmartSliceExtension()
-extension._name = "Extension"
+#extension._name = "Extension"
 requirements_tool = SmartSliceRequirements.SmartSliceRequirements(extension)
 requirements_tool._name = "RequirementsTool"
 select_tool = SmartSliceSelectTool.SmartSliceSelectTool(extension)
