@@ -313,7 +313,6 @@ class SmartSliceCloudJob(Job):
         # self.job_type == pywim.smartslice.job.JobType.optimization
         if task and task.result and len(task.result.analyses) > 0:
             analysis = task.result.analyses[0]
-
             self._process_analysis_result(analysis)
 
             # Overriding if our result is going to be optimized...
@@ -433,9 +432,6 @@ class SmartSliceCloudJob(Job):
         else:
             material_volume = [analysis.extruders[0].material_volume]
 
-            # TODO - once multiple extruders are handles we'll need to grab info
-            # here for each of them
-
         material_extra_info = self.connector._calculateAdditionalMaterialInfo(material_volume)
         Logger.log("d", "material_extra_info: {}".format(material_extra_info))
 
@@ -484,7 +480,7 @@ class SmartSliceCloudConnector(QObject):
 
     debug_save_smartslice_package_preference = "smartslice/debug_save_smartslice_package"
     debug_save_smartslice_package_location = "smartslice/debug_save_smartslice_package_location"
-    
+
 
     def __init__(self, extension):
         super().__init__()
@@ -512,7 +508,7 @@ class SmartSliceCloudConnector(QObject):
 
         self._proxy.loadMagnitudeChanged.connect(self._updateForce0Magnitude)
         self._proxy.loadDirectionChanged.connect(self._updateForce0Direction)
-        
+
         # Connecting signals
         self.doVerification.connect(self._doVerfication)
         self.confirmOptimization.connect(self._confirmOptimization)
@@ -524,7 +520,7 @@ class SmartSliceCloudConnector(QObject):
         self.app_preferences.addPreference(self.http_hostname_preference, "api-20.fea.cloud")
         self.app_preferences.addPreference(self.http_port_preference, 443)
         self.app_preferences.addPreference(self.http_token_preference, "")
-        
+
         # Debug stuff
         self.app_preferences.addPreference(self.debug_save_smartslice_package_preference, False)
         if Platform.isLinux():
@@ -549,7 +545,7 @@ class SmartSliceCloudConnector(QObject):
         self.resetAnchor0FacesPoc()
         self.resetForce0FacesPoc()
         self.resetForce0VectorPoc()
-        
+
         Application.getInstance().engineCreatedSignal.connect(self._onEngineCreated)
 
         self.confirming = False
@@ -559,7 +555,7 @@ class SmartSliceCloudConnector(QObject):
         self.confirmationConcluded.connect(self.onConfirmationConcluded)
 
     onSmartSlicePrepared = pyqtSignal()
-    
+
     def _onSaveDebugPackage(self, messageId: str, actionId: str) -> None:
         dummy_job = SmartSliceCloudVerificationJob(self)
         if self.status == SmartSliceCloudStatus.ReadyToVerify:
@@ -569,7 +565,7 @@ class SmartSliceCloudConnector(QObject):
         else:
             Logger.log("e", "DEBUG: This is not a defined state. Provide all input to create the debug package.")
             return
-        
+
         jobname = Application.getInstance().getPrintInformation().jobName
         debug_filename = "{}_smartslice.3mf".format(jobname)
         debug_filedir = self.app_preferences.getValue(self.debug_save_smartslice_package_location)
@@ -593,7 +589,7 @@ class SmartSliceCloudConnector(QObject):
         self.onSmartSlicePrepared.emit()
         self.propertyHandler.cacheChanges() # Setup Cache
         self.status = SmartSliceCloudStatus.NoModel
-        
+
         if self.app_preferences.getValue(self.debug_save_smartslice_package_preference):
             self.debug_save_smartslice_package_message = Message(title="[DEBUG] SmartSlicePlugin",
                                                                  text= "Click on the button below to generate a debug package, which contains all data as sent to the cloud. Make sure you provide all input as confirmed by an active button in the action menu in the SmartSlice tab.\nThanks!",
@@ -741,7 +737,7 @@ class SmartSliceCloudConnector(QObject):
             if node.getName() == "SmartSliceMeshModifier":
                 sliceable_nodes_count -= 1
 
-        #  If no model is reported... 
+        #  If no model is reported...
         #   This needs to be reported *first*
         if slicable_nodes_count != 1:
             self.status = SmartSliceCloudStatus.NoModel
@@ -767,7 +763,7 @@ class SmartSliceCloudConnector(QObject):
         elif not self._jobs[self._current_job].canceled:
             self.propertyHandler._propertiesChanged = []
             self._jobs[self._current_job] = None
-        
+
 
     #
     #   CONFIRMATION PROMPT
@@ -793,7 +789,7 @@ class SmartSliceCloudConnector(QObject):
                 self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose the current\n validation results?"
             elif self.status is SmartSliceCloudStatus.BusyOptimizing:
                 self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose your \noptimization results?"
-            
+
             self._proxy.confirmationWindowEnabled = True
             self._proxy.confirmationWindowEnabledChanged.emit()
 
@@ -907,7 +903,7 @@ class SmartSliceCloudConnector(QObject):
         if self._proxy._confirming_modmesh:
             self.doOptimization.emit()
             self._proxy._confirming_modmesh = False
-        
+
         #  For handling requirements changes during optimization
         elif self.status is SmartSliceCloudStatus.BusyOptimizing:
             if SmartSliceValidationProperty.FactorOfSafety in self.propertyHandler._propertiesChanged or (SmartSliceValidationProperty.MaxDisplacement in self.propertyHandler._propertiesChanged):
@@ -920,11 +916,11 @@ class SmartSliceCloudConnector(QObject):
                     self.status = SmartSliceCloudStatus.Optimized
                 self.updateSliceWidget()
             else:
-                self._prepareValidation()   
+                self._prepareValidation()
 
         else:
             self._prepareValidation()
-        
+
         self.propertyHandler._onConfirmChanges()
 
         # Close Dialog
@@ -943,7 +939,7 @@ class SmartSliceCloudConnector(QObject):
             '''
         else:
             self.propertyHandler._onCancelChanges()
-        
+
         # Close Dialog
         self.confirmationConcluded.emit()
 

@@ -1,14 +1,7 @@
-# Intelligent Slice Plugin (USER INTERFACE)
-
-**VERSION: 19.0.5.0**
-
-This repository contains the **USER INTERFACE** to be used with the Intelligent Slice Plugin.  
+# Smart Slice Plugin for Cura
 This plugin provides an interface within Ultimaker Cura so that Teton Simulation's proprietary
 smart slicing algorithms can be conveniently used by end-users without leaving the part modeling interface.
 
-
-
-### Table of Contents
 *  [Getting Started](#getting-started)
     * [Versioning](#versioning)
     * [Prerequisites](#prerequisites)
@@ -21,9 +14,9 @@ smart slicing algorithms can be conveniently used by end-users without leaving t
 *   [Recent Updates](#patch-notes)
 
 
-## Getting Started 
+# Getting Started
 
-#### Versioning
+## Versioning
 
 Semantic versioning is employed with the following format:
 
@@ -34,31 +27,10 @@ Semantic versioning is employed with the following format:
 *  `Z` represents the REVISION version
 *  `B` represents the BUILD version
 
-#### Prerequisites
-
-*  Ultimaker Cura
-*  Python 3.5
-    *  Pip
-
-#### Installation
-
-###### Linux and UNIX
-
-```bash
-[user@computer ~]$ cd .local/share/cura/[VERSION NUMBER]/plugins/
-[user@computer plugins] git clone https://github.com/tetonsim/is-cura-ui.git
-[user@computer plugins] pip install cgal-bindings --user
-[user@computer plugins] pip install teton-3mf --user
-[user@computer plugins] pip install teton-pywim --user
-```
-
-###### Windows
-
-*Commentary needed by Windows User*
-
+## Dev Environment Configuration
+[See this page](https://github.com/tetonsim/is-cura-ui/wiki/Setup-Dev-Machine)
 
 ##  Project Features
-
 *  Basic Interface Features
     *  Provides new tab labeled "SMART SLICE" to on right side of standard top bar options (e.g. PREPARE, PREVIEW, MONITOR)
 *  Smart Slice Button
@@ -76,31 +48,12 @@ Semantic versioning is employed with the following format:
     *  AWS returns a report that either validates the job or explains existing problems
     *  A validated part might then be further optimized (assuming it is not then over-fitted)
 
-####  Loads
+###  Loads
 
-A load can be a Pushing or Pulling kinetic force.  Users apply these loads by selecting a surface, while in 'Smart Slice' mode,  and modifying the values on the new dialogue within the canvas.  Loads can be further refined by right-clicking a surface and selecting *edit load*.  The load is represented by an arrow pointing in the normal direction of the force.  
+A load can be a Pushing or Pulling kinetic force.  Users apply these loads by selecting a surface, while in 'Smart Slice' mode,  and modifying the values on the new dialogue within the canvas.  Loads can be further refined by right-clicking a surface and selecting *edit load*.  The load is represented by an arrow pointing in the normal direction of the force.
 
 
-####  Anchors
+###  Anchors
 
 An anchor is a boundary condition where a subcomponent **must** remain static.  If it is not physically possible to do so, because of loads or some other reason, the entire part is reported as invalid.
-
-
-
-#  Patch Notes
-
-**NOTE:**  The constraints dialog works but is currently deactivated as it is integrated into Cura's native left sidebar.
-
-###  Coming Soon
-
-*  Sidebar buttons will be reintegrated to fit natively within Cura's left sidebar.
-*  Sidebar buttons will open dialogs, as they did in 19.0.5.0.
-*  Constraints buttons will be linked to selection handle as appropriate
-
-### 19.0.5.0
-
-*  Main Stage UI has been overhauled to better match Cura's native UI
-*  Push/Mount tools are now bordered icons and can be toggled
-    *  Public Domain Cursor images
-    *  Only one can be 'selected' at a time
 
