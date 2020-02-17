@@ -207,6 +207,22 @@ class SmartSliceStage(CuraStage):
         component_path = os.path.join(base_path, "stage", "ui", "SmartSliceMenu.qml")
         self.addDisplayComponent("menu", component_path)
 
+        #
+        #   BEGIN TESTING!!!
+        #
+
+        base_path = PluginRegistry.getInstance().getPluginPath("SmartSlicePlugin")
+        component_path = os.path.join(base_path, "SmartSliceConfirmationPrompt.qml")
+        self.addDisplayComponent("confirm", component_path)
+
+        #  Start with a Confirmation Prompt Raised
+        self._connector._proxy.confirmationWindowEnabled = True
+        self._connector._proxy.confirmationWindowEnabledChanged.emit()
+
+        #
+        #   END TESTING!!!
+        #
+
         # Setting state after all plugins are loaded
         self._was_buildvolume_hidden = not Application.getInstance().getBuildVolume().isVisible()
 
