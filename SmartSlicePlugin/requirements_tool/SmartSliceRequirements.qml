@@ -101,6 +101,11 @@ Item
             text: SmartSlice.Cloud.targetMaximalDisplacement
             placeholderText: ""
             property string unit: "[mm]";
+
+            Connections {
+                target: SmartSlice.Cloud
+                onTargetMaximalDisplacementChanged: { valueMaxDeflect.text = SmartSlice.Cloud.targetMaximalDisplacement }
+            }
         }
 
     }

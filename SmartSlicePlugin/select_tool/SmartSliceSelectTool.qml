@@ -136,10 +136,10 @@ Item {
             anchors.leftMargin: UM.Theme.getSize("default_margin").width
 
             text: "Flip Direction"
-
-            checked: SmartSlice.Selection.loadMagnitudeInverted
+            
+            checked: SmartSlice.Cloud.loadDirection
             onCheckedChanged: {
-				SmartSlice.Selection.loadMagnitudeInverted = checked;
+				SmartSlice.Cloud.loadDirection = checked;
 				UM.ActiveTool.triggerAction("_onSelectedFaceChanged");
 			}
         }
@@ -168,10 +168,10 @@ Item {
 
             onEditingFinished:
             {
-                SmartSlice.Selection.loadMagnitude = text; // Will be converted from string to the target data type via SmartSliceVariables
+                SmartSlice.Cloud.loadMagnitude = text; // Will be converted from string to the target data type via SmartSliceVariables
             }
 
-            text: SmartSlice.Selection.loadMagnitude
+            text: SmartSlice.Cloud.loadMagnitude
             placeholderText: "Type in your load"
             property string unit: "[N]";
         }

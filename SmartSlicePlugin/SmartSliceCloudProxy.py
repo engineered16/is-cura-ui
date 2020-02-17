@@ -6,16 +6,27 @@ Created on 22.10.2019
 
 import copy
 
+#  Standard Imports
+from enum import Enum
+
+#  Python/QML
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import pyqtProperty
 from PyQt5.QtCore import QObject
 from PyQt5.QtCore import QTime
 from PyQt5.QtCore import QUrl
 
+#  Ultimaker / Cura
+from UM.Application import Application
 from UM.Logger import Logger
 
+from cura.CuraApplication import CuraApplication
+from cura.Settings.MachineManager import MachineManager
 
-class SmartSliceCloudStatus:
+#  Smart Slice
+from .SmartSliceValidationProperty import SmartSliceValidationProperty
+
+class SmartSliceCloudStatus():
     NoConnection = 1
     BadLogin = 2
     NoModel = 3
@@ -35,32 +46,60 @@ class SmartSliceCloudStatus:
                    Overdimensioned,
                    )
 
-
 class SmartSliceCloudProxy(QObject):
     def __init__(self, connector) -> None:
         super().__init__()
 
         self.connector = connector
+        self._activeMachineManager = None
+        self._activeExtruder = None
+        self.shouldRaiseWarning = False
 
         # Properties (mainly) for the login window
         self._loginStatus = "Please log in with your credentials below."
         self._loginName = ""
         self._loginPassword = ""
 
-        # Properties (mainly) for the sliceinfo popup
+        # Primary Button (Slice/Validate/Optimize)
         self._sliceStatusEnum = 0
         self._sliceStatus = "_Status"
         self._sliceHint = "_Hint"
         self._sliceButtonText = "_ButtonText"
         self._sliceButtonEnabled = False
+        self._sliceButtonVisible = True
+        self._sliceButtonFillWidth = True
         self._sliceIconImage = ""
         self._sliceIconVisible = False
 
-        # Boundary values
+        # Secondary Button (Preview/Cancel)
+        self._secondaryButtonText = "_SecondaryText"
+        self._secondaryButtonFillWidth = False
+        self._secondaryButtonVisible = False
+
+        # Confirm Changes Dialog
+        self._validationRaised = False
+        self._confirmationWindowEnabled = False
+        self._validate_confirmed = True
+        self._optimize_confirmed = False
+        self._confirming_modmesh = False
+        self._hasActiveValidate = False
+        self._hasModMesh = False # Currently ASSUMES a mod mesh is in place; TODO: Detect this property change
+        self._confirmationText = ""
+
+        # Proxy Values (DO NOT USE DIRECTLY)
         self._targetFactorOfSafety = 1.5
         self._targetMaximalDisplacement = 1.0
         self._loadsApplied = 0
         self._anchorsApplied = 0
+        self._loadMagnitude = 10.0
+        self._loadDirection = False
+
+        #  Use-case & Requirements
+        self.reqsSafetyFactor = self._targetFactorOfSafety
+        self.reqsMaxDeflect  = self._targetMaximalDisplacement
+        self.reqsLoadMagnitude = self._loadMagnitude
+        self.reqsLoadDirection = self._loadDirection
+
 
         # Properties (mainly) for the sliceinfo widget
         self._resultSafetyFactor = copy.copy(self._targetFactorOfSafety)
@@ -97,7 +136,7 @@ class SmartSliceCloudProxy(QObject):
         self.resultTimeSkirtChanged.connect(self._onResultTimeChanged)
         self.resultTimeTravelChanged.connect(self._onResultTimeChanged)
 
-        self._materialName = "None"
+        self._materialName = None
         self._materialCost = 0.0
         self._materialLength = 0.0
         self._materialWeight = 0.0
@@ -149,7 +188,23 @@ class SmartSliceCloudProxy(QObject):
 
     # Properties (mainly) for the sliceinfo widget
 
+    #
+    #   SLICE BUTTON WINDOW
+    #
+    sliceButtonClicked = pyqtSignal()
+    secondaryButtonClicked = pyqtSignal()
+    sliceStatusChanged = pyqtSignal()
     sliceStatusEnumChanged = pyqtSignal()
+    sliceButtonFillWidthChanged = pyqtSignal()
+
+    sliceHintChanged = pyqtSignal()
+    sliceButtonVisibleChanged = pyqtSignal()
+    sliceButtonEnabledChanged = pyqtSignal()
+    sliceButtonTextChanged = pyqtSignal()
+
+    secondaryButtonTextChanged = pyqtSignal()
+    secondaryButtonVisibleChanged = pyqtSignal()
+    secondaryButtonFillWidthChanged = pyqtSignal()
 
     @pyqtProperty(int, notify=sliceStatusEnumChanged)
     def sliceStatusEnum(self):
@@ -162,8 +217,6 @@ class SmartSliceCloudProxy(QObject):
             self._sliceStatusEnum = value
             self.sliceStatusEnumChanged.emit()
 
-    sliceStatusChanged = pyqtSignal()
-
     @pyqtProperty(str, notify=sliceStatusChanged)
     def sliceStatus(self):
         return self._sliceStatus
@@ -174,8 +227,6 @@ class SmartSliceCloudProxy(QObject):
             Logger.log("d", "sliceStatus: <{}> -> <{}>".format(self._sliceStatus, value))
             self._sliceStatus = value
             self.sliceStatusChanged.emit()
-
-    sliceHintChanged = pyqtSignal()
 
     @pyqtProperty(str, notify=sliceHintChanged)
     def sliceHint(self):
@@ -188,8 +239,6 @@ class SmartSliceCloudProxy(QObject):
             self._sliceHint = value
             self.sliceHintChanged.emit()
 
-    sliceButtonTextChanged = pyqtSignal()
-
     @pyqtProperty(str, notify=sliceButtonTextChanged)
     def sliceButtonText(self):
         return self._sliceButtonText
@@ -201,7 +250,16 @@ class SmartSliceCloudProxy(QObject):
             self._sliceButtonText = value
             self.sliceButtonTextChanged.emit()
 
-    sliceButtonEnabledChanged = pyqtSignal()
+    @pyqtProperty(str, notify=secondaryButtonTextChanged)
+    def secondaryButtonText(self):
+        return self._secondaryButtonText
+
+    @secondaryButtonText.setter
+    def secondaryButtonText(self, value):
+        if self._secondaryButtonText is not value:
+            Logger.log("d", "_secondaryButtonText: <{}> -> <{}>".format(self._secondaryButtonText, value))
+            self._secondaryButtonText = value
+            self.secondaryButtonTextChanged.emit()
 
     @pyqtProperty(bool, notify=sliceButtonEnabledChanged)
     def sliceButtonEnabled(self):
@@ -214,7 +272,78 @@ class SmartSliceCloudProxy(QObject):
             self._sliceButtonEnabled = value
             self.sliceButtonEnabledChanged.emit()
 
-    sliceButtonClicked = pyqtSignal()
+    @pyqtProperty(bool, notify=sliceButtonVisibleChanged)
+    def sliceButtonVisible(self):
+        return self._sliceButtonVisible
+
+    @sliceButtonVisible.setter
+    def sliceButtonVisible(self, value):
+        if self._sliceButtonVisible is not value:
+            Logger.log("d", "sliceButtonVisible: <{}> -> <{}>".format(self._sliceVisibleEnabled, value))
+            self._sliceButtonVisible = value
+            self.sliceButtonVisibleChanged.emit()
+
+    @pyqtProperty(bool, notify=sliceButtonFillWidthChanged)
+    def sliceButtonFillWidth(self):
+        return self._sliceButtonFillWidth
+
+    @sliceButtonFillWidth.setter
+    def sliceButtonFillWidth(self, value):
+        if self._sliceButtonFillWidth is not value:
+            Logger.log("d", "sliceButtonFillWidth Enabled: <{}> -> <{}>".format(self._sliceButtonFillWidth, value))
+            self._sliceButtonFillWidth = value
+            self.sliceButtonFillWidthChanged.emit()
+
+    @pyqtProperty(bool, notify=secondaryButtonFillWidthChanged)
+    def secondaryButtonFillWidth(self):
+        return self._secondaryButtonFillWidth
+
+    @secondaryButtonFillWidth.setter
+    def secondaryButtonFillWidth(self, value):
+        if self._secondaryButtonFillWidth is not value:
+            Logger.log("d", "seceondaryButtonFillWidth Enabled: <{}> -> <{}>".format(self._secondaryButtonFillWidth, value))
+            self._secondaryButtonFillWidth = value
+            self.secondaryButtonFillWidthChanged.emit()
+
+    @pyqtProperty(bool, notify=secondaryButtonVisibleChanged)
+    def secondaryButtonVisible(self):
+        return self._secondaryButtonVisible
+
+    @secondaryButtonVisible.setter
+    def secondaryButtonVisible(self, value):
+        if self._secondaryButtonVisible is not value:
+            Logger.log("d", "sliceButtonEnabled: <{}> -> <{}>".format(self._secondaryButtonVisible, value))
+            self._secondaryButtonVisible = value
+            self.secondaryButtonVisibleChanged.emit()
+
+    #  
+    #   CONFIRMATION WINDOW 
+    #
+
+    confirmationWindowEnabledChanged = pyqtSignal()
+    confirmationWindowTextChanged = pyqtSignal()
+    confirmationConfirmClicked = pyqtSignal()
+    confirmationCancelClicked = pyqtSignal()
+    
+    @pyqtProperty(bool, notify=confirmationWindowEnabledChanged)
+    def confirmationWindowEnabled(self):
+        return self._confirmationWindowEnabled
+
+    @confirmationWindowEnabled.setter
+    def confirmationWindowEnabled(self, value):
+        if self._confirmationWindowEnabled is not value:
+            self._confirmationWindowEnabled = value
+            self.confirmationWindowEnabledChanged.emit()
+
+    @pyqtProperty(str, notify=confirmationWindowTextChanged)
+    def confirmationWindowText(self):
+        return self._confirmationText
+
+    @confirmationWindowText.setter
+    def confirmationWindowText(self, value):
+        if self._confirmationText is not value:
+            self._confirmationText = value
+            self.confirmationWindowTextChanged.emit()
 
     sliceIconImageChanged = pyqtSignal()
 
@@ -242,9 +371,22 @@ class SmartSliceCloudProxy(QObject):
             self._sliceIconVisible = value
             self.sliceIconVisibleChanged.emit()
 
-    # Properties need to be passed to the cloud
+
+    #
+    # USE-CASE REQUIREMENTS
+    #   * Safety Factor
+    #   * Max Displacement
+    #   * Load Magnitude/Direction
+    #
+
+    # Safety Factor
 
     targetFactorOfSafetyChanged = pyqtSignal()
+    resultSafetyFactorChanged = pyqtSignal()
+
+    def setFactorOfSafety(self):
+        self._targetFactorOfSafety = self.reqsSafetyFactor
+        self.targetFactorOfSafetyChanged.emit()
 
     @pyqtProperty(float, notify=targetFactorOfSafetyChanged)
     def targetFactorOfSafety(self):
@@ -252,25 +394,24 @@ class SmartSliceCloudProxy(QObject):
 
     @targetFactorOfSafety.setter
     def targetFactorOfSafety(self, value):
-        if self._targetFactorOfSafety is not value:
+        if self.connector.status is SmartSliceCloudStatus.BusyOptimizing or (self.connector.status is SmartSliceCloudStatus.Optimized):
+            self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.FactorOfSafety)
+            self.connector.propertyHandler._changedValues.append(value)
+            self.connector._confirmOptimization()
+        elif self.connector.status in SmartSliceCloudStatus.Optimizable:
+            self._targetFactorOfSafety = value
+            self.reqsSafetyFactor = value # SET CACHE
+            self.targetFactorOfSafetyChanged.emit()
+            #  Check if status has changed form the change
+            if value < self.resultSafetyFactor and (self.reqsMaxDeflect > self.resultMaximalDisplacement):
+                self.connector.status = SmartSliceCloudStatus.Overdimensioned
+            else:
+                self.connector.status = SmartSliceCloudStatus.Underdimensioned
+            self.connector.updateSliceWidget()
+        else:
+            self.reqsSafetyFactor = value # SET CACHE
             self._targetFactorOfSafety = value
             self.targetFactorOfSafetyChanged.emit()
-
-    targetMaximalDisplacementChanged = pyqtSignal()
-
-    @pyqtProperty(float, notify=targetMaximalDisplacementChanged)
-    def targetMaximalDisplacement(self):
-        return self._targetMaximalDisplacement
-
-    @targetMaximalDisplacement.setter
-    def targetMaximalDisplacement(self, value):
-        if self._targetMaximalDisplacement is not value:
-            self._targetMaximalDisplacement = value
-            self.targetMaximalDisplacementChanged.emit()
-
-    # Properties returned from the cloud and visualized in the UI
-
-    resultSafetyFactorChanged = pyqtSignal()
 
     @pyqtProperty(float, notify=resultSafetyFactorChanged)
     def resultSafetyFactor(self):
@@ -282,7 +423,41 @@ class SmartSliceCloudProxy(QObject):
             self._resultSafetyFactor = value
             self.resultSafetyFactorChanged.emit()
 
+    # Max Displacement
+
+    targetMaximalDisplacementChanged = pyqtSignal()
     resultMaximalDisplacementChanged = pyqtSignal()
+
+    def setMaximalDisplacement(self):
+        self._targetMaximalDisplacement = self.reqsMaxDeflect
+        self.targetMaximalDisplacementChanged.emit()
+
+    @pyqtProperty(float, notify=targetMaximalDisplacementChanged)
+    def targetMaximalDisplacement(self):
+        return self._targetMaximalDisplacement
+    
+    @targetMaximalDisplacement.setter
+    def targetMaximalDisplacement(self, value):
+        if self.connector.status is SmartSliceCloudStatus.BusyOptimizing or (self.connector.status is SmartSliceCloudStatus.Optimized):
+            self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.MaxDisplacement)
+            self.connector.propertyHandler._changedValues.append(value)
+            self.reqsMaxDeflect = value
+            self.connector._confirmOptimization()
+        elif self.connector.status in SmartSliceCloudStatus.Optimizable:
+            self._targetMaximalDisplacement = value
+            self.reqsMaxDeflect = value # SET CACHE
+            self.targetMaximalDisplacementChanged.emit()
+            #  Check if status has changed form the change
+            if value < self.resultMaximalDisplacement or (self.reqsSafetyFactor > self.resultSafetyFactor):
+                self.connector.status = SmartSliceCloudStatus.Underdimensioned
+            else:
+                self.connector.status = SmartSliceCloudStatus.Overdimensioned
+            self.connector.updateSliceWidget()
+        else:
+            self.reqsMaxDeflect = value # SET CACHE
+            self._targetMaximalDisplacement = value
+            self.targetMaximalDisplacementChanged.emit()
+
 
     @pyqtProperty(float, notify=resultMaximalDisplacementChanged)
     def resultMaximalDisplacement(self):
@@ -293,6 +468,60 @@ class SmartSliceCloudProxy(QObject):
         if self._resultMaximalDisplacement is not value:
             self._resultMaximalDisplacement = value
             self.resultMaximalDisplacementChanged.emit()
+
+
+    #   Load Direction/Magnitude
+
+    loadMagnitudeChanged = pyqtSignal()
+    loadDirectionChanged = pyqtSignal()
+
+    def setLoadMagnitude(self):
+
+        self._loadMagnitude = self.reqsLoadMagnitude
+        self.loadMagnitudeChanged.emit()
+
+    @pyqtProperty(float, notify=loadMagnitudeChanged)
+    def loadMagnitude(self):
+        return self._loadMagnitude
+
+    @loadMagnitude.setter
+    def loadMagnitude(self, value):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing or (self.connector.status is SmartSliceCloudStatus.Optimized)):
+            self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.LoadMagnitude)
+            self.connector.propertyHandler._changedValues.append(value)
+            self.connector._confirmValidation()
+        else:
+            self.reqsLoadMagnitude = value
+            self._loadMagnitude = value
+            self.loadMagnitudeChanged.emit()
+            self.connector._prepareValidation()
+
+    def setLoadDirection(self):
+        self._loadDirection = self.reqsLoadDirection
+        self.loadDirectionChanged.emit()
+
+    @pyqtProperty(bool, notify=loadDirectionChanged)
+    def loadDirection(self):
+        Logger.log("d", "Load Direction has been set to " + str(self._loadDirection))
+        return self._loadDirection
+
+    @loadDirection.setter
+    def loadDirection(self, value):
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
+            self.connector.propertyHandler._propertiesChanged.append(SmartSliceValidationProperty.LoadDirection)
+            self.connector.propertyHandler._changedValues.append(value)
+            self.connector._confirmValidation()
+        else:
+            self.reqsLoadDirection = value
+            self._loadDirection = value
+            self.loadDirectionChanged.emit()
+            self.connector._prepareValidation()
+
+
+
+    #
+    #   SMART SLICE RESULTS
+    #
 
     resultTimeTotalChanged = pyqtSignal()
 
@@ -504,10 +733,14 @@ class SmartSliceCloudProxy(QObject):
 
     @materialName.setter
     def materialName(self, value):
-        if not self._materialName == value:
-            Logger.log("d", "materialName: <{}> -> <{}>".format(self._materialName, value))
+        if self.connector.status is SmartSliceCloudStatus.BusyValidating:
+            self._propertyChanged = SmartSliceValidationProperty.Material
+            self._changedMaterial = value
+            self.connector._confirmValidation()
+        elif self._materialName is not value:
             self._materialName = value
             self.materialNameChanged.emit()
+            self.connector._prepareValidation()
 
     materialLengthChanged = pyqtSignal()
 
@@ -547,3 +780,5 @@ class SmartSliceCloudProxy(QObject):
             Logger.log("d", "materialCost: <{}> -> <{}>".format(self._materialCost, value))
             self._materialCost = value
             self.materialCostChanged.emit()
+
+
