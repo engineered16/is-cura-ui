@@ -313,9 +313,8 @@ class SmartSliceCloudJob(Job):
         # self.job_type == pywim.smartslice.job.JobType.optimization
         if task and task.result and len(task.result.analyses) > 0:
             analysis = task.result.analyses[0]
-
             self._process_analysis_result(analysis)
-    
+
             # Overriding if our result is going to be optimized...
             if previous_connector_status in SmartSliceCloudStatus.Optimizable:
                 self.connector.status = SmartSliceCloudStatus.Optimized
@@ -434,9 +433,6 @@ class SmartSliceCloudJob(Job):
         else:
             material_volume = [analysis.extruders[0].material_volume]
 
-            # TODO - once multiple extruders are handles we'll need to grab info
-            # here for each of them
-
         material_extra_info = self.connector._calculateAdditionalMaterialInfo(material_volume)
         Logger.log("d", "material_extra_info: {}".format(material_extra_info))
 
@@ -462,6 +458,20 @@ class SmartSliceCloudOptimizeJob(SmartSliceCloudVerificationJob):
 
         self.job_type = pywim.smartslice.job.JobType.optimization
 
+class Force: # TODO - Move this or replace
+    def __init__(self, normal : Vector = None, magnitude : float = 0.0, pull : bool = True):
+        self.normal = normal if normal else Vector(1.0, 0.0, 0.0)
+        self.magnitude = magnitude
+        self.pull = pull
+
+    def loadVector(self) -> Vector:
+        scale = self.magnitude if self.pull else -self.magnitude
+
+        return Vector(
+            self.normal.x * scale,
+            self.normal.y * scale,
+            self.normal.z * scale,
+        )
 
 class SmartSliceCloudConnector(QObject):
     http_protocol_preference = "smartslice/http_protocol"
@@ -471,7 +481,7 @@ class SmartSliceCloudConnector(QObject):
 
     debug_save_smartslice_package_preference = "smartslice/debug_save_smartslice_package"
     debug_save_smartslice_package_location = "smartslice/debug_save_smartslice_package_location"
-    
+
 
     def __init__(self, extension):
         super().__init__()
@@ -496,7 +506,10 @@ class SmartSliceCloudConnector(QObject):
         #Re-Optimize
         self._proxy.confirmationConfirmClicked.connect(self.onConfirmationConfirmClicked)
         self._proxy.confirmationCancelClicked.connect(self.onConfirmationCancelClicked)
-        
+
+        self._proxy.loadMagnitudeChanged.connect(self._updateForce0Magnitude)
+        self._proxy.loadDirectionChanged.connect(self._updateForce0Direction)
+
         # Connecting signals
         self.doVerification.connect(self._doVerfication)
         self.confirmOptimization.connect(self._confirmOptimization)
@@ -508,7 +521,7 @@ class SmartSliceCloudConnector(QObject):
         self.app_preferences.addPreference(self.http_hostname_preference, "api-20.fea.cloud")
         self.app_preferences.addPreference(self.http_port_preference, 443)
         self.app_preferences.addPreference(self.http_token_preference, "")
-        
+
         # Debug stuff
         self.app_preferences.addPreference(self.debug_save_smartslice_package_preference, False)
         if Platform.isLinux():
@@ -526,14 +539,14 @@ class SmartSliceCloudConnector(QObject):
         self.active_machine = None
         self.extruders = None
         self._all_extruders_settings = None
-        self.propertyHandler = None
+        self.propertyHandler = None # SmartSlicePropertyHandler
 
         # POC
         self._poc_default_infill_direction = 45
         self.resetAnchor0FacesPoc()
         self.resetForce0FacesPoc()
         self.resetForce0VectorPoc()
-        
+
         Application.getInstance().engineCreatedSignal.connect(self._onEngineCreated)
 
         self.confirming = False
@@ -543,7 +556,7 @@ class SmartSliceCloudConnector(QObject):
         self.confirmationConcluded.connect(self.onConfirmationConcluded)
 
     onSmartSlicePrepared = pyqtSignal()
-    
+
     def _onSaveDebugPackage(self, messageId: str, actionId: str) -> None:
         dummy_job = SmartSliceCloudVerificationJob(self)
         if self.status == SmartSliceCloudStatus.ReadyToVerify:
@@ -553,7 +566,7 @@ class SmartSliceCloudConnector(QObject):
         else:
             Logger.log("e", "DEBUG: This is not a defined state. Provide all input to create the debug package.")
             return
-        
+
         jobname = Application.getInstance().getPrintInformation().jobName
         debug_filename = "{}_smartslice.3mf".format(jobname)
         debug_filedir = self.app_preferences.getValue(self.debug_save_smartslice_package_location)
@@ -577,7 +590,7 @@ class SmartSliceCloudConnector(QObject):
         self.onSmartSlicePrepared.emit()
         self.propertyHandler.cacheChanges() # Setup Cache
         self.status = SmartSliceCloudStatus.NoModel
-        
+
         if self.app_preferences.getValue(self.debug_save_smartslice_package_preference):
             self.debug_save_smartslice_package_message = Message(title="[DEBUG] SmartSlicePlugin",
                                                                  text= "Click on the button below to generate a debug package, which contains all data as sent to the cloud. Make sure you provide all input as confirmed by an active button in the action menu in the SmartSlice tab.\nThanks!",
@@ -725,7 +738,7 @@ class SmartSliceCloudConnector(QObject):
             if node.getName() == "SmartSliceMeshModifier":
                 sliceable_nodes_count -= 1
 
-        #  If no model is reported... 
+        #  If no model is reported...
         #   This needs to be reported *first*
         if slicable_nodes_count != 1:
             self.status = SmartSliceCloudStatus.NoModel
@@ -751,7 +764,7 @@ class SmartSliceCloudConnector(QObject):
         elif not self._jobs[self._current_job].canceled:
             self.propertyHandler._propertiesChanged = []
             self._jobs[self._current_job] = None
-        
+
 
     #
     #   CONFIRMATION PROMPT
@@ -777,7 +790,7 @@ class SmartSliceCloudConnector(QObject):
                 self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose the current\n validation results?"
             elif self.status is SmartSliceCloudStatus.BusyOptimizing:
                 self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose your \noptimization results?"
-            
+
             self._proxy.confirmationWindowEnabled = True
             self._proxy.confirmationWindowEnabledChanged.emit()
 
@@ -891,7 +904,7 @@ class SmartSliceCloudConnector(QObject):
         if self._proxy._confirming_modmesh:
             self.doOptimization.emit()
             self._proxy._confirming_modmesh = False
-        
+
         #  For handling requirements changes during optimization
         elif self.status is SmartSliceCloudStatus.BusyOptimizing:
             if SmartSliceProperty.FactorOfSafety in self.propertyHandler._propertiesChanged or (SmartSliceProperty.MaxDisplacement in self.propertyHandler._propertiesChanged):
@@ -904,11 +917,11 @@ class SmartSliceCloudConnector(QObject):
                     self.status = SmartSliceCloudStatus.Optimized
                 self.updateSliceWidget()
             else:
-                self._prepareValidation()   
+                self._prepareValidation()
 
         else:
             self._prepareValidation()
-        
+
         self.propertyHandler._onConfirmChanges()
 
         # Close Dialog
@@ -927,7 +940,7 @@ class SmartSliceCloudConnector(QObject):
             '''
         else:
             self.propertyHandler._onCancelChanges()
-        
+
         # Close Dialog
         self.confirmationConcluded.emit()
 
@@ -1150,28 +1163,37 @@ class SmartSliceCloudConnector(QObject):
 
         return True
 
-    def setForce0VectorPoc(self, x, y, z):
-        load_vector = (x, y, z)
-        if load_vector != self._poc_force0_vector:
-            Logger.log("d", "Changing load vector to: {}".format(load_vector))
-            self._poc_force0_vector = load_vector
+    def _updateForce0Magnitude(self):
+        self._poc_force.magnitude = self._proxy.loadMagnitude
+        Logger.log("d", "Load magnitude changed, new force vector: {}".format(self._poc_force.loadVector()))
+
+    def _updateForce0Direction(self):
+        self._poc_force.pull = self._proxy.loadDirection
+        Logger.log("d", "Load direction changed, new force vector: {}".format(self._poc_force.loadVector()))
+
+    def updateForce0Vector(self, normal : Vector):
+        self._poc_force.normal = normal
+        Logger.log("d", "Load normal changed, new force vector: {}".format(self._poc_force.loadVector()))
 
     def resetForce0VectorPoc(self):
-        self._poc_force0_vector = (0, 0, 0)
+        self._poc_force = Force(
+            magnitude=self._proxy.loadMagnitude,
+            pull=self._proxy.loadDirection
+        )
 
     def getForce0VectorPoc(self):
-        native_vector = ()
-        for component in self._poc_force0_vector:
-            if type(component) is numpy.float64:
-                component = component.item()
-            native_vector += (float(component), )
-        return list(native_vector)
+        vec = self._poc_force.loadVector()
+        return [
+            float(vec.x),
+            float(vec.y),
+            float(vec.z)
+        ]
 
     def appendForce0FacesPoc(self, face_ids):
-        face_ids = tuple(face_ids)
         for face_id in face_ids:
+            if not isinstance(face_id, int):
+                face_id = face_id.id
             if face_id not in self._poc_force0_faces:
-                Logger.log("d", "Adding new face to force0: {}".format(face_id))
                 self._poc_force0_faces += (face_id, )
 
     def resetForce0FacesPoc(self):
@@ -1181,10 +1203,10 @@ class SmartSliceCloudConnector(QObject):
         return self._poc_force0_faces
 
     def appendAnchor0FacesPoc(self, face_ids):
-        face_ids = tuple(face_ids)
         for face_id in face_ids:
+            if not isinstance(face_id, int):
+                face_id = face_id.id
             if face_id not in self._poc_anchor0_faces:
-                Logger.log("d", "Adding new face to anchor0: {}".format(face_id))
                 self._poc_anchor0_faces += (face_id, )
 
     def resetAnchor0FacesPoc(self):

@@ -1,9 +1,3 @@
-#######################################
-#   SmartSliceStage.py
-#   Teton Simulation, Inc; Ultimaker
-#   Last Modified October 17, 2019
-#######################################
-
 #
 #   Contains backend-interface for Smart Slice Stage
 #
@@ -16,8 +10,6 @@
 #   setting anchors/loads and requesting AWS jobs.
 #
 
-
-#   Filesystem Control
 import os.path
 
 #   Expose Ultimaker/Cura API

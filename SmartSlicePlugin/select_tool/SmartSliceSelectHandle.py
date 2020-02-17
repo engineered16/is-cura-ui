@@ -1,33 +1,13 @@
-# SmartSliceSelectHandle.py
-# Teton Simulation
-# Last Modified November 12, 2019
-
-# Copyright (c) 2015 Ultimaker B.V.
-# Uranium is released under the terms of the LGPLv3 or higher.
-
-#
-#   Contains functionality to be triggered upon face selection
-#
-
-import time
+import numpy
 
 #  UM/Cura Imports
 from UM.Logger import Logger
 from UM.Scene.ToolHandle import ToolHandle
-from UM.Scene.SceneNode import SceneNode
+from UM.Scene.Selection import Selection
 from UM.Mesh.MeshBuilder import MeshBuilder
-from UM.Mesh.MeshData import MeshData
-from UM.PluginRegistry import PluginRegistry
 
 from UM.Math.Color import Color
-from UM.Math.Matrix import Matrix
-from UM.Math.Quaternion import Quaternion
 from UM.Math.Vector import Vector
-
-# Local Imports
-from .FaceSelection import SelectableFace, SelectableMesh
-from .FaceSelection import toCalculatableFace
-from .Detessellate import isCoplanar, isJointed
 
 # Provides enums
 class SelectionMode:
@@ -40,28 +20,11 @@ class SmartSliceSelectHandle(ToolHandle):
         super().__init__(parent)
 
         self._name = "SmartSliceSelectHandle"
-        self._connector = extension.cloud
-
-        #  Default Line Properties
-        self._edge_width = 0.8
-        self._edge_length = [] # TODO: GET THIS FROM FACE EDGES
+        self._connector = extension.cloud # SmartSliceCloudConnector
         self._selected_color = Color(0, 0, 255, 255)
-        self._anchored_color = self._y_axis_color
-        self._loaded_color = self._y_axis_color
 
         #  Selected Face Properties
         self._tri = tri
-        self._face = []
-        self._center = self.findCenter()
-
-        #  Previously Selected Faces
-        self._loaded_faces = []
-        self._load_magnitude = 0
-        self._anchored_faces = []
-
-        #  For Performance
-        self._has_anchor = False
-        self._has_loads  = False
 
         #   Arrow Mesh
         self._arrow = False
@@ -83,6 +46,12 @@ class SmartSliceSelectHandle(ToolHandle):
         self._connector.propertyHandler._selection_mode = SelectionMode.LoadMode
         self._connector._proxy.loadDirectionChanged.connect(self.drawSelection)
 
+    # Override ToolHandle._onSelectionCenterChanged so that we can set the full transformation
+    def _onSelectionCenterChanged(self) -> None:
+        if self._enabled:
+            #self.setPosition(Selection.getSelectionCenter())
+            obj = Selection.getSelectedObject(0) # which index to use?
+            self.setTransformation(obj.getLocalTransformation())
 
 #  ACCESSORS
     @property
@@ -92,17 +61,6 @@ class SmartSliceSelectHandle(ToolHandle):
 #  MUTATORS
     def setFace(self, f):
         self._tri = f
-        self._center = self.findCenter()
-
-    def getLoadVector(self):
-        if len(self._loaded_faces) > 0:
-            load_mag = self._connector._proxy._loadMagnitude
-            if self._connector._proxy.loadDirection:
-                load_mag *= -1
-            lf = toCalculatableFace(list(self._loaded_faces)[0])
-            n = lf.normal
-            return Vector(load_mag*n.x, load_mag*n.y, load_mag*n.z)
-        return Vector(0., 0., 0.) # no load face available to determine vector
 
     '''
       drawSelection()
@@ -110,110 +68,23 @@ class SmartSliceSelectHandle(ToolHandle):
         Uses UM's MeshBuilder to construct 3D Arrow mesh and translates/rotates as to be normal to the selected face
     '''
     def drawSelection(self):
+        if self._tri is None:
+            return
+
         #  Construct Edges using MeshBuilder Cubes
         mb = MeshBuilder()
-        _selected_mesh = None
-
-        #Logger.log("d", "Root Face: {}".format(self._tri))
 
         Logger.log("d", "Drawing Face Selection")
 
-        if self._connector.propertyHandler._selection_mode == SelectionMode.LoadMode:
-            self._load_magnitude = self._connector._proxy._loadMagnitude
-            _selected_mesh = self._connector.propertyHandler._loadedMesh
-            #  TODO: Generalize this for more than one Active Load
-            if self._connector.propertyHandler._loadedFaces[0] is not None:
-                self.setFace(self._connector.propertyHandler._loadedFaces[0])
-        else:
-            _selected_mesh = self._connector.propertyHandler._anchoredMesh
-            #  TODO: Generalize this for more than one Active Anchor
-            if self._connector.propertyHandler._anchoredFaces[0] is not None:
-                self.setFace(self._connector.propertyHandler._anchoredFaces[0])
-        self._face = set()
-        
-        #if draw_arrow:
-        #    self.drawNormalArrow()
-        #    self.addChild(self._arrow)
-
-        coplanar_faces = set((self._tri._id,))
-        possible_faces = set()
-        checked = set()
-
-        start = time.time()
-
-        for fid in _selected_mesh.faces.keys():
-            if fid in checked:
-                continue
-
-            checked.add(fid)
-
-            #Logger.log('d', '{} ->\n{}\n {}'.format(self._tri, _tri, self._tri.normal.angleToVector(_tri.normal)))
-
-            if isCoplanar(self._tri, _selected_mesh.faces[fid]):
-                possible_faces.add(fid)
-                
-                #  Paint Faces that are recursively coplanar/jointed
-                # TODO Brady - commented out
-                #self.paintPossibleFaces(mode, mb, _tri, checked)
-
-        Logger.log('d', 'Found {} possible faces in {}'.format(len(possible_faces), time.time() - start))
-
-        start = time.time()
-
-        # now filter possible faces into faces that are only connected to the root face
-        faces_added = 1
-        face_combos_checked = set()
-        while faces_added > 0:
-            connected = set()
-            for f1 in possible_faces:
-                for f2 in coplanar_faces:
-                    combo = (f1, f2)
-                    if combo not in face_combos_checked:
-                        face_combos_checked.add(combo)
-                        if isJointed(_selected_mesh.faces[f1], _selected_mesh.faces[f2]):
-                            connected.add(f1)
-            faces_added = len(connected)
-            for f in connected:
-                coplanar_faces.add(f)
-                possible_faces.remove(f)
-
-        Logger.log('d', 'Found {} connected faces in {}'.format(len(coplanar_faces), time.time() - start))
-
-        face_list = []
-        for fid in coplanar_faces:
-            face_list.append(_selected_mesh.faces[fid])
-            self.paintFace(_selected_mesh.faces[fid], mb)
+        for tri in self._tri:
+            mb.addFace(tri.v1, tri.v2, tri.v3, color=self._selected_color)
 
         if self._connector.propertyHandler._selection_mode == SelectionMode.LoadMode:
-            self._loaded_faces = face_list
-            self._connector.propertyHandler._selection_mode = SelectionMode.LoadMode
-            self.paintArrow(face_list, mb)
-        else:
-            self._anchored_faces = face_list
-            self._connector.propertyHandler._selection_mode = SelectionMode.AnchorMode
+            self.paintArrow(self._tri, mb)
 
         #  Add to Cura Scene
         self.setSolidMesh(mb.build())
 
-        #Logger.log("d", "Anchor Faces: {}".format([f._id for f in self._anchored_faces]))
-        #Logger.log("d", "Load Faces: {}".format([f._id for f in self._loaded_faces]))
-        #Logger.log("d", "Load Vector: {}".format(self.getLoadVector()))
-
-
-    '''
-      paintFace(tri, mb)
-        tri: SelectableFace (EXACTLY 3 Vertices)
-        mb: MeshBuilder
-
-        Creates a face representitive of 'tri' within mb and paints it selected color
-    '''
-    def paintFace(self, tri, mb):
-        p = tri.points
-        tri.generateNormalVector()
-        p0 = Vector(p[0].x, p[0].y, p[0].z)
-        p1 = Vector(p[1].x, p[1].y, p[1].z)
-        p2 = Vector(p[2].x, p[2].y, p[2].z)
-        mb.addFace(p0, p1, p2, color=self._selected_color)
 
     def paintArrow(self, face_list, mb):
         """
@@ -226,9 +97,10 @@ class SmartSliceSelectHandle(ToolHandle):
             return
         index = len(face_list) // 2
         tri = face_list[index]
-        p = tri.points
-        tri.generateNormalVector()
+        #p = tri.points
+        #tri.generateNormalVector()
         n = tri.normal
+        n = Vector(n.r, n.s, n.t) # pywim Vector to UM Vector
         invert_arrow = self._connector._proxy.loadDirection
         center = self.findFaceCenter(face_list)
         
@@ -312,8 +184,8 @@ class SmartSliceSelectHandle(ToolHandle):
         """
             Find center point among all input points.
             Input:
-                points   (list) a list of one or more SelectablePoint points.
-            Output: (SelectablePoint)    A single vector averaging the input vectors.
+                points   (list) a list of one or more pywim.geom.Vertex points.
+            Output: (Vector) A single vector averaging the input points.
         """
         xs = 0
         ys = 0
@@ -329,11 +201,11 @@ class SmartSliceSelectHandle(ToolHandle):
         """
             Find center of face.  Return point is guaranteed to be on face.
             Inputs:
-                triangles: (list)   Triangles contains three SelectablePoint.  All triangles assumed to be in same plane.
+                triangles: (list) Triangles. All triangles assumed to be in same plane.
         """
         c_point = self.findPointsCenter([point for tri in triangles for point in tri.points]) # List comprehension creates list of points.
         for tri in triangles:
-            if tri.isPointContained(c_point):
+            if SmartSliceSelectHandle._triangleContainsPoint(tri, c_point):
                 return c_point
         
         # When center point is not on face, choose instead center point of middle triangle.
@@ -341,110 +213,30 @@ class SmartSliceSelectHandle(ToolHandle):
         tri = triangles[index]
         return self.findPointsCenter(tri.points)
 
-    '''
-      paintPossibleFaces(mb, face, possible)
-        mb: MeshBuilder
-        face: SelectableFace
-        possible: List of SelectableFaces
-
-        Paints all SelectableFaces in 'possible' that are jointed/coplanar with 'face'
-        NOTE:  This assumes all entries in 'possible' are coplanar with 'face'
-    '''
-    def paintPossibleFaces(self, mode, mb, face, possible):
-        for _tri in possible:
-            if isJointed(face, _tri):
-                self.paintFace(_tri, mb)
-                self._face.add(_tri)
-                possible.remove(_tri)
-                self.paintPossibleFaces(mode, mb, _tri, possible)
-                if mode == SelectionMode.LoadMode:
-                    self._loaded_faces.add(_tri)
-                else:
-                    self._anchored_faces.add(_tri)
-
-    '''
-      paintAnchoredFaces()
-
-        Repaints the saved selection for applied Anchors
-    '''
-    def paintAnchoredFaces(self):
-        mb = MeshBuilder()
-        for _tri in self._anchored_faces:
-            self.paintFace(_tri, mb)
-        #  Add to Cura Scene
-        self.setSolidMesh(mb.build())  
-
-    '''
-      paintLoadedFaces()
-
-        Repaints the saved selection for applied Loads
-    '''
-    def paintLoadedFaces(self):
-        mb = MeshBuilder()
-        for _tri in self._loaded_faces:
-            self.paintFace(_tri, mb)
-        self.paintArrow(self._loaded_faces, mb)
-        #  Add to Cura Scene
-        self.setSolidMesh(mb.build())  
-
-
-    '''
-      drawNormalArrow()
-    '''
-    def drawNormalArrow(self):
-        mb = MeshBuilder()
-        if self._arrow is not None:
-            self.removeChild(self._arrow)
-        self._arrow = SceneNode(self, name="_NormalArrow")
-
-        f = self._tri
-        n = f.generateNormalVector()
-
-        #  Paint Normal Arrow
-        center_shaft = Vector(self._center[0], self._center[1]+5, self._center[2])
-        center_head = Vector(self._center[0], self._center[1]+10, self._center[2])
-
-        mb.addCube(1, 10, 1, center_shaft, self._color)
-        mb.addPyramid(5, 5, 5, 0, Vector.Unit_Y, center_head, self._color)
-        
-        '''
-        mat = Matrix()
-        mat.setByRotationAxis(180*n.x, Vector.Unit_X)
-        mat.setByRotationAxis(-180*(1-n.y), Vector.Unit_Y)
-        mat.setByRotationAxis(180*n.z, Vector.Unit_Z)
-        self._arrow.rotate(Quaternion().fromMatrix(mat))
-        '''
-
-        #  Add to Cura Scene
-        self._arrow.setMeshData(mb.build())
-
-    '''
-      findCenter()
-
-        calculates center vector for currently selected face
-    '''
-    def findCenter(self):
-        i = 0
-        x = 0.
-        y = 0.
-        z = 0.
-
-        if self._tri is None:
-            return [0, 0, 0]
-
-        for p in self._tri.points:
-            
-            x += p.x
-            y += p.y
-            z += p.z
-            
-            i += 1
-
-        return [x/i, y/i, z/i]
-
-
     def clearSelection(self):
-        mb = MeshBuilder()
-        self.setSolidMesh(mb.build())  
+        self.setSolidMesh(MeshBuilder().build())  
 
+    @staticmethod
+    def _triangleContainsPoint(triangle, point):
+        v1 = triangle.v1
+        v2 = triangle.v2
+        v3 = triangle.v3
 
+        area_2 = SmartSliceSelectHandle._threePointArea2(v1, v2, v3)
+        alpha = SmartSliceSelectHandle._threePointArea2(point, v2, v3) / area_2
+        beta = SmartSliceSelectHandle._threePointArea2(point, v3, v1) / area_2
+        gamma = SmartSliceSelectHandle._threePointArea2(point, v1, v2) / area_2
+
+        total = alpha + beta + gamma
+
+        return total > 0.99 and total < 1.01
+    
+    @staticmethod
+    def _threePointArea2(p, q, r):
+        pq = (q.x - p.x, q.y - p.y, q.z - p.z)
+        pr = (r.x - p.x, r.y - p.y, r.z - p.z)
+
+        vect = numpy.cross(pq, pr)
+
+        # Return area X 2
+        return numpy.sqrt(vect[0]**2 + vect[1]**2 + vect[2]**2)
