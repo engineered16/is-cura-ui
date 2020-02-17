@@ -74,8 +74,10 @@ class SmartSlicePropertyHandler(QObject):
         self._changedForce = None
         self._anchoredMesh = None
         self._anchoredFaces = None
+        self._anchoredID = None
         self._loadedMesh = None
         self._loadedFaces = None
+        self._loadedID = None
         
         #  Cura Setup
         self._activeMachineManager = CuraApplication.getInstance().getMachineManager()
@@ -197,7 +199,7 @@ class SmartSlicePropertyHandler(QObject):
         self.clearChangedProperties()
 
         if self._cachedFaceID is not None:
-            self.applyAnchorOrLoad(self._cachedScene, self._cachedFaceID, self._cachedTriangles)
+            self.applyAnchorOrLoad(self._cachedTriangles)
             self._cachedFaceID = None
 
     #  Restore Properties from Cache
@@ -409,22 +411,12 @@ class SmartSlicePropertyHandler(QObject):
 
     selectedFacesChanged = Signal() 
 
-    def applyAnchorOrLoad(self, scene_node, face_id, selected_triangles):
-
-        if self._selection_mode is 1: #  Anchor
-
-            #  Set/Draw Anchor Selection in Scene
-            self.connector._proxy._anchorsApplied = 1
-            self._anchoredID = face_id
-
+    def applyAnchorOrLoad(self, selected_triangles):
+        if self._selection_mode is 1:
             self.connector.resetAnchor0FacesPoc()
             self.connector.appendAnchor0FacesPoc(selected_triangles)
             Logger.log("d", "cloud_connector.getAnchor0FacesPoc(): {}".format(self.connector.getAnchor0FacesPoc()))
-        else:   # Load
-
-            #  Set/Draw Scene Properties
-            self.connector._proxy._loadsApplied = 1
-            self._loadedID = face_id
+        else: 
 
             load_vector = selected_triangles[0].normal
 
@@ -438,7 +430,23 @@ class SmartSlicePropertyHandler(QObject):
             Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(self.connector.getForce0VectorPoc()))
             Logger.log("d", "cloud_connector.getForce0FacesPoc(): {}".format(self.connector.getForce0FacesPoc()))
 
-    def confirmFaceDraw(self, scene_node=None, face_id=None, selected_triangles=None, force=None):
+
+        
+
+    def drawAnchorOrLoad(self, scene_node, face_id, selected_triangles):
+
+        if self._selection_mode is 1: #  Anchor
+
+            #  Set/Draw Anchor Selection in Scene
+            self.connector._proxy._anchorsApplied = 1
+            self._anchoredID = face_id
+        else:   # Load
+
+            #  Set/Draw Scene Properties
+            self.connector._proxy._loadsApplied = 1
+            self._loadedID = face_id
+
+    def confirmFaceDraw(self, scene_node=None, face_id=None, selected_triangles=None):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
             self._propertiesChanged.append(SmartSliceProperty.SelectedFace)
             self._cachedScene = scene_node
@@ -451,9 +459,18 @@ class SmartSlicePropertyHandler(QObject):
                 if self._loadedID is not face_id:
                     self.connector.confirmValidation.emit()
         else:
+            if self._selection_mode is 1:
+                if self._anchoredID is not None and (self._anchoredID is face_id):
+                    self.updateMeshes()
+                    return
+            else:
+                if self._loadedID is not None and (self._loadedID is face_id):
+                    self.updateMeshes()
+                    return
             self.connector._prepareValidation()
             self.updateMeshes()
-            self.applyAnchorOrLoad(scene_node, face_id, selected_triangles)
+            self.drawAnchorOrLoad(scene_node, face_id, selected_triangles)
+            self.applyAnchorOrLoad(selected_triangles)
             self.selectedFacesChanged.emit()
 
     def updateMeshes(self):
