@@ -615,13 +615,14 @@ class SmartSliceCloudConnector(QObject):
         #   BEGIN TESTING!!!
         #
         #  Create a Confirmation Dialog Component
-        base_path = os.path.dirname(__file__)
+        base_path = os.path.abspath(os.path.dirname(__file__))
         component_path = QUrl.fromLocalFile(os.path.join(base_path, "SmartSliceConfirmationPrompt.qml"))
         component = QQmlComponent(ApplicationCompat().qml_engine, component_path)
 
         #  Attach to Viewport
         context = QQmlContext(ApplicationCompat().qml_engine.rootContext())
         context.setContextProperty("manager", self)
+
         self._dialog = component.create(context)
         #
         #   END TESTING!!!
