@@ -23,84 +23,77 @@ import SmartSlice 1.0 as SmartSlice
 
 
 //  Confirm Changes Components
-Item {
-    id: smartSliceConfirmDialog
+UM.Dialog {
+    id: smartSliceConfirm
 
-    /*
-        CONFIRMATION PROMPTS
-    */
-    Rectangle {
-        id: smartSliceConfirm
+    width: UM.Theme.getSize("action_panel_widget").width
+    height: myColumn.height + 2 * UM.Theme.getSize("thick_margin").width
 
-        width: UM.Theme.getSize("action_panel_widget").width
-        height: myColumn.height + 2 * UM.Theme.getSize("thick_margin").width
+    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.verticalCenter: parent.verticalCenter
 
+    color: UM.Theme.getColor("main_background")
+    border.width: UM.Theme.getSize("default_lining").width
+    border.color: UM.Theme.getColor("lining")
+    radius: UM.Theme.getSize("default_radius").width
+
+    //visible: SmartSlice.Cloud.confirmationWindowEnabled
+
+    Connections {
+        target: SmartSlice.Cloud
+        //onConfirmationWindowEnabledChanged: { smartSliceConfirm.visible = SmartSlice.Cloud.confirmationWindowEnabled }
+        onConfirmationWindowTextChanged: { smartSliceConfirmText.text = SmartSlice.Cloud.confirmationWindowText }
+    }
+
+    Label {
+        id: smartSliceConfirmText
+        anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
+        anchors.topMargin: UM.Theme.getSize("thick_margin").width
+        text: SmartSlice.Cloud.confirmationWindowText
+    }
+    
+    Cura.PrimaryButton {
+        id: smartSliceConfirmContinue
 
-        color: UM.Theme.getColor("main_background")
-        border.width: UM.Theme.getSize("default_lining").width
-        border.color: UM.Theme.getColor("lining")
-        radius: UM.Theme.getSize("default_radius").width
+        anchors.bottom: parent.bottom
+        anchors.right: parent.right
 
-        visible: SmartSlice.Cloud.confirmationWindowEnabled
+        anchors.bottomMargin: UM.Theme.getSize("thick_margin").height
+        anchors.rightMargin: UM.Theme.getSize("thick_margin").width
 
-        Connections {
-            target: SmartSlice.Cloud
-            onConfirmationWindowEnabledChanged: { smartSliceConfirm.visible = SmartSlice.Cloud.confirmationWindowEnabled }
-            onConfirmationWindowTextChanged: { smartSliceConfirmText.text = SmartSlice.Cloud.confirmationWindowText }
+        enabled: true
+        text: "Continue"
+
+        /*
+            Re-optimize Continue Button Click Event
+        */
+        onClicked: {
+            //  Show Validation Dialog
+            //  TODO: Generalize this reoptimize cancellation for validation as well
+            SmartSlice.Cloud.confirmationConfirmClicked()
         }
+    }
 
-        Label {
-            id: smartSliceConfirmText
-            anchors.top: parent.top
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.topMargin: UM.Theme.getSize("thick_margin").width
-            text: SmartSlice.Cloud.confirmationWindowText
-        }
-        
-        Cura.PrimaryButton {
-            id: smartSliceConfirmContinue
+    Cura.SecondaryButton {
+        id: smartSliceConfirmCancel
 
-            anchors.bottom: parent.bottom
-            anchors.right: parent.right
+        anchors.right: smartSliceConfirmContinue.left
+        anchors.bottom: parent.bottom
 
-            anchors.bottomMargin: UM.Theme.getSize("thick_margin").height
-            anchors.rightMargin: UM.Theme.getSize("thick_margin").width
+        anchors.rightMargin: UM.Theme.getSize("thick_margin").width
+        anchors.bottomMargin: UM.Theme.getSize("thick_margin").height
 
-            enabled: true
-            text: "Continue"
+        enabled: true
+        text: "Cancel"
 
-            /*
-                Re-optimize Continue Button Click Event
-            */
-            onClicked: {
-                //  Show Validation Dialog
-                //  TODO: Generalize this reoptimize cancellation for validation as well
-                SmartSlice.Cloud.confirmationConfirmClicked()
-            }
-        }
-
-        Cura.SecondaryButton {
-            id: smartSliceConfirmCancel
-
-            anchors.right: smartSliceConfirmContinue.left
-            anchors.bottom: parent.bottom
-
-            anchors.rightMargin: UM.Theme.getSize("thick_margin").width
-            anchors.bottomMargin: UM.Theme.getSize("thick_margin").height
-
-            enabled: true
-            text: "Cancel"
-
-            /*
-                Re-optimize Cancel Button Click Event
-            */
-            onClicked: {
-                //  Show Validation Dialog
-                //  TODO: Generalize this reoptimize cancellation for validation as well
-                SmartSlice.Cloud.confirmationCancelClicked()
-            }
+        /*
+            Re-optimize Cancel Button Click Event
+        */
+        onClicked: {
+            //  Show Validation Dialog
+            //  TODO: Generalize this reoptimize cancellation for validation as well
+            SmartSlice.Cloud.confirmationCancelClicked()
         }
     }
 }

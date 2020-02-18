@@ -21,13 +21,13 @@ import pywim  # @UnresolvedImport
 
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtCore import QObject
 from PyQt5.QtCore import QTime
-from PyQt5.QtCore import QUrl
 from PyQt5.QtNetwork import QNetworkReply
 from PyQt5.QtNetwork import QNetworkRequest
 from PyQt5.QtNetwork import QNetworkAccessManager
 from PyQt5.QtQml import qmlRegisterSingletonType
+from PyQt5.QtCore import QUrl, QObject
+from PyQt5.QtQml import QQmlComponent, QQmlContext
 
 # Uranium
 from UM.i18n import i18nCatalog
@@ -65,6 +65,8 @@ from .SmartSliceProperty import SmartSliceProperty
 from .SmartSlicePropertyHandler import SmartSlicePropertyHandler
 
 i18n_catalog = i18nCatalog("smartslice")
+
+from .CuraCompat import ApplicationCompat, Deprecations
 
 
 # #  Formatter class that handles token expansion in start/end gcode
@@ -605,6 +607,27 @@ class SmartSliceCloudConnector(QObject):
                                                                  )
             self.debug_save_smartslice_package_message.actionTriggered.connect(self._onSaveDebugPackage)
             self.debug_save_smartslice_package_message.show()
+            
+        #
+        #   BEGIN TESTING!!!
+        #
+
+        #  Create a Confirmation Dialog Component
+        base_path = PluginRegistry.getInstance().getPluginPath("SmartSlicePlugin")
+        component_path = os.path.join(base_path, "SmartSliceConfirmationPrompt.qml")
+        component = QQmlComponent(ApplicationCompat().qml_engine, component_path)
+
+        #  Attach to Viewport
+        context = QQmlContext(ApplicationCompat().qml_engine.rootContext())
+        context.setContextProperty("manager", self)
+        dialog = component.create(context)
+
+        #if dialog:
+        dialog.show()
+
+        #
+        #   END TESTING!!!
+        #
 
     def updateSliceWidget(self):
         if self.status is SmartSliceCloudStatus.NoModel:
