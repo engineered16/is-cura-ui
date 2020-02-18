@@ -552,6 +552,7 @@ class SmartSliceCloudConnector(QObject):
         Application.getInstance().engineCreatedSignal.connect(self._onEngineCreated)
 
         self.confirming = False
+        self._dialog = None
         self.confirmValidation.connect(self._confirmValidation)
         self.confirmOptimization.connect(self._confirmOptimization)
 
@@ -606,28 +607,31 @@ class SmartSliceCloudConnector(QObject):
                                                                  ""  # description
                                                                  )
             self.debug_save_smartslice_package_message.actionTriggered.connect(self._onSaveDebugPackage)
-            self.debug_save_smartslice_package_message.show()
-            
+            self.debug_save_smartslice_package_message.show()            
+        
+
+    def _createConfirmDialog(self):
         #
         #   BEGIN TESTING!!!
         #
-
         #  Create a Confirmation Dialog Component
-        base_path = PluginRegistry.getInstance().getPluginPath("SmartSlicePlugin")
-        component_path = os.path.join(base_path, "SmartSliceConfirmationPrompt.qml")
+        base_path = os.path.dirname(__file__)
+        component_path = QUrl.fromLocalFile(os.path.join(base_path, "SmartSliceConfirmationPrompt.qml"))
         component = QQmlComponent(ApplicationCompat().qml_engine, component_path)
 
         #  Attach to Viewport
         context = QQmlContext(ApplicationCompat().qml_engine.rootContext())
         context.setContextProperty("manager", self)
-        dialog = component.create(context)
-
-        #if dialog:
-        dialog.show()
-
+        self._dialog = component.create(context)
         #
         #   END TESTING!!!
         #
+
+    def showConfirmDialog(self):
+        if self._dialog is None:
+            self._createConfirmDialog()
+        self._dialog.show()
+
 
     def updateSliceWidget(self):
         if self.status is SmartSliceCloudStatus.NoModel:
@@ -807,7 +811,8 @@ class SmartSliceCloudConnector(QObject):
         self.status = SmartSliceCloudStatus.ReadyToVerify
         Application.getInstance().activityChanged.emit()
 
-    def _confirmValidation(self):
+    def _confirmValidation(self):  
+        self._dialog.show()  
         if self.propertyHandler._cancelChanges is False:
             if self.status is SmartSliceCloudStatus.BusyValidating:
                 self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose the current\n validation results?"
