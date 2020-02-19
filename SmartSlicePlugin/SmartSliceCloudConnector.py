@@ -319,9 +319,9 @@ class SmartSliceCloudJob(Job):
             if previous_connector_status in SmartSliceCloudStatus.Optimizable:
                 self.connector.status = SmartSliceCloudStatus.Optimized
             else:
-                if self.connector._proxy.resultSafetyFactor < self.connector._proxy.targetFactorOfSafety or self.connector._proxy.resultMaximalDisplacement > self.connector._proxy.targetMaximalDisplacement:
+                if self.connector._proxy.resultSafetyFactor < self.connector._proxy.targetFactorOfSafety or (self.connector._proxy.resultMaximalDisplacement > self.connector._proxy.targetMaximalDisplacement):
                     self.connector.status = SmartSliceCloudStatus.Underdimensioned
-                elif self.connector._proxy.resultSafetyFactor > self.connector._proxy.targetFactorOfSafety or self.connector._proxy.resultMaximalDisplacement < self.connector._proxy.targetMaximalDisplacement:
+                elif self.connector._proxy.resultSafetyFactor > self.connector._proxy.targetFactorOfSafety or (self.connector._proxy.resultMaximalDisplacement < self.connector._proxy.targetMaximalDisplacement):
                     self.connector.status = SmartSliceCloudStatus.Overdimensioned
                 else:
                     self.connector.status = SmartSliceCloudStatus.Optimized
