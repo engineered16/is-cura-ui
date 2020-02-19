@@ -733,14 +733,14 @@ class SmartSliceCloudConnector(QObject):
         return sliceable_nodes
 
     def _onApplicationActivityChanged(self):
-        slicable_nodes_count = len(self.getSliceableNodes())
+        sliceable_nodes_count = len(self.getSliceableNodes())
         for node in self.getSliceableNodes():
             if node.getName() == "SmartSliceMeshModifier":
                 sliceable_nodes_count -= 1
 
         #  If no model is reported...
         #   This needs to be reported *first*
-        if slicable_nodes_count != 1:
+        if sliceable_nodes_count != 1:
             self.status = SmartSliceCloudStatus.NoModel
 
         #  Check for Anchors and Loads
@@ -751,7 +751,7 @@ class SmartSliceCloudConnector(QObject):
 
         #  If it is ready to Verify
         elif (self.status is SmartSliceCloudStatus.NoConditions) or (self.status is SmartSliceCloudStatus.NoModel):
-            if slicable_nodes_count == 1:
+            if sliceable_nodes_count == 1:
                 self.status = SmartSliceCloudStatus.ReadyToVerify
         #  If it is NOT ready to Verify
         else:
