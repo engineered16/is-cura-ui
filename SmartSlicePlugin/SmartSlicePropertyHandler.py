@@ -431,17 +431,12 @@ class SmartSlicePropertyHandler(QObject):
             Logger.log("d", "cloud_connector.getForce0FacesPoc(): {}".format(self.connector.getForce0FacesPoc()))
 
 
-        
-
     def drawAnchorOrLoad(self, scene_node, face_id, selected_triangles):
-
         if self._selection_mode is 1: #  Anchor
-
             #  Set/Draw Anchor Selection in Scene
             self.connector._proxy._anchorsApplied = 1
             self._anchoredID = face_id
         else:   # Load
-
             #  Set/Draw Scene Properties
             self.connector._proxy._loadsApplied = 1
             self._loadedID = face_id
@@ -455,7 +450,7 @@ class SmartSlicePropertyHandler(QObject):
             if self._selection_mode is 1:
                 if self._anchoredID is not face_id:
                     self.connector.confirmValidation.emit()
-            else:
+            elif self._selection_mode is 2:
                 if self._loadedID is not face_id:
                     self.connector.confirmValidation.emit()
         else:
@@ -463,7 +458,7 @@ class SmartSlicePropertyHandler(QObject):
                 if self._anchoredID is not None and (self._anchoredID is face_id):
                     self.updateMeshes()
                     return
-            else:
+            elif self._selection_mode is 2:
                 if self._loadedID is not None and (self._loadedID is face_id):
                     self.updateMeshes()
                     return
@@ -479,7 +474,7 @@ class SmartSlicePropertyHandler(QObject):
             self._anchoredMesh = self._changedMesh
             self._anchoredFaces = self._changedFaces
         #  LOAD MODE
-        else:
+        elif self._selection_mode == 2:
             self._loadedMesh = self._changedMesh
             self._loadedFaces = self._changedFaces
 
