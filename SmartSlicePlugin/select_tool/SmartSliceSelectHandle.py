@@ -50,8 +50,8 @@ class SmartSliceSelectHandle(ToolHandle):
     def _onSelectionCenterChanged(self) -> None:
         if self._enabled:
             #self.setPosition(Selection.getSelectionCenter())
+            obj = Selection.getSelectedObject(0) # which index to use?
             if obj:
-                obj = Selection.getSelectedObject(0) # which index to use?
                 self.setTransformation(obj.getLocalTransformation())
 
 #  ACCESSORS
