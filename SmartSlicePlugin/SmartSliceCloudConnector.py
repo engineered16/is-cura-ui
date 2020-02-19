@@ -14,11 +14,13 @@ import json
 import zipfile
 import re
 import math
+import typing
 
 import numpy
 
 import pywim  # @UnresolvedImport
 
+from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtCore import QTime
@@ -610,28 +612,29 @@ class SmartSliceCloudConnector(QObject):
             self.debug_save_smartslice_package_message.show()            
         
 
-    def _createConfirmDialog(self):
-        #
-        #   BEGIN TESTING!!!
-        #
-        #  Create a Confirmation Dialog Component
-        base_path = os.path.abspath(os.path.dirname(__file__))
-        component_path = QUrl.fromLocalFile(os.path.join(base_path, "SmartSliceConfirmationPrompt.qml"))
-        component = QQmlComponent(ApplicationCompat().qml_engine, component_path)
-
-        #  Attach to Viewport
-        context = QQmlContext(ApplicationCompat().qml_engine.rootContext())
-        context.setContextProperty("manager", self)
-
-        self._dialog = component.create(context)
-        #
-        #   END TESTING!!!
-        #
-
     def showConfirmDialog(self):
-        if self._dialog is None:
-            self._createConfirmDialog()
-        self._dialog.show()
+        validationMsg = "Modifying this setting will invalidate your results.\nDo you want to continue and lose the current\n validation results?"
+        optimizationMsg = "Modifying this setting will invalidate your results.\nDo you want to continue and lose your \noptimization results?"
+
+        #  Create a Confirmation Dialog Component
+        if self.status is SmartSliceCloudStatus.BusyValidating:
+            CuraApplication.getInstance().messageBox("Lose Validation Results?",
+                                                     validationMsg, 
+                                                     buttons=(QMessageBox.Ok | QMessageBox.Cancel),
+                                                     callback=self.onConfirmDialogButtonPressed)
+        elif self.status is SmartSliceCloudStatus.BusyOptimizing:
+            CuraApplication.getInstance().messageBox("Lose Optimization Results?",
+                                                     optimizationMsg, 
+                                                     buttons=(QMessageBox.Ok | QMessageBox.Cancel),
+                                                     callback=self.onConfirmDialogButtonPressed)
+        
+
+    def onConfirmDialogButtonPressed(self, i):
+        print (i)
+        if i == 1024:
+            self.onConfirmationConfirmClicked()
+        elif i == 4194304:
+            self.onConfirmationCancelClicked()
 
 
     def updateSliceWidget(self):
@@ -813,15 +816,8 @@ class SmartSliceCloudConnector(QObject):
         Application.getInstance().activityChanged.emit()
 
     def _confirmValidation(self):  
-        self._dialog.show()  
         if self.propertyHandler._cancelChanges is False:
-            if self.status is SmartSliceCloudStatus.BusyValidating:
-                self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose the current\n validation results?"
-            elif self.status is SmartSliceCloudStatus.BusyOptimizing:
-                self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose your \noptimization results?"
-
-            self._proxy.confirmationWindowEnabled = True
-            self._proxy.confirmationWindowEnabledChanged.emit()
+            self.showConfirmDialog()
 
     def _doVerfication(self):
         self.propertyHandler._cancelChanges = False
