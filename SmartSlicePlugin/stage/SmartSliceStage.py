@@ -45,6 +45,7 @@ class SmartSliceStage(CuraStage):
         self._our_last_tool = None
         self._were_tools_enabled = None
         self._was_selection_face = None
+        self._previous_tool = None
 
     #   onStageSelected:
     #       This transitions the userspace/working environment from
@@ -61,14 +62,14 @@ class SmartSliceStage(CuraStage):
         self._was_overhang_visible = application.getPreferences().getValue(self._overhang_visible_preference)
         application.getPreferences().setValue(self._overhang_visible_preference, False)
 
-        # Ensure we have tools defined and apply them here
-        req_tool = self._our_toolset[1] # Force Init
-        use_tool = self._our_toolset[0]
-        self.setToolVisibility(True)
-        application.getController().setFallbackTool(use_tool)
-        self._previous_tool = application.getController().getActiveTool()
         if self._previous_tool:
-            application.getController().setActiveTool(req_tool)
+            application.getController().setActiveTool(self._previous_tool)
+        else:
+            # Ensure we have tools defined and apply them here
+            use_tool = self._our_toolset[0]
+            self.setToolVisibility(True)
+            application.getController().setFallbackTool(use_tool)
+            self._previous_tool = application.getController().getActiveTool()
 
         #  Set the Active Extruder for the Cloud interactions
         self._connector._proxy._activeMachineManager = CuraApplication.getInstance().getMachineManager()

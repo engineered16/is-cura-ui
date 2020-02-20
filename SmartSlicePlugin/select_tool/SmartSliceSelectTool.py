@@ -54,7 +54,6 @@ class SmartSliceSelectTool(Tool):
 
         self._controller.activeToolChanged.connect(self._onActiveStateChanged)
 
-
     ##  Handle mouse and keyboard events
     #
     #   \param event type(Event)
@@ -131,12 +130,15 @@ class SmartSliceSelectTool(Tool):
         active_tool = controller.getActiveTool()
         Logger.log("d", "Application.getInstance().getController().getActiveTool(): {}".format(active_tool))
 
-        if active_tool == self and Selection.hasSelection():
-            Selection.setFaceSelectMode(True)
-            Logger.log("d", "Enabled faceSelectMode!")
-        else:
-            Selection.setFaceSelectMode(False)
-            Logger.log("d", "Disabled faceSelectMode!")
+        if active_tool == self:
+            stage = controller.getActiveStage()
+            controller.setFallbackTool(stage._our_toolset[0])
+            if Selection.hasSelection():
+                Selection.setFaceSelectMode(True)
+                Logger.log("d", "Enabled faceSelectMode!")
+            else:
+                Selection.setFaceSelectMode(False)
+                Logger.log("d", "Disabled faceSelectMode!")
 
     ##  Get whether the select face feature is supported.
     #   \return True if it is supported, or False otherwise.

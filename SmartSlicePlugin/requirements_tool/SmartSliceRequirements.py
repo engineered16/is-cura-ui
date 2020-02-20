@@ -29,7 +29,10 @@ class SmartSliceRequirements(Tool):
         self._controller.activeToolChanged.connect(self._onToolSelected)
 
     def _onToolSelected(self):
-        if not self._connector._proxy.shouldRaiseWarning:
-            self._connector._proxy.confirmationWindowEnabled = False
-            self._connector._proxy.confirmationWindowEnabledChanged.emit()
+        controller = Application.getInstance().getController()
+        active_tool = controller.getActiveTool()
+        
+        if active_tool == self:
+            stage = controller.getActiveStage()
+            controller.setFallbackTool(stage._our_toolset[1])
             

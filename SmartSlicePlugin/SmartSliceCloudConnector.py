@@ -858,14 +858,20 @@ class SmartSliceCloudConnector(QObject):
 
     confirmValidation = pyqtSignal()
     doVerification = pyqtSignal()
+    confirmOptimization = pyqtSignal()
+    confirmModMeshRemove = pyqtSignal()
+    doOptimization = pyqtSignal()
 
     def _prepareValidation(self):
         self._proxy._hasActiveValidate = False
         self.status = SmartSliceCloudStatus.ReadyToVerify
         Application.getInstance().activityChanged.emit()
 
-    def _confirmValidation(self):  
-        self.showConfirmDialog()
+    def _confirmValidation(self):
+        if len(self.propertyHandler._propertiesChanged) > 0:
+            for prop in self.propertyHandler._propertiesChanged:
+                Logger.log ("Property Found: " + str(prop))
+            self.showConfirmDialog()
 
     def _doVerfication(self):
         self.propertyHandler._cancelChanges = False
@@ -875,9 +881,6 @@ class SmartSliceCloudConnector(QObject):
             self._jobs[self._current_job]._id = self._current_job
             self._jobs[self._current_job].finished.connect(self._onJobFinished)
             self._jobs[self._current_job].start()
-
-    confirmOptimization = pyqtSignal()
-    confirmModMeshRemove = pyqtSignal()
 
     def _confirmOptimization(self):
         self.showConfirmDialog()
@@ -894,15 +897,13 @@ class SmartSliceCloudConnector(QObject):
         else:
             self.doOptimization.emit()
 
-
-    doOptimization = pyqtSignal()
-
     def _doOptimization(self):
         self._current_job += 1
         self._jobs[self._current_job] = SmartSliceCloudOptimizeJob(self)
         self._jobs[self._current_job]._id = self._current_job
         self._jobs[self._current_job].finished.connect(self._onJobFinished)
         self._jobs[self._current_job].start()
+
 
     '''
       Primary Button Actions:
@@ -953,6 +954,7 @@ class SmartSliceCloudConnector(QObject):
         else:
             Application.getInstance().getController().setActiveStage("PreviewStage")
 
+
     '''
       onConfirmationConfirmClicked()
         * Confirm change to Parameter/Setting
@@ -983,8 +985,9 @@ class SmartSliceCloudConnector(QObject):
             '''
                 Remove Modifier Mesh Here
             '''
-        else:
-            self.propertyHandler._onCancelChanges()
+            1 # Stub
+
+        self.propertyHandler._onCancelChanges()
 
         # Close Dialog
         self.confirmationConcluded.emit()
