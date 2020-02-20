@@ -324,7 +324,8 @@ class SmartSliceCloudJob(Job):
             else:
                 self.connector.updateOptimizationState()
         else:
-            #self.connector.status = previous_connector_status
+            if self.connector.status is not SmartSliceCloudStatus.ReadyToVerify:
+                self.connector.status = previous_connector_status
             Message(
                 title='SmartSlice',
                 text=i18n_catalog.i18nc("@info:status", "SmartSlice was unable to find a solution")
@@ -870,7 +871,7 @@ class SmartSliceCloudConnector(QObject):
     def _confirmValidation(self):
         if len(self.propertyHandler._propertiesChanged) > 0:
             for prop in self.propertyHandler._propertiesChanged:
-                Logger.log ("Property Found: " + str(prop))
+                Logger.log ("d", "Property Found: " + str(prop))
             self.showConfirmDialog()
 
     def _doVerfication(self):
