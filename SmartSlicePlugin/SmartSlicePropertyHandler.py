@@ -31,6 +31,7 @@ from UM.PluginRegistry import PluginRegistry
 #  Smart Slice
 from .SmartSliceCloudProxy import SmartSliceCloudStatus
 from .SmartSliceProperty import SmartSliceProperty, SmartSliceLoadDirection, SmartSliceContainerProperties
+from .select_tool.SmartSliceSelectHandle import SelectionMode
 
 """
   SmartSlicePropertyHandler(connector)
@@ -70,26 +71,15 @@ class SmartSlicePropertyHandler(QObject):
 
         #  Selection Proeprties
         self._selection_mode = 1 # Default to AnchorMode
+        self._changedMesh = None
+        self._changedFaces = None
         self._changedForce = None
-        self._changedAnchorMesh = None
-        self._changedAnchorFace = None
-        self._changedLoadMesh = None
-        self._changedLoadFace = None
         self._anchoredMesh = None
         self._anchoredFaces = None
         self._anchoredID = None
         self._loadedMesh = None
         self._loadedFaces = None
         self._loadedID = None
-
-        self._changedAnchorFace = None
-        self._changedAnchorTris = None
-        self._changedLoadFace = None
-        self._changedLoadTris = None
-        self._anchoredFace = None
-        self._anchoredTris = None
-        self._loadedFace = None
-        self._loadedTris = None
         
         #  Cura Setup
         self._activeMachineManager = CuraApplication.getInstance().getMachineManager()
@@ -104,10 +94,13 @@ class SmartSlicePropertyHandler(QObject):
         self._cancelChanges = False
 
         #  Temporary Cache
+        self._cachedScene = None
         self._cachedFaceID = None
         self._cachedTriangles = None
+        self._addProperties = True
 
         #  Attune to Scale/Rotate Operations
+        #Application.getInstance().getController().toolOperationStopped.connect(self._onLocalTransformationChanged)
         Application.getInstance().getController().getTool("ScaleTool").operationStopped.connect(self.onMeshScaleChanged)
         Application.getInstance().getController().getTool("RotateTool").operationStopped.connect(self.onMeshRotationChanged)
 
@@ -140,9 +133,9 @@ class SmartSlicePropertyHandler(QObject):
         Stores all current values in Cura environment to SmartSlice cache
     """
     def cacheChanges(self):
-        self.cacheSmartSlice()
         self.cacheGlobal()
         self.cacheExtruder()
+        self.cacheSmartSlice()
 
     """
       cacheGlobal()
@@ -156,6 +149,14 @@ class SmartSlicePropertyHandler(QObject):
                 self._global_cache[key] = self._globalStack.getProperty(key, "value")
             if self._global_cache[key] != self._globalStack.getProperty(key, "value"):
                 self._global_cache[key] = self._globalStack.getProperty(key, "value")
+
+        #  Clear Properties Changed of Global Settings
+        _props = 0
+        for prop in self._propertiesChanged:
+            if prop is SmartSliceProperty.GlobalProperty:
+                _props += 1
+        for i in range(_props):
+            self._propertiesChanged.remove(SmartSliceProperty.GlobalProperty)
             
     """
       cacheExtruder()
@@ -169,6 +170,14 @@ class SmartSlicePropertyHandler(QObject):
                 self._extruder_cache[key] = self._activeExtruder.getProperty(key, "value")
             if self._extruder_cache[key] != self._activeExtruder.getProperty(key, "value"):
                 self._extruder_cache[key] = self._activeExtruder.getProperty(key, "value")
+
+        #  Clear Properties Changed of Extruder Settings
+        _props = 0
+        for prop in self._propertiesChanged:
+            if prop is SmartSliceProperty.ExtruderProperty:
+                _props += 1
+        for i in range(_props):
+            self._propertiesChanged.remove(SmartSliceProperty.ExtruderProperty)
 
     """
       cacheSmartSlice()
@@ -215,20 +224,36 @@ class SmartSlicePropertyHandler(QObject):
         Restores all cached values for properties upon user cancellation
     """
     def restoreCache(self):
+        self._addProperties = False
+        # Restore/Clear Global Property Changes
         for property in self._global_cache:
             if self._global_cache[property] != self._globalStack.getProperty(property, "value"):
                 self._lastCancel = property
                 self._globalStack.setProperty(property, "value", self._global_cache[property])
                 self._globalStack.setProperty(property, "state", InstanceState.Default)
+        _props = 0
+        for prop in self._propertiesChanged:
+            if prop is SmartSliceProperty.GlobalProperty:
+                _props += 1
+        for i in range(_props):
+            self._propertiesChanged.remove(SmartSliceProperty.GlobalProperty)
 
+        #  Restore/Clear Extruder Property Changes
         for property in self._extruder_cache:
             if self._extruder_cache[property] != self._activeExtruder.getProperty(property, "value"):
                 self._lastCancel = property
                 self._activeExtruder.setProperty(property, "value", self._extruder_cache[property])
                 self._activeExtruder.setProperty(property, "state", InstanceState.Default)
-
+        _props = 0
         for prop in self._propertiesChanged:
-            print ("Property:  " + str(prop))
+            if prop is SmartSliceProperty.ExtruderProperty:
+                _props += 1
+        for i in range(_props):
+            self._propertiesChanged.remove(SmartSliceProperty.ExtruderProperty)
+
+        #  Restore/Clear SmartSlice Property Changes
+        for prop in self._propertiesChanged:
+            Logger.log ("d", "Property Found: " + str(prop))
             self._lastCancel = prop
             if prop is SmartSliceProperty.MaxDisplacement:
                 self.connector._proxy.setMaximalDisplacement()
@@ -279,6 +304,7 @@ class SmartSlicePropertyHandler(QObject):
         #         erroneously raises a second confirmation prompt 
         time.sleep(0.35)
         self._cancelChanges = False
+        self._addProperties = True
 
 
     #
@@ -385,55 +411,78 @@ class SmartSlicePropertyHandler(QObject):
 
     selectedFacesChanged = Signal() 
 
-    def applyAnchorOrLoad(self):
-        if self._selection_mode is 1:
+    def applyAnchorOrLoad(self, selected_triangles):
+        if self._selection_mode is SelectionMode.AnchorMode:
             self.connector.resetAnchor0FacesPoc()
-            self.connector.appendAnchor0FacesPoc(self._anchoredTris)
+            self.connector.appendAnchor0FacesPoc(selected_triangles)
             Logger.log("d", "cloud_connector.getAnchor0FacesPoc(): {}".format(self.connector.getAnchor0FacesPoc()))
-        elif self._selection_mode is 2: 
-            load_vector = self._loadedTris[0].normal
+        elif self._selection_mode is SelectionMode.LoadMode: 
+            load_vector = selected_triangles[0].normal
 
             self.connector.updateForce0Vector(
                 Vector(load_vector.r, load_vector.s, load_vector.t)
             )
 
             self.connector.resetForce0FacesPoc()
-            self.connector.appendForce0FacesPoc(self._loadedTris)
+            self.connector.appendForce0FacesPoc(selected_triangles)
 
             Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(self.connector.getForce0VectorPoc()))
             Logger.log("d", "cloud_connector.getForce0FacesPoc(): {}".format(self.connector.getForce0FacesPoc()))
 
+    def drawAnchorOrLoad(self, scene_node, face_id, selected_triangles):
+        if self._selection_mode is SelectionMode.AnchorMode:
+            #  Set/Draw Anchor Selection in Scene
+            self.connector._proxy._anchorsApplied = 1
+            self._anchoredID = face_id
+        elif self._selection_mode is SelectionMode.LoadMode: 
+            #  Set/Draw Scene Properties
+            self.connector._proxy._loadsApplied = 1
+            self._loadedID = face_id
+        Application.getInstance().activityChanged.emit()
 
-    def confirmFaceDraw(self):
+    def confirmFaceDraw(self, scene_node, face_id, selected_triangles):
         if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
-            self._propertiesChanged.append(SmartSliceProperty.SelectedFace)
-            if self._selection_mode is 1:
-                if self._anchoredFace is not self._changedAnchorFace:
+            self._cachedScene = scene_node
+            self._cachedTriangles = selected_triangles
+            self._cachedFaceID = face_id
+            if self._selection_mode is SelectionMode.AnchorMode:
+                if self._anchoredID != face_id:
+                    self._propertiesChanged.append(SmartSliceProperty.SelectedFace)
                     self.connector.confirmValidation.emit()
-            elif self._selection_mode is 2:
-                if self._loadedFace is not self._changedLoadFace:
+            elif self._selection_mode is SelectionMode.LoadMode:
+                if self._loadedID != face_id:
+                    self._propertiesChanged.append(SmartSliceProperty.SelectedFace)
                     self.connector.confirmValidation.emit()
         else:
+            if self._selection_mode is SelectionMode.AnchorMode:
+                if self._anchoredID is not None and (self._anchoredID is face_id):
+                    self.updateMeshes()
+                    Application.getInstance().activityChanged.emit()
+                    return
+                else:
+                    self._anchoredID = face_id
+            elif self._selection_mode is SelectionMode.LoadMode:
+                if self._loadedID is not None and (self._loadedID is face_id):
+                    self.updateMeshes()
+                    Application.getInstance().activityChanged.emit()
+                    return
+                else:
+                    self._loadedID = face_id
             self.connector._prepareValidation()
             self.updateMeshes()
-            self.applyAnchorOrLoad()
+            self.drawAnchorOrLoad(scene_node, face_id, selected_triangles)
+            self.applyAnchorOrLoad(selected_triangles)
             self.selectedFacesChanged.emit()
 
-    """
-      updateMeshes(face_id)
-
-    """
     def updateMeshes(self):
         #  ANCHOR MODE
-        if self._selection_mode == 1:
-            self.connector._proxy._anchorsApplied = 1
-            self._anchoredFace = self._changedAnchorFace
-            self._anchoredTris = self._changedAnchorTris
+        if self._selection_mode == SelectionMode.AnchorMode:
+            self._anchoredMesh = self._changedMesh
+            self._anchoredFaces = self._changedFaces
         #  LOAD MODE
-        elif self._selection_mode == 2:
-            self.connector._proxy._loadsApplied = 1
-            self._loadedFace = self._changedLoadFace
-            self._loadedTris = self._changedLoadTris
+        elif self._selection_mode == SelectionMode.LoadMode:
+            self._loadedMesh = self._changedMesh
+            self._loadedFaces = self._changedFaces
 
 
     #
@@ -449,9 +498,10 @@ class SmartSlicePropertyHandler(QObject):
             return
 
         if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
-            self._propertiesChanged.append(SmartSliceProperty.GlobalProperty)
-            self._changedValues.append(self._activeExtruder.getProperty(key, "value"))
-            self.connector.confirmValidation.emit()
+            if self._addProperties:
+                self._propertiesChanged.append(SmartSliceProperty.GlobalProperty)
+                self._changedValues.append(self._activeExtruder.getProperty(key, "value"))
+                self.connector.confirmValidation.emit()
         else:
             self.connector._prepareValidation()
             self._global_cache[key] = self._globalStack.getProperty(key, "value")
@@ -465,10 +515,11 @@ class SmartSlicePropertyHandler(QObject):
             return
 
         if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
-            #  Confirm Settings Changes
-            self._propertiesChanged.append(SmartSliceProperty.ExtruderProperty)
-            self._changedValues.append(self._activeExtruder.getProperty(key, "value"))
-            self.connector.confirmValidation.emit()
+            if self._addProperties:
+                #  Confirm Settings Changes
+                self._propertiesChanged.append(SmartSliceProperty.ExtruderProperty)
+                self._changedValues.append(self._activeExtruder.getProperty(key, "value"))
+                self.connector.confirmValidation.emit()
         else:
             self.connector._prepareValidation()
             self._extruder_cache[key] = self._activeExtruder.getProperty(key, "value")

@@ -53,11 +53,6 @@ class SmartSliceSelectTool(Tool):
         self._anchor_face = None
 
         self._controller.activeToolChanged.connect(self._onActiveStateChanged)
-        Application.getInstance().engineCreatedSignal.connect(self._onEngineCreated)
-
-
-    def _onEngineCreated(self):
-        self._handle._connector.propertyHandler.selectedFacesChanged.connect(self._setFace)
 
     ##  Handle mouse and keyboard events
     #
@@ -108,31 +103,26 @@ class SmartSliceSelectTool(Tool):
 
     def setFaceVisible(self, scene_node, face_id):
         selected_triangles = list(self._interactive_mesh.select_planar_face(face_id))
-        
-        ph = self._handle._connector.propertyHandler
 
+        selmesh = None #SelectableMesh( scene_node.getMeshData() )
+        selected_faces = None
+
+        self._handle.setFace(selected_triangles)
+            
+        #  Set mesh
+        self._handle._connector.propertyHandler._changedMesh = selmesh
+        self._handle._connector.propertyHandler._changedFaces = selected_faces
+        
         if self.getAnchorSelectionActive():
-            #  Draw in Scene
             self._handle._arrow = False
             self._anchor_face = (scene_node, face_id)
-            ph._changedAnchorFace = face_id
-            ph._changedAnchorTris = selected_triangles
-        elif self.getLoadSelectionActive():
-            #  Draw in Scene
+            self._handle._connector.propertyHandler.confirmFaceDraw(scene_node=scene_node, face_id=face_id, selected_triangles=selected_triangles)
+
+        else:
             self._handle._arrow = True
             self._load_face = (scene_node, face_id)
-            ph._changedLoadFace = face_id
-            ph._changedLoadTris = selected_triangles
+            self._handle._connector.propertyHandler.confirmFaceDraw(scene_node=scene_node, face_id=face_id, selected_triangles=selected_triangles)
 
-        ph.confirmFaceDraw()
-
-        Application.getInstance().activityChanged.emit()
-
-    def _setFace(self):
-        if self.getAnchorSelectionActive():
-            self._handle.setFace(self._handle._connector.propertyHandler._anchoredTris)
-        elif self.getLoadSelectionActive():
-            self._handle.setFace(self._handle._connector.propertyHandler._loadedTris)
 
     def _onActiveStateChanged(self):
         controller = Application.getInstance().getController()
