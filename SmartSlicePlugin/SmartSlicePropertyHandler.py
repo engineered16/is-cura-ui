@@ -70,9 +70,11 @@ class SmartSlicePropertyHandler(QObject):
 
         #  Selection Proeprties
         self._selection_mode = 1 # Default to AnchorMode
-        self._changedMesh = None
-        self._changedFaces = None
         self._changedForce = None
+        self._changedAnchorMesh = None
+        self._changedAnchorFace = None
+        self._changedLoadMesh = None
+        self._changedLoadFace = None
         self._anchoredMesh = None
         self._anchoredFaces = None
         self._anchoredID = None
@@ -93,12 +95,10 @@ class SmartSlicePropertyHandler(QObject):
         self._cancelChanges = False
 
         #  Temporary Cache
-        self._cachedScene = None
         self._cachedFaceID = None
         self._cachedTriangles = None
 
         #  Attune to Scale/Rotate Operations
-        #Application.getInstance().getController().toolOperationStopped.connect(self._onLocalTransformationChanged)
         Application.getInstance().getController().getTool("ScaleTool").operationStopped.connect(self.onMeshScaleChanged)
         Application.getInstance().getController().getTool("RotateTool").operationStopped.connect(self.onMeshRotationChanged)
 
@@ -395,20 +395,9 @@ class SmartSlicePropertyHandler(QObject):
             Logger.log("d", "cloud_connector.getForce0FacesPoc(): {}".format(self.connector.getForce0FacesPoc()))
 
 
-    def drawAnchorOrLoad(self, scene_node, face_id, selected_triangles):
-        if self._selection_mode is 1: #  Anchor
-            #  Set/Draw Anchor Selection in Scene
-            self.connector._proxy._anchorsApplied = 1
-            self._anchoredID = face_id
-        else:   # Load
-            #  Set/Draw Scene Properties
-            self.connector._proxy._loadsApplied = 1
-            self._loadedID = face_id
-
-    def confirmFaceDraw(self, scene_node=None, face_id=None, selected_triangles=None):
+    def confirmFaceDraw(self, face_id=None, selected_triangles=None):
         if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
             self._propertiesChanged.append(SmartSliceProperty.SelectedFace)
-            self._cachedScene = scene_node
             self._cachedTriangles = selected_triangles
             self._cachedFaceID = face_id
             if self._selection_mode is 1:
@@ -418,29 +407,26 @@ class SmartSlicePropertyHandler(QObject):
                 if self._loadedID is not face_id:
                     self.connector.confirmValidation.emit()
         else:
-            if self._selection_mode is 1:
-                if self._anchoredID is not None and (self._anchoredID is face_id):
-                    #self.updateMeshes()
-                    return
-            elif self._selection_mode is 2:
-                if self._loadedID is not None and (self._loadedID is face_id):
-                    #self.updateMeshes()
-                    return
             self.connector._prepareValidation()
-            self.updateMeshes()
-            self.drawAnchorOrLoad(scene_node, face_id, selected_triangles)
+            self.updateMeshes(face_id)
             self.applyAnchorOrLoad(selected_triangles)
             self.selectedFacesChanged.emit()
 
-    def updateMeshes(self):
+    def updateMeshes(self, face_id=None):
         #  ANCHOR MODE
         if self._selection_mode == 1:
-            self._anchoredMesh = self._changedMesh
-            self._anchoredFaces = self._changedFaces
+            self.connector._proxy._anchorsApplied = 1
+            self._anchoredMesh = self._changedAnchorMesh
+            self._anchoredFaces = self._changedAnchorFace
+            if self._anchoredID is not face_id:
+                self._anchoredID = face_id
         #  LOAD MODE
         elif self._selection_mode == 2:
-            self._loadedMesh = self._changedMesh
-            self._loadedFaces = self._changedFaces
+            self.connector._proxy._loadsApplied = 1
+            self._loadedMesh = self._changedLoadMesh
+            self._loadedFaces = self._changedLoadFace
+            if self._loadedID is not face_id:
+                self._loadedID = face_id
 
 
     #

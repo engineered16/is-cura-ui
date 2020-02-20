@@ -109,19 +109,24 @@ class SmartSliceSelectTool(Tool):
 
         self._handle.setFace(selected_triangles)
             
-        #  Set mesh
-        self._handle._connector.propertyHandler._changedMesh = selmesh
-        self._handle._connector.propertyHandler._changedFaces = selected_faces
         
         if self.getAnchorSelectionActive():
+            #  Set mesh
+            self._handle._connector.propertyHandler._changedAnchorMesh = selmesh
+            self._handle._connector.propertyHandler._changedAnchorFace = selected_faces
+            #  Draw in Scene
             self._handle._arrow = False
             self._anchor_face = (scene_node, face_id)
-            self._handle._connector.propertyHandler.confirmFaceDraw(scene_node=scene_node, face_id=face_id, selected_triangles=selected_triangles)
+            self._handle._connector.propertyHandler.confirmFaceDraw(face_id=face_id, selected_triangles=selected_triangles)
 
-        else:
+        elif self.getLoadSelectionActive():
+            #  Set mesh
+            self._handle._connector.propertyHandler._changedLoadMesh = selmesh
+            self._handle._connector.propertyHandler._changedLoadFace = selected_faces
+            #  Draw in Scene
             self._handle._arrow = True
             self._load_face = (scene_node, face_id)
-            self._handle._connector.propertyHandler.confirmFaceDraw(scene_node=scene_node, face_id=face_id, selected_triangles=selected_triangles)
+            self._handle._connector.propertyHandler.confirmFaceDraw(face_id=face_id, selected_triangles=selected_triangles)
 
         Application.getInstance().activityChanged.emit()
 
