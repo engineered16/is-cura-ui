@@ -85,16 +85,6 @@ class SmartSliceExtension(Extension):
                                  self.getVariables
                                  )
         '''
-        
-        #
-        #   TODO: The QML is not getting added to the extension's screen. 
-        #           * This dialog needs to be added to the extension when the engine is created, so
-        #               it can be displayed in any stage when a validation/optimization parameter is changed
-        #
-        # Prompt for Confirming/Cancelling Invalidating Changes
-        base_path = PluginRegistry.getInstance().getPluginPath("SmartSlicePlugin")
-        component_path = os.path.join(base_path, "SmartSliceConfirmationPrompt.qml")
-        Application.getInstance().createQmlComponent(component_path)
 
         #  Start with a Confirmation Prompt Raised
         self.cloud._proxy.confirmationWindowEnabled = True

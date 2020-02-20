@@ -99,6 +99,7 @@ class SmartSliceCloudProxy(QObject):
         self.reqsMaxDeflect  = self._targetMaximalDisplacement
         self.reqsLoadMagnitude = self._loadMagnitude
         self.reqsLoadDirection = self._loadDirection
+        self._changedValues = {}
 
 
         # Properties (mainly) for the sliceinfo widget
@@ -397,19 +398,14 @@ class SmartSliceCloudProxy(QObject):
         if self.connector.status is SmartSliceCloudStatus.BusyOptimizing or (self.connector.status is SmartSliceCloudStatus.Optimized):
             self.connector.propertyHandler._propertiesChanged.append(SmartSliceProperty.FactorOfSafety)
             self.connector.propertyHandler._changedValues.append(value)
-            self.connector._confirmOptimization()
+            self.connector.confirmOptimization.emit()
         elif self.connector.status in SmartSliceCloudStatus.Optimizable:
             self._targetFactorOfSafety = value
-            self.reqsSafetyFactor = value # SET CACHE
+            self.reqsSafetyFactor = value 
             self.targetFactorOfSafetyChanged.emit()
-            #  Check if status has changed form the change
-            if value < self.resultSafetyFactor and (self.reqsMaxDeflect > self.resultMaximalDisplacement):
-                self.connector.status = SmartSliceCloudStatus.Overdimensioned
-            else:
-                self.connector.status = SmartSliceCloudStatus.Underdimensioned
-            self.connector.updateSliceWidget()
+            self.connector.updateOptimizationState()
         else:
-            self.reqsSafetyFactor = value # SET CACHE
+            self.reqsSafetyFactor = value
             self._targetFactorOfSafety = value
             self.targetFactorOfSafetyChanged.emit()
 
@@ -441,18 +437,12 @@ class SmartSliceCloudProxy(QObject):
         if self.connector.status is SmartSliceCloudStatus.BusyOptimizing or (self.connector.status is SmartSliceCloudStatus.Optimized):
             self.connector.propertyHandler._propertiesChanged.append(SmartSliceProperty.MaxDisplacement)
             self.connector.propertyHandler._changedValues.append(value)
-            self.reqsMaxDeflect = value
-            self.connector._confirmOptimization()
+            self.connector.confirmOptimization.emit()
         elif self.connector.status in SmartSliceCloudStatus.Optimizable:
             self._targetMaximalDisplacement = value
-            self.reqsMaxDeflect = value # SET CACHE
+            self.reqsMaxDeflect = value
             self.targetMaximalDisplacementChanged.emit()
-            #  Check if status has changed form the change
-            if value < self.resultMaximalDisplacement or (self.reqsSafetyFactor > self.resultSafetyFactor):
-                self.connector.status = SmartSliceCloudStatus.Underdimensioned
-            else:
-                self.connector.status = SmartSliceCloudStatus.Overdimensioned
-            self.connector.updateSliceWidget()
+            self.connector.updateOptimizationState()
         else:
             self.reqsMaxDeflect = value # SET CACHE
             self._targetMaximalDisplacement = value

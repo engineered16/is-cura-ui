@@ -270,7 +270,7 @@ class SmartSliceCloudJob(Job):
                 error_message.setTitle("SmartSlice plugin")
                 error_message.setText(i18n_catalog.i18nc("@info:status", "Error while processing the job:\n{}".format(task.error)))
                 error_message.show()
-                self.connector.status = SmartSliceCloudStatus.ReadyToVerify
+                self.connector.cancelCurrentJob()
 
                 Logger.log("e", "An error occured while sending and receiving cloud job: {}".format(task.error))
                 self.connector.propertyHandler._cancelChanges = False
@@ -284,7 +284,7 @@ class SmartSliceCloudJob(Job):
                 error_message.setTitle("SmartSlice plugin")
                 error_message.setText(i18n_catalog.i18nc("@info:status", "Unexpected status occured:\n{}".format(task.error)))
                 error_message.show()
-                self.connector.status = SmartSliceCloudStatus.ReadyToVerify
+                self.connector.cancelCurrentJob()
 
                 Logger.log("e", "An unexpected status occured while sending and receiving cloud job: {}".format(task.status))
                 self.connector.propertyHandler._cancelChanges = False
@@ -294,7 +294,7 @@ class SmartSliceCloudJob(Job):
             notification_message.setTitle("SmartSlice plugin")
             notification_message.setText(i18n_catalog.i18nc("@info:status", "Job has been canceled!".format(task.error)))
             notification_message.show()
-            self.connector.propertyHandler._cancelChanges = False
+            self.connector.cancelCurrentJob()
 
     def run(self) -> None:
         if not self.job_type:
@@ -302,8 +302,7 @@ class SmartSliceCloudJob(Job):
             error_message.setTitle("SmartSlice plugin")
             error_message.setText(i18n_catalog.i18nc("@info:status", "Job type not set for processing:\nDon't know what to do!"))
             error_message.show()
-            self.connector.status = SmartSliceCloudStatus.ReadyToVerify
-            self.connector.propertyHandler._cancelChanges = False
+            self.connector.cancelCurrentJob()
 
         # TODO: Add instructions how to send a verification job here
         previous_connector_status = self.connector.status
@@ -323,21 +322,15 @@ class SmartSliceCloudJob(Job):
             if previous_connector_status in SmartSliceCloudStatus.Optimizable:
                 self.connector.status = SmartSliceCloudStatus.Optimized
             else:
-                if self.connector._proxy.resultSafetyFactor < self.connector._proxy.targetFactorOfSafety or (self.connector._proxy.resultMaximalDisplacement > self.connector._proxy.targetMaximalDisplacement):
-                    self.connector.status = SmartSliceCloudStatus.Underdimensioned
-                elif self.connector._proxy.resultSafetyFactor > self.connector._proxy.targetFactorOfSafety or (self.connector._proxy.resultMaximalDisplacement < self.connector._proxy.targetMaximalDisplacement):
-                    self.connector.status = SmartSliceCloudStatus.Overdimensioned
-                else:
-                    self.connector.status = SmartSliceCloudStatus.Optimized
+                self.connector.updateOptimizationState()
         else:
-            self.connector.status = previous_connector_status
+            #self.connector.status = previous_connector_status
             Message(
                 title='SmartSlice',
                 text=i18n_catalog.i18nc("@info:status", "SmartSlice was unable to find a solution")
             ).show()
         self.connector.propertyHandler.prepareCache()
 
-            
 
     def _process_analysis_result(self, analysis : pywim.smartslice.result.Analysis):
         #Logger.log("d", "analysis: {}".format(analysis.to_json()))
@@ -562,6 +555,13 @@ class SmartSliceCloudConnector(QObject):
 
     onSmartSlicePrepared = pyqtSignal()
 
+    def cancelCurrentJob(self):
+        if self._jobs[self._current_job] is not None:
+            self._jobs[self._current_job].cancel()
+            self._jobs[self._current_job].canceled = True
+            self._jobs[self._current_job] = None
+            self._prepareValidation()
+
     def _onSaveDebugPackage(self, messageId: str, actionId: str) -> None:
         dummy_job = SmartSliceCloudVerificationJob(self)
         if self.status == SmartSliceCloudStatus.ReadyToVerify:
@@ -616,26 +616,76 @@ class SmartSliceCloudConnector(QObject):
         validationMsg = "Modifying this setting will invalidate your results.\nDo you want to continue and lose the current\n validation results?"
         optimizationMsg = "Modifying this setting will invalidate your results.\nDo you want to continue and lose your \noptimization results?"
 
-        #  Create a Confirmation Dialog Component
-        if self.status is SmartSliceCloudStatus.BusyValidating:
-            CuraApplication.getInstance().messageBox("Lose Validation Results?",
-                                                     validationMsg, 
-                                                     buttons=(QMessageBox.Ok | QMessageBox.Cancel),
-                                                     callback=self.onConfirmDialogButtonPressed)
-        elif self.status is SmartSliceCloudStatus.BusyOptimizing:
-            CuraApplication.getInstance().messageBox("Lose Optimization Results?",
-                                                     optimizationMsg, 
-                                                     buttons=(QMessageBox.Ok | QMessageBox.Cancel),
-                                                     callback=self.onConfirmDialogButtonPressed)
+        if not self.propertyHandler._cancelChanges:
+            #  Create a Confirmation Dialog Component
+            if self.status is SmartSliceCloudStatus.BusyValidating:
+                CuraApplication.getInstance().messageBox("Lose Validation Results?",
+                                                        validationMsg, 
+                                                        buttons=(QMessageBox.Cancel | QMessageBox.Apply),
+                                                        callback=self.onConfirmDialogButtonPressed_Validate)
+            elif self.status is SmartSliceCloudStatus.BusyOptimizing or (self.status is SmartSliceCloudStatus.Optimized):
+                CuraApplication.getInstance().messageBox("Lose Optimization Results?",
+                                                        optimizationMsg, 
+                                                        buttons=(QMessageBox.Cancel | QMessageBox.Apply),
+                                                        callback=self.onConfirmDialogButtonPressed_Optimize)
         
 
-    def onConfirmDialogButtonPressed(self, i):
-        print (i)
-        if i == 1024:
+    """
+      onConfirmDialogButtonPressed_Validate(pressed)
+        pressed: Button Type that User Selected
+
+        Handles confirmation dialog during validation runs according to 'pressed' button
+    """
+    def onConfirmDialogButtonPressed_Validate(self, pressed):
+        if pressed == QMessageBox.Apply:
+            self.cancelCurrentJob()
             self.onConfirmationConfirmClicked()
-        elif i == 4194304:
+        elif pressed == QMessageBox.Cancel:
             self.onConfirmationCancelClicked()
 
+    """
+      onConfirmDialogButtonPressed_Optimize(pressed)
+        pressed: Button Type that User Selected
+
+        Handles confirmation dialog during optimization runs according to 'pressed' button
+    """
+    def onConfirmDialogButtonPressed_Optimize(self, pressed):
+        if pressed == QMessageBox.Apply:
+            self.cancelCurrentJob()
+            #  Special Handling for Use-Case Requirements
+            #  Max Displace
+            if SmartSliceProperty.MaxDisplacement in self.propertyHandler._propertiesChanged:
+                index = self.propertyHandler._propertiesChanged.index(SmartSliceProperty.MaxDisplacement)
+                self.propertyHandler._propertiesChanged.remove(SmartSliceProperty.MaxDisplacement)
+                self._proxy.reqsMaxDeflect = self.propertyHandler._changedValues[index]
+                self.propertyHandler._changedValues.pop(index)
+                self._proxy.setMaximalDisplacement()
+                self.updateOptimizationState()
+            #  Factor of Safety
+            elif SmartSliceProperty.FactorOfSafety in self.propertyHandler._propertiesChanged:
+                index = self.propertyHandler._propertiesChanged.index(SmartSliceProperty.FactorOfSafety)
+                self.propertyHandler._propertiesChanged.remove(SmartSliceProperty.FactorOfSafety)
+                self._proxy.reqsSafetyFactor = self.propertyHandler._changedValues[index]
+                self.propertyHandler._changedValues.pop(index)
+                self._proxy.setFactorOfSafety()
+                self.updateOptimizationState()
+
+            else:
+                self._prepareValidation()
+                self.onConfirmationConfirmClicked()
+        elif pressed == QMessageBox.Cancel:
+            self.onConfirmationCancelClicked()
+
+
+    def updateOptimizationState(self):
+        #  Check if status has changed form the change
+        if self._proxy.reqsMaxDeflect > self._proxy.resultMaximalDisplacement and (self._proxy.reqsSafetyFactor < self._proxy.resultSafetyFactor):
+            self.status = SmartSliceCloudStatus.Overdimensioned
+        elif self._proxy.reqsMaxDeflect <= self._proxy.resultMaximalDisplacement or (self._proxy.reqsSafetyFactor >= self._proxy.resultSafetyFactor):
+            self.status = SmartSliceCloudStatus.Underdimensioned
+        else:
+            self.status = SmartSliceCloudStatus.Optimized
+        self.updateSliceWidget()
 
     def updateSliceWidget(self):
         if self.status is SmartSliceCloudStatus.NoModel:
@@ -804,7 +854,6 @@ class SmartSliceCloudConnector(QObject):
 
     def onConfirmationConcluded(self):
         self.propertyHandler.prepareCache()
-        self.updateSliceWidget()
         self.confirming = False
 
     confirmValidation = pyqtSignal()
@@ -816,8 +865,7 @@ class SmartSliceCloudConnector(QObject):
         Application.getInstance().activityChanged.emit()
 
     def _confirmValidation(self):  
-        if self.propertyHandler._cancelChanges is False:
-            self.showConfirmDialog()
+        self.showConfirmDialog()
 
     def _doVerfication(self):
         self.propertyHandler._cancelChanges = False
@@ -832,13 +880,7 @@ class SmartSliceCloudConnector(QObject):
     confirmModMeshRemove = pyqtSignal()
 
     def _confirmOptimization(self):
-        if not self.confirming:
-            self.confirming = True
-            #  If a modifier mesh has already been applied,
-            #   Display confirmation prompt before optimizing
-            self._proxy.confirmationWindowEnabled = True
-            self._proxy.confirmationWindowText = "Modifying this setting will invalidate your results.\nDo you want to continue and lose your \noptimization results?"
-            self._proxy.confirmationWindowEnabledChanged.emit()
+        self.showConfirmDialog()
 
     def _confirmModMeshRemove(self):
         #  If a modifier mesh has already been applied,
@@ -920,32 +962,10 @@ class SmartSliceCloudConnector(QObject):
             - Otherwise, change to validate state
     '''
     def onConfirmationConfirmClicked(self):
-        #  Cancel Smart Slice Job
-        if self._jobs[self._current_job] is not None:
-            self._jobs[self._current_job].canceled = True
-            self._jobs[self._current_job] = None
-
-        #  When asking "Is okay to remove Modifier Mesh?"
+        #  Different behavior, when asking "Is okay to remove Modifier Mesh?"
         if self._proxy._confirming_modmesh:
             self.doOptimization.emit()
             self._proxy._confirming_modmesh = False
-
-        #  For handling requirements changes during optimization
-        elif self.status is SmartSliceCloudStatus.BusyOptimizing:
-            if SmartSliceProperty.FactorOfSafety in self.propertyHandler._propertiesChanged or (SmartSliceProperty.MaxDisplacement in self.propertyHandler._propertiesChanged):
-                self.propertyHandler._onConfirmRequirements()    #print ("FoS or Max Displace was in _propertiesChanged")
-                if self._proxy.resultSafetyFactor < self._proxy.reqsSafetyFactor or (self._proxy.resultMaximalDisplacement > self._proxy.reqsMaxDeflect):
-                    self.status = SmartSliceCloudStatus.Underdimensioned
-                elif self._proxy.resultSafetyFactor > self._proxy.reqsSafetyFactor and (self._proxy.resultMaximalDisplacement < self._proxy.reqsMaxDeflect):
-                    self.status = SmartSliceCloudStatus.Overdimensioned
-                else:
-                    self.status = SmartSliceCloudStatus.Optimized
-                self.updateSliceWidget()
-            else:
-                self._prepareValidation()
-
-        else:
-            self._prepareValidation()
 
         self.propertyHandler._onConfirmChanges()
 

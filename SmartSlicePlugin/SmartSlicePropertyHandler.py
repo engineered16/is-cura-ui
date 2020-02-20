@@ -169,10 +169,8 @@ class SmartSlicePropertyHandler(QObject):
         i = 0
         for prop in self._propertiesChanged:
             if prop is SmartSliceProperty.MaxDisplacement:
-                self.connector._proxy.reqsMaxDeflect = self._changedValues[i]
                 self.connector._proxy.setMaximalDisplacement()
             elif prop is SmartSliceProperty.FactorOfSafety:
-                self.connector._proxy.reqsSafetyFactor = self._changedValues[i]
                 self.connector._proxy.setFactorOfSafety()
             elif prop is SmartSliceProperty.LoadDirection:
                 self.connector._proxy.reqsLoadDirection = self._changedValues[i]
@@ -218,13 +216,13 @@ class SmartSlicePropertyHandler(QObject):
             if self._global_cache[property] != self._globalStack.getProperty(property, "value"):
                 self._lastCancel = property
                 self._globalStack.setProperty(property, "value", self._global_cache[property])
-                #self._globalStack.setProperty(property, "state", InstanceState.Default)
+                self._globalStack.setProperty(property, "state", InstanceState.Default)
 
         for property in self._extruder_cache:
             if self._extruder_cache[property] != self._activeExtruder.getProperty(property, "value"):
                 self._lastCancel = property
                 self._activeExtruder.setProperty(property, "value", self._extruder_cache[property])
-                #self._activeExtruder.setProperty(property, "state", InstanceState.Default)
+                self._activeExtruder.setProperty(property, "state", InstanceState.Default)
 
         for prop in self._propertiesChanged:
             self._lastCancel = prop
@@ -254,19 +252,6 @@ class SmartSlicePropertyHandler(QObject):
     #
     #   CONFIRM/CANCEL PROPERTY CHANGES
     #
-
-    def _onConfirmRequirements(self):
-        i = 0
-        for prop in self._propertiesChanged:
-            if prop is SmartSliceProperty.MaxDisplacement:
-                self.connector._proxy.reqsMaxDeflect = self._changedValues.pop(i)
-                self.connector._proxy.setMaximalDisplacement()
-                self._propertiesChanged.pop(i)
-            elif prop is SmartSliceProperty.FactorOfSafety:
-                self.connector._proxy.reqsSafetyFactor = self._changedValues.pop(i)
-                self.connector._proxy.setFactorOfSafety()
-                self._propertiesChanged.pop(i)
-            i += 1
 
     def _onConfirmChanges(self):
         self.cacheChanges()
@@ -353,7 +338,6 @@ class SmartSlicePropertyHandler(QObject):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
             self._propertiesChanged.append(SmartSliceProperty.MeshScale)
             self._changedValues.append(self._sceneNode.getScale())
-            self.connector._proxy.shouldRaiseWarning = True
             self.connector.confirmValidation.emit()
         else:
             self.meshScale = self._sceneNode.getScale()
@@ -367,7 +351,6 @@ class SmartSlicePropertyHandler(QObject):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
             self._propertiesChanged.append(SmartSliceProperty.MeshRotation)
             self._changedValues.append(self._sceneNode.getOrientation())
-            self.connector._proxy.shouldRaiseWarning = True
             self.connector.confirmValidation.emit()
         else:
             self.meshRotation = self._sceneNode.getOrientation()
@@ -384,17 +367,14 @@ class SmartSlicePropertyHandler(QObject):
        
     def _onMaterialChanged(self):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
-            #print("\n\nMATERIAL CHANGE CONFIRMED HERE\n\n")
             #if len(self._propertiesChanged) > 1:
             if self._material is not self._activeExtruder.material:
                 self._propertiesChanged.append(SmartSliceProperty.Material)
                 self._changedValues.append(self._activeExtruder.material)
                 self.connector.confirmValidation.emit()
         else:
-            #print("\n\nMATERIAL CHANGED HERE\n\n")
-            #  TODO:  Next line is commented because there are two signals that are thrown
-            #self.connector._prepareValidation()
             self._material = self._activeExtruder.material
+            self.connector._prepareValidation()
             
     #
     #   FACE SELECTION
@@ -483,6 +463,7 @@ class SmartSlicePropertyHandler(QObject):
             return
 
         if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
+            self._propertiesChanged.append(SmartSliceProperty.GlobalProperty)
             self.connector.confirmValidation.emit()
         else:
             self.connector._prepareValidation()
@@ -498,8 +479,9 @@ class SmartSlicePropertyHandler(QObject):
 
         if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
             #  Confirm Settings Changes
-            if not self.connector._proxy.confirmationWindowEnabled:
-                self.connector.confirmValidation.emit()
+            self._propertiesChanged.append(SmartSliceProperty.ExtruderProperty)
+            self._changedValues.append(self._activeExtruder.getProperty(key, "value"))
+            self.connector.confirmValidation.emit()
         else:
             self.connector._prepareValidation()
             self._extruder_cache[key] = self._activeExtruder.getProperty(key, "value")
