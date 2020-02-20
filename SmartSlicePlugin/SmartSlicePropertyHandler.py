@@ -219,7 +219,7 @@ class SmartSlicePropertyHandler(QObject):
                 self._activeExtruder.setProperty(property, "state", InstanceState.Default)
 
         for prop in self._propertiesChanged:
-            Logger.log ("d", "Property:  " + str(prop))
+            print ("Property:  " + str(prop))
             self._lastCancel = prop
             if prop is SmartSliceProperty.MaxDisplacement:
                 self.connector._proxy.setMaximalDisplacement()
