@@ -508,7 +508,6 @@ class SmartSliceCloudProxy(QObject):
             self.connector._prepareValidation()
 
 
-
     #
     #   SMART SLICE RESULTS
     #

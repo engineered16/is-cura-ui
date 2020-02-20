@@ -966,8 +966,8 @@ class SmartSliceCloudConnector(QObject):
         if self._proxy._confirming_modmesh:
             self.doOptimization.emit()
             self._proxy._confirming_modmesh = False
-
-        self.propertyHandler._onConfirmChanges()
+        else:
+            self.propertyHandler._onConfirmChanges()
 
         # Close Dialog
         self.confirmationConcluded.emit()

@@ -187,16 +187,10 @@ class SmartSlicePropertyHandler(QObject):
           #  Material
             elif prop is SmartSliceProperty.Material:
                 self._material = self._changedValues[i]
-                self.setMaterial()
-                self._propertiesChanged.pop()
             elif prop is SmartSliceProperty.MeshScale:
                 self.meshScale = self._changedValues[i]
-                self.setMeshScale()
-                self._propertiesChanged.pop()
             elif prop is SmartSliceProperty.MeshRotation:
-                self.meshScale = self._changedValues[i]
-                self.setMeshRotation()
-                self._propertiesChanged.pop()
+                self.meshRotation = self._changedValues[i]
             i += 0
         self.clearChangedProperties()
 
@@ -225,6 +219,7 @@ class SmartSlicePropertyHandler(QObject):
                 self._activeExtruder.setProperty(property, "state", InstanceState.Default)
 
         for prop in self._propertiesChanged:
+            print ("Property:  " + str(prop))
             self._lastCancel = prop
             if prop is SmartSliceProperty.MaxDisplacement:
                 self.connector._proxy.setMaximalDisplacement()
@@ -335,7 +330,7 @@ class SmartSlicePropertyHandler(QObject):
         self._sceneNode.transformationChanged.emit(self._sceneNode)
 
     def onMeshScaleChanged(self, unused):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
+        if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
             self._propertiesChanged.append(SmartSliceProperty.MeshScale)
             self._changedValues.append(self._sceneNode.getScale())
             self.connector.confirmValidation.emit()
@@ -348,7 +343,7 @@ class SmartSlicePropertyHandler(QObject):
         self._sceneNode.transformationChanged.emit(self._sceneNode)
 
     def onMeshRotationChanged(self, unused):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
+        if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
             self._propertiesChanged.append(SmartSliceProperty.MeshRotation)
             self._changedValues.append(self._sceneNode.getOrientation())
             self.connector.confirmValidation.emit()
@@ -366,8 +361,7 @@ class SmartSlicePropertyHandler(QObject):
        self._activeExtruder.material = self._material
        
     def _onMaterialChanged(self):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
-            #if len(self._propertiesChanged) > 1:
+        if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
             if self._material is not self._activeExtruder.material:
                 self._propertiesChanged.append(SmartSliceProperty.Material)
                 self._changedValues.append(self._activeExtruder.material)
@@ -387,8 +381,7 @@ class SmartSlicePropertyHandler(QObject):
             self.connector.resetAnchor0FacesPoc()
             self.connector.appendAnchor0FacesPoc(selected_triangles)
             Logger.log("d", "cloud_connector.getAnchor0FacesPoc(): {}".format(self.connector.getAnchor0FacesPoc()))
-        else: 
-
+        elif self._selection_mode is 2: 
             load_vector = selected_triangles[0].normal
 
             self.connector.updateForce0Vector(
@@ -413,7 +406,7 @@ class SmartSlicePropertyHandler(QObject):
             self._loadedID = face_id
 
     def confirmFaceDraw(self, scene_node=None, face_id=None, selected_triangles=None):
-        if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
+        if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
             self._propertiesChanged.append(SmartSliceProperty.SelectedFace)
             self._cachedScene = scene_node
             self._cachedTriangles = selected_triangles
@@ -427,11 +420,11 @@ class SmartSlicePropertyHandler(QObject):
         else:
             if self._selection_mode is 1:
                 if self._anchoredID is not None and (self._anchoredID is face_id):
-                    self.updateMeshes()
+                    #self.updateMeshes()
                     return
             elif self._selection_mode is 2:
                 if self._loadedID is not None and (self._loadedID is face_id):
-                    self.updateMeshes()
+                    #self.updateMeshes()
                     return
             self.connector._prepareValidation()
             self.updateMeshes()
@@ -464,6 +457,7 @@ class SmartSlicePropertyHandler(QObject):
 
         if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
             self._propertiesChanged.append(SmartSliceProperty.GlobalProperty)
+            self._changedValues.append(self._activeExtruder.getProperty(key, "value"))
             self.connector.confirmValidation.emit()
         else:
             self.connector._prepareValidation()
