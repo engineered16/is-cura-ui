@@ -81,6 +81,15 @@ class SmartSlicePropertyHandler(QObject):
         self._loadedMesh = None
         self._loadedFaces = None
         self._loadedID = None
+
+        self._changedAnchorFace = None
+        self._changedAnchorTris = None
+        self._changedLoadFace = None
+        self._changedLoadTris = None
+        self._anchoredFace = None
+        self._anchoredTris = None
+        self._loadedFace = None
+        self._loadedTris = None
         
         #  Cura Setup
         self._activeMachineManager = CuraApplication.getInstance().getMachineManager()
@@ -376,57 +385,55 @@ class SmartSlicePropertyHandler(QObject):
 
     selectedFacesChanged = Signal() 
 
-    def applyAnchorOrLoad(self, selected_triangles):
+    def applyAnchorOrLoad(self):
         if self._selection_mode is 1:
             self.connector.resetAnchor0FacesPoc()
-            self.connector.appendAnchor0FacesPoc(selected_triangles)
+            self.connector.appendAnchor0FacesPoc(self._anchoredTris)
             Logger.log("d", "cloud_connector.getAnchor0FacesPoc(): {}".format(self.connector.getAnchor0FacesPoc()))
         elif self._selection_mode is 2: 
-            load_vector = selected_triangles[0].normal
+            load_vector = self._loadedTris[0].normal
 
             self.connector.updateForce0Vector(
                 Vector(load_vector.r, load_vector.s, load_vector.t)
             )
 
             self.connector.resetForce0FacesPoc()
-            self.connector.appendForce0FacesPoc(selected_triangles)
+            self.connector.appendForce0FacesPoc(self._loadedTris)
 
             Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(self.connector.getForce0VectorPoc()))
             Logger.log("d", "cloud_connector.getForce0FacesPoc(): {}".format(self.connector.getForce0FacesPoc()))
 
 
-    def confirmFaceDraw(self, face_id=None, selected_triangles=None):
+    def confirmFaceDraw(self):
         if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
             self._propertiesChanged.append(SmartSliceProperty.SelectedFace)
-            self._cachedTriangles = selected_triangles
-            self._cachedFaceID = face_id
             if self._selection_mode is 1:
-                if self._anchoredID is not face_id:
+                if self._anchoredFace is not self._changedAnchorFace:
                     self.connector.confirmValidation.emit()
             elif self._selection_mode is 2:
-                if self._loadedID is not face_id:
+                if self._loadedFace is not self._changedLoadFace:
                     self.connector.confirmValidation.emit()
         else:
             self.connector._prepareValidation()
-            self.updateMeshes(face_id)
-            self.applyAnchorOrLoad(selected_triangles)
+            self.updateMeshes()
+            self.applyAnchorOrLoad()
             self.selectedFacesChanged.emit()
 
-    def updateMeshes(self, face_id=None):
+    """
+      updateMeshes(face_id)
+
+    """
+    def updateMeshes(self):
         #  ANCHOR MODE
         if self._selection_mode == 1:
             self.connector._proxy._anchorsApplied = 1
-            self._anchoredMesh = self._changedAnchorMesh
-            self._anchoredFaces = self._changedAnchorFace
-            if self._anchoredID is not face_id:
-                self._anchoredID = face_id
+            self._anchoredFace = self._changedAnchorFace
+            self._anchoredTris = self._changedAnchorTris
         #  LOAD MODE
         elif self._selection_mode == 2:
             self.connector._proxy._loadsApplied = 1
-            self._loadedMesh = self._changedLoadMesh
-            self._loadedFaces = self._changedLoadFace
-            if self._loadedID is not face_id:
-                self._loadedID = face_id
+            self._loadedFace = self._changedLoadFace
+            self._loadedTris = self._changedLoadTris
 
 
     #
