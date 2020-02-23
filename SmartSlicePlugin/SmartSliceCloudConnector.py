@@ -68,8 +68,6 @@ from .SmartSlicePropertyHandler import SmartSlicePropertyHandler
 
 i18n_catalog = i18nCatalog("smartslice")
 
-from .CuraCompat import ApplicationCompat, Deprecations
-
 
 # #  Formatter class that handles token expansion in start/end gcode
 class GcodeStartEndFormatter(Formatter):
@@ -548,8 +546,8 @@ class SmartSliceCloudConnector(QObject):
 
         Application.getInstance().engineCreatedSignal.connect(self._onEngineCreated)
 
+        self._confirmDialog = []
         self.confirming = False
-        self._dialog = None
         self.confirmValidation.connect(self._confirmValidation)
         self.confirmOptimization.connect(self._confirmOptimization)
 
@@ -621,29 +619,76 @@ class SmartSliceCloudConnector(QObject):
         if not self.propertyHandler._cancelChanges:
             #  Create a Confirmation Dialog Component
             if self.status is SmartSliceCloudStatus.BusyValidating:
-                CuraApplication.getInstance().messageBox("Lose Validation Results?",
-                                                        validationMsg, 
-                                                        buttons=(QMessageBox.Cancel | QMessageBox.Apply),
-                                                        callback=self.onConfirmDialogButtonPressed_Validate)
+                index = len(self._confirmDialog)
+                self._confirmDialog.append(Message(title="Lose Validation Results?",
+                                  text=validationMsg,
+                                  lifetime=0,))
+                                  
+                self._confirmDialog[index].addAction("cancel",# action_id
+                                              i18n_catalog.i18nc("@action",
+                                                                 "Cancel"
+                                                                 ), # name
+                                              "", #icon
+                                              "", #description
+                                              button_style=Message.ActionButtonStyle.SECONDARY 
+                                              )
+                self._confirmDialog[index].addAction("continue",# action_id
+                                              i18n_catalog.i18nc("@action",
+                                                                 "Continue"
+                                                                 ), # name
+                                              "", #icon
+                                              "" #description
+                                              )
+                self._confirmDialog[index].actionTriggered.connect(self.onConfirmDialogButtonPressed_Validate)
+                if index == 0:
+                    self._confirmDialog[index].show()
+                
             elif self.status is SmartSliceCloudStatus.BusyOptimizing or (self.status is SmartSliceCloudStatus.Optimized):
-                CuraApplication.getInstance().messageBox("Lose Optimization Results?",
-                                                        optimizationMsg, 
-                                                        buttons=(QMessageBox.Cancel | QMessageBox.Apply),
-                                                        callback=self.onConfirmDialogButtonPressed_Optimize)
+                index = len(self._confirmDialog)
+                self._confirmDialog.append(Message(title="Lose Validation Results?",
+                                  text=validationMsg,
+                                  lifetime=0,))
+                                  
+                self._confirmDialog[index].addAction("continue",# action_id
+                                  i18n_catalog.i18nc("@action",
+                                                     "Continue"
+                                                     ), # name
+                                  "", #icon
+                                  ""  #description
+                                  )
+                self._confirmDialog[index].addAction("cancel",# action_id
+                                  i18n_catalog.i18nc("@action",
+                                                     "Cancel"
+                                                     ), # name
+                                  "", # icon
+                                  ""  # description
+                                  )
+                self._confirmDialog[index].actionTriggered.connect(self.onConfirmDialogButtonPressed_Validate)
+                if index == 0:
+                    self._confirmDialog[index].show()
         
+    def hideMessage(self):
+        for dialog in self._confirmDialog:
+            dialog.hide()
+        self._confirmDialog = []
 
     """
-      onConfirmDialogButtonPressed_Validate(pressed)
-        pressed: Button Type that User Selected
+      onConfirmDialogButtonPressed_Validate(msg, action)
+        msg: Reference to calling Message()
+        action: Button Type that User Selected
 
         Handles confirmation dialog during validation runs according to 'pressed' button
     """
-    def onConfirmDialogButtonPressed_Validate(self, pressed):
-        if pressed == QMessageBox.Apply:
+    def onConfirmDialogButtonPressed_Validate(self, msg, action):
+        if action == "continue":
+            Logger.log ("d", "Property Change accepted during validation")
             self.cancelCurrentJob()
             self.onConfirmationConfirmClicked()
-        elif pressed == QMessageBox.Cancel:
+            self.hideMessage()
+        elif action == "cancel":
+            Logger.log ("d", "Property Change canceled during validation")
             self.onConfirmationCancelClicked()
+            self.hideMessage()
 
     """
       onConfirmDialogButtonPressed_Optimize(pressed)
@@ -857,6 +902,7 @@ class SmartSliceCloudConnector(QObject):
     def onConfirmationConcluded(self):
         self.propertyHandler.prepareCache()
         self.confirming = False
+        self.hideMessage()
 
     confirmValidation = pyqtSignal()
     doVerification = pyqtSignal()

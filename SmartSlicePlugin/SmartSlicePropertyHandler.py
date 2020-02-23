@@ -305,6 +305,7 @@ class SmartSlicePropertyHandler(QObject):
         time.sleep(0.35)
         self._cancelChanges = False
         self._addProperties = True
+        self.connector.hideMessage()
 
 
     #
