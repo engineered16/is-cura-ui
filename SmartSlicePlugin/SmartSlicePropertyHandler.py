@@ -19,6 +19,7 @@ from PyQt5.QtCore import QObject
 from UM.Application import Application
 from UM.Preferences import Preferences
 from UM.Settings.ContainerStack import ContainerStack
+from UM.Scene.SceneNode import SceneNode
 from UM.Scene.Selection import Selection
 from UM.Signal import Signal
 from UM.Logger import Logger
@@ -95,6 +96,8 @@ class SmartSlicePropertyHandler(QObject):
 
         #  Temporary Cache
         self._cachedScene = None
+        self._cachedModMesh = None
+        self._positionModMesh = None
         self._cachedFaceID = None
         self._cachedTriangles = None
         self._addProperties = True
@@ -207,10 +210,15 @@ class SmartSlicePropertyHandler(QObject):
           #  Material
             elif prop is SmartSliceProperty.Material:
                 self._material = self._changedValues[i]
+
+          #  Mesh Properties
             elif prop is SmartSliceProperty.MeshScale:
                 self.meshScale = self._changedValues[i]
             elif prop is SmartSliceProperty.MeshRotation:
                 self.meshRotation = self._changedValues[i]
+            elif prop is SmartSliceProperty.ModifierMesh:
+                self._changedValues.pop(i+1)
+
             i += 0
         self.clearChangedProperties()
 
@@ -254,8 +262,10 @@ class SmartSlicePropertyHandler(QObject):
             self._propertiesChanged.remove(SmartSliceProperty.ExtruderProperty)
 
         #  Restore/Clear SmartSlice Property Changes
+        _props = 0
         for prop in self._propertiesChanged:
             Logger.log ("d", "Property Found: " + str(prop))
+            _props += 1
             self._lastCancel = prop
             if prop is SmartSliceProperty.MaxDisplacement:
                 self.connector._proxy.setMaximalDisplacement()
@@ -273,11 +283,19 @@ class SmartSlicePropertyHandler(QObject):
             #  Material
             elif prop is SmartSliceProperty.Material:
                 self.setMaterial()
-                #self._propertiesChanged.pop()
+
+            #  Mesh Properties
             elif prop is SmartSliceProperty.MeshScale:
                 self.setMeshScale()
             elif prop is SmartSliceProperty.MeshRotation:
                 self.setMeshRotation()
+            elif prop is SmartSliceProperty.ModifierMesh:
+                self._cachedModMesh.setPosition(self._positionModMesh, SceneNode.TransformSpace.World)
+                self._sceneRoot.addChild(self._cachedModMesh)
+                self._changedValues.pop(_props)
+
+                Application.getInstance().getController().getScene().sceneChanged.emit(self._cachedModMesh)
+
 
 
     #
@@ -337,9 +355,10 @@ class SmartSlicePropertyHandler(QObject):
       connectMeshSignals()
         When a mesh is loaded, this method is called to connect signals for detecting mesh transform changes
     """
-    def connectMeshSignals(self, unused=None):
+    def connectMeshSignals(self, changed_node):
         i = 0
         _root = self._sceneRoot 
+        hasModMesh = False
 
         for node in _root.getAllChildren():
             if node.getName() == "3d":
@@ -355,8 +374,24 @@ class SmartSlicePropertyHandler(QObject):
                     #  TODO: Properly Disconnect this Signal, when figure out where to do so
                     #self._sceneNode.transformationChanged.connect(self._onLocalTransformationChanged)
                     i += 1
+            if node.getName() == "SmartSliceMeshModifier":        
+                self._cachedModMesh = node
+                self._positionModMesh = self._cachedModMesh.getWorldPosition()
+                hasModMesh = True
             i += 1
-        return 
+            
+        #  Check if Modifier Mesh has been Removed
+        if self._cachedModMesh:
+            if not hasModMesh:
+                self.showModMeshDialog()
+
+
+    def showModMeshDialog(self):
+        self._propertiesChanged.append(SmartSliceProperty.ModifierMesh)
+        self._changedValues.append(self._cachedModMesh)
+        self._changedValues.append(self._positionModMesh)
+        self.connector.showConfirmDialog()
+
 
 
     #

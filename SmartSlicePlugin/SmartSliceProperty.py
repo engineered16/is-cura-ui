@@ -14,6 +14,7 @@ class SmartSliceProperty(Enum):
     # Mesh Properties
       MeshScale       =  1
       MeshRotation    =  2
+      ModifierMesh    =  3
     # Requirements
       FactorOfSafety  =  11
       MaxDisplacement =  12

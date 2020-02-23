@@ -405,6 +405,9 @@ class SmartSliceCloudJob(Job):
                                             SceneNode.TransformSpace.World)
             Logger.log("d", "Moved modifiers to the global location: {}".format(our_only_node_position))
 
+            
+            modifier_mesh_node.meshDataChanged.connect(self.connector.showConfirmDialog)
+
             Application.getInstance().getController().getScene().sceneChanged.emit(modifier_mesh_node)
 
 
