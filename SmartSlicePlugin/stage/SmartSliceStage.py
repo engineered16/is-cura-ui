@@ -67,9 +67,10 @@ class SmartSliceStage(CuraStage):
         else:
             # Ensure we have tools defined and apply them here
             use_tool = self._our_toolset[0]
-            self.setToolVisibility(True)
             application.getController().setFallbackTool(use_tool)
             self._previous_tool = application.getController().getActiveTool()
+            
+        self.setToolVisibility(True)
 
         #  Set the Active Extruder for the Cloud interactions
         self._connector._proxy._activeMachineManager = CuraApplication.getInstance().getMachineManager()

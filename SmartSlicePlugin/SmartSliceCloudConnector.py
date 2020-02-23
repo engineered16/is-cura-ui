@@ -625,51 +625,59 @@ class SmartSliceCloudConnector(QObject):
                                   lifetime=0,))
                                   
                 self._confirmDialog[index].addAction("cancel",# action_id
-                                              i18n_catalog.i18nc("@action",
-                                                                 "Cancel"
-                                                                 ), # name
-                                              "", #icon
-                                              "", #description
-                                              button_style=Message.ActionButtonStyle.SECONDARY 
-                                              )
+                                                     i18n_catalog.i18nc("@action",
+                                                                        "Cancel"
+                                                                        ), # name
+                                                     "", #icon
+                                                     "", #description
+                                                     button_style=Message.ActionButtonStyle.SECONDARY 
+                                                     )
                 self._confirmDialog[index].addAction("continue",# action_id
-                                              i18n_catalog.i18nc("@action",
-                                                                 "Continue"
-                                                                 ), # name
-                                              "", #icon
-                                              "" #description
-                                              )
+                                                     i18n_catalog.i18nc("@action",
+                                                                        "Continue"
+                                                                        ), # name
+                                                     "", #icon
+                                                     "" #description
+                                                     )
                 self._confirmDialog[index].actionTriggered.connect(self.onConfirmDialogButtonPressed_Validate)
                 if index == 0:
                     self._confirmDialog[index].show()
                 
             elif self.status is SmartSliceCloudStatus.BusyOptimizing or (self.status is SmartSliceCloudStatus.Optimized):
                 index = len(self._confirmDialog)
-                self._confirmDialog.append(Message(title="Lose Validation Results?",
-                                  text=validationMsg,
+                self._confirmDialog.append(Message(title="Lose Optimization Results?",
+                                  text=optimizationMsg,
                                   lifetime=0,))
                                   
-                self._confirmDialog[index].addAction("continue",# action_id
-                                  i18n_catalog.i18nc("@action",
-                                                     "Continue"
-                                                     ), # name
-                                  "", #icon
-                                  ""  #description
-                                  )
                 self._confirmDialog[index].addAction("cancel",# action_id
-                                  i18n_catalog.i18nc("@action",
-                                                     "Cancel"
-                                                     ), # name
-                                  "", # icon
-                                  ""  # description
-                                  )
-                self._confirmDialog[index].actionTriggered.connect(self.onConfirmDialogButtonPressed_Validate)
+                                                     i18n_catalog.i18nc("@action",
+                                                                        "Cancel"
+                                                                        ), # name
+                                                     "", #icon
+                                                     "", #description
+                                                     button_style=Message.ActionButtonStyle.SECONDARY 
+                                                     )
+                self._confirmDialog[index].addAction("continue",# action_id
+                                                     i18n_catalog.i18nc("@action",
+                                                                        "Continue"
+                                                                        ), # name
+                                                     "", #icon
+                                                     "" #description
+                                                     )
+                self._confirmDialog[index].actionTriggered.connect(self.onConfirmDialogButtonPressed_Optimize)
                 if index == 0:
                     self._confirmDialog[index].show()
-        
+
+    """
+      hideMessage()
+        When settings are cached/reverted, numerous other dialogs are often 
+          raised by Cura, indicating a global/extruder property has been changed.
+        hideMessage() silences the initial dialog and prepares for the next
+          change by clearing the current list of dialogs
+    """
     def hideMessage(self):
-        for dialog in self._confirmDialog:
-            dialog.hide()
+        if len(self._confirmDialog) > 0:
+            self._confirmDialog[0].hide()
         self._confirmDialog = []
 
     """
@@ -684,20 +692,19 @@ class SmartSliceCloudConnector(QObject):
             Logger.log ("d", "Property Change accepted during validation")
             self.cancelCurrentJob()
             self.onConfirmationConfirmClicked()
-            self.hideMessage()
         elif action == "cancel":
             Logger.log ("d", "Property Change canceled during validation")
             self.onConfirmationCancelClicked()
-            self.hideMessage()
 
     """
-      onConfirmDialogButtonPressed_Optimize(pressed)
-        pressed: Button Type that User Selected
+      onConfirmDialogButtonPressed_Optimize(msg, action)
+        msg: Reference to calling Message()
+        action: Button Type that User Selected
 
         Handles confirmation dialog during optimization runs according to 'pressed' button
     """
-    def onConfirmDialogButtonPressed_Optimize(self, pressed):
-        if pressed == QMessageBox.Apply:
+    def onConfirmDialogButtonPressed_Optimize(self, msg, action):
+        if action == "continue":
             self.cancelCurrentJob()
             #  Special Handling for Use-Case Requirements
             #  Max Displace
@@ -716,11 +723,12 @@ class SmartSliceCloudConnector(QObject):
                 self.propertyHandler._changedValues.pop(index)
                 self._proxy.setFactorOfSafety()
                 self.updateOptimizationState()
-
             else:
                 self._prepareValidation()
                 self.onConfirmationConfirmClicked()
-        elif pressed == QMessageBox.Cancel:
+                return
+            self.onConfirmationCancelClicked()
+        elif action == "cancel":
             self.onConfirmationCancelClicked()
 
 
