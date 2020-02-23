@@ -32,6 +32,7 @@ from .SmartSliceSelectHandle import SelectionMode
 from .SmartSliceSelectHandle import SmartSliceSelectHandle
 #from .SmartSliceDrawSelection import SmartSliceSelectionVisualizer
 from .FaceSelection import SelectablePoint, SelectableFace, SelectableMesh
+from ..shape_detection.ShapeDetectedNode import ShapeDetectedNode
 #from .SmartSliceNormalArrow import SmartSliceNormalArrow
 
 i18n_catalog = i18nCatalog("smartslice")
@@ -76,6 +77,9 @@ class SmartSliceSelectTool(Tool):
 
         if len(nodes) > 0:
             sn = nodes[0]
+            
+            sdn = ShapeDetectedNode(sn)
+            sdn.analysePointCloud()
 
             if self._scene_node_name is None or sn.getName() != self._scene_node_name:
 
