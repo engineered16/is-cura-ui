@@ -1014,7 +1014,7 @@ class SmartSliceCloudConnector(QObject):
                 self.status = SmartSliceCloudStatus.ReadyToVerify
                 Application.getInstance().activityChanged.emit()
         else:
-            Application.getInstance().getController().getActiveStage().setToolVisibility(False)
+            Application.getInstance().getController().getActiveStage().onStageDeselected()
             Application.getInstance().getController().setActiveStage("PreviewStage")
 
 

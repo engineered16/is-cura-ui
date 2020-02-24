@@ -414,13 +414,6 @@ class SmartSlicePropertyHandler(QObject):
                       text="Continue and remove Smart Slice Modifier Mesh?",
                       lifetime=0
                       )
-        msg.addAction("continueModMesh",       #  action_id
-                      i18n_catalog.i18nc("@action",
-                                         "Continue"
-                                         ),
-                      "", #icon
-                      ""  #description
-                      )
         msg.addAction("cancelModMesh",       #  action_id
                       i18n_catalog.i18nc("@action",
                                          "Cancel"
@@ -428,6 +421,13 @@ class SmartSlicePropertyHandler(QObject):
                       "", #icon
                       "", #description
                       button_style=Message.ActionButtonStyle.SECONDARY 
+                      )
+        msg.addAction("continueModMesh",       #  action_id
+                      i18n_catalog.i18nc("@action",
+                                         "Continue"
+                                         ),
+                      "", #icon
+                      ""  #description
                       )
         msg.actionTriggered.connect(self.removeSmartSliceModMesh)
         msg.show()
