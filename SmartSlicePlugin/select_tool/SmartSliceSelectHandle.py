@@ -49,9 +49,9 @@ class SmartSliceSelectHandle(ToolHandle):
     # Override ToolHandle._onSelectionCenterChanged so that we can set the full transformation
     def _onSelectionCenterChanged(self) -> None:
         if self._enabled:
-            #self.setPosition(Selection.getSelectionCenter())
             obj = Selection.getSelectedObject(0) # which index to use?
-            self.setTransformation(obj.getLocalTransformation())
+            if obj:
+                self.setTransformation(obj.getLocalTransformation())
 
 #  ACCESSORS
     @property

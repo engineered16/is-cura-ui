@@ -12,13 +12,19 @@
 
 import os.path
 
-#   Expose Ultimaker/Cura API
+from UM.i18n import i18nCatalog
 from UM.Logger import Logger
 from UM.Application import Application
 from UM.PluginRegistry import PluginRegistry
+from UM.Message import Message
+from UM.Scene.SceneNode import SceneNode
+from UM.Scene.Selection import Selection
+from UM.Scene.Iterator.DepthFirstIterator import DepthFirstIterator
 
 from cura.Stages.CuraStage import CuraStage
 from cura.CuraApplication import CuraApplication
+
+i18n_catalog = i18nCatalog("smartslice")
 
 #
 #   Stage Class Definition
@@ -27,47 +33,106 @@ class SmartSliceStage(CuraStage):
     def __init__(self, extension, parent=None):
         super().__init__(parent)
 
+        app = CuraApplication.getInstance()
+
         #   Connect Stage to Cura Application
-        Application.getInstance().engineCreatedSignal.connect(self._engineCreated)
+        app.engineCreatedSignal.connect(self._engineCreated)
+        app.activityChanged.connect(self._checkScene)
+
         self._connector = extension
 
+        self._previous_view = None
+
         #   Set Default Attributes
-        self._was_buildvolume_hidden = None
-        self._was_overhang_visible = None
-        self._overhang_visible_preference = "view/show_overhang"
         self._default_toolset = None
         self._default_fallback_tool = None
-        self._our_toolset = ("SmartSlicePlugin_SelectTool",
-                             "SmartSlicePlugin_RequirementsTool",
-                             )
-        #self._tool_blacklist = ("SelectionTool", "CameraTool")
-        self._our_last_tool = None
-        self._were_tools_enabled = None
-        self._was_selection_face = None
+        self._our_toolset = (
+            "SmartSlicePlugin_SelectTool",
+            "SmartSlicePlugin_RequirementsTool",
+        )
+
+    @staticmethod
+    def _printable_nodes():
+        scene = CuraApplication.getInstance().getController().getScene()
+        root = scene.getRoot()
+
+        printable_nodes = []
+
+        for node in DepthFirstIterator(root):
+            isSliceable = node.callDecoration("isSliceable")
+            isPrinting = not node.callDecoration("isNonPrintingMesh")
+            isSupport = False
+
+            stack = node.callDecoration("getStack")
+
+            if stack:
+                isSupport = stack.getProperty("support_mesh", "value")
+
+            if isSliceable and isPrinting and not isSupport:
+                printable_nodes.append(node)
+
+        return printable_nodes
+
+    def _scene_not_ready(self, text):
+        app = CuraApplication.getInstance()
+
+        title = i18n_catalog.i18n("Invalid print for Smart Slice")
+
+        Message(
+            title=title, text=text, lifetime=120, dismissable=True
+        ).show()
+
+        app.getController().setActiveStage("PrepareStage")
+
+    def _exit_stage_if_scene_is_invalid(self):
+        printable_nodes = SmartSliceStage._printable_nodes()
+        if len(printable_nodes) == 0:
+            self._scene_not_ready(
+                i18n_catalog.i18n("Smart Slice requires a printable model on the build plate.")
+            )
+            return None
+        elif len(printable_nodes) > 1:
+            self._scene_not_ready(
+                i18n_catalog.i18n(
+                    "Only one printable model can be used with Smart Slice. " + \
+                    "Please remove any additional models."
+                )
+            )
+            return None
+        return printable_nodes[0]
 
     #   onStageSelected:
     #       This transitions the userspace/working environment from
     #       current stage into the Smart Slice User Environment.
     def onStageSelected(self):
-        application = Application.getInstance()
-        
-        buildvolume = application.getBuildVolume()
-        if buildvolume.isVisible():
-            buildvolume.setVisible(False)
-            self._was_buildvolume_hidden = True
-            
-        # Overhang visiualization
-        self._was_overhang_visible = application.getPreferences().getValue(self._overhang_visible_preference)
-        application.getPreferences().setValue(self._overhang_visible_preference, False)
+        application = CuraApplication.getInstance()
+        controller = application.getController()
+
+        Selection.clear()
+
+        printable_node = self._exit_stage_if_scene_is_invalid()
+
+        if not printable_node:
+            return
+
+        self._previous_view = controller.getActiveView().name
+
+        # When the Smart Slice stage is active we want to use our SmartSliceView
+        # to control the rendering of various nodes. Views are referred to by their
+        # plugin name.
+        controller.setActiveView('SmartSlicePlugin')
+
+        if not Selection.hasSelection():
+            Selection.add(printable_node)
 
         # Ensure we have tools defined and apply them here
         req_tool = self._our_toolset[1] # Force Init
         use_tool = self._our_toolset[0]
         self.setToolVisibility(True)
-        application.getController().setFallbackTool(use_tool)
-        self._previous_tool = application.getController().getActiveTool()
+        controller.setFallbackTool(use_tool)
+        self._previous_tool = controller.getActiveTool()
         if self._previous_tool:
-            application.getController().setActiveTool(req_tool)
+            controller.setActiveTool(use_tool)
 
         #  Set the Active Extruder for the Cloud interactions
         self._connector._proxy._activeMachineManager = CuraApplication.getInstance().getMachineManager()
@@ -76,21 +141,14 @@ class SmartSliceStage(CuraStage):
         if not self._connector.propertyHandler._initialized:
             self._connector.propertyHandler.cacheChanges()
             self._connector.propertyHandler._initialized = True
-        
+
     #   onStageDeselected:
     #       Sets attributes that allow the Smart Slice Stage to properly deactivate
     #       This occurs before the next Cura Stage is activated
     def onStageDeselected(self):
-        application = Application.getInstance()
-        
-        if self._was_buildvolume_hidden:
-            buildvolume = application.getBuildVolume()
-            buildvolume.setVisible(True)
-            self._is_buildvolume_hidden = None
-
-        if self._was_overhang_visible is not None:
-            application.getPreferences().setValue(self._overhang_visible_preference,
-                                                  self._was_overhang_visible)
+        application = CuraApplication.getInstance()
+        controller = application.getController()
+        controller.setActiveView(self._previous_view)
 
         # Recover if we have tools defined
         self.setToolVisibility(False)
@@ -100,26 +158,10 @@ class SmartSliceStage(CuraStage):
 
         #  Hide all visible SmartSlice UI Components
 
-        
-
     def getVisibleTools(self):
         visible_tools = []
-        tools = Application.getInstance().getController().getAllTools()
-        """
-        plugin_registry = PluginRegistry.getInstance()
-        for tool in tools:
-            visible = True
-            tool_metainfos = plugin_registry.getMetaData(tool).get("tool", {})
-            if type(tool_metainfos) is dict:
-                tool_metainfos = [tool_metainfos]
-            for tool_metainfo in tool_metainfos:
-                keys = tool_metainfo.keys()
-                if "visible" in keys:
-                    visible = tool_metainfo["visible"]
-    
-                if visible and tool not in visible_tools:
-                    visible_tools.append(tool)
-        """
+        tools = CuraApplication.getInstance().getController().getAllTools()
+
         for name in tools:
             visible = True
             tool_metainfo = tools[name].getMetaData()
@@ -129,7 +171,7 @@ class SmartSliceStage(CuraStage):
 
             if visible:
                 visible_tools.append(name)
-            
+
             Logger.log("d", "Visibility of <{}>: {}".format(name,
                                                             visible,
                                                             )
@@ -139,39 +181,21 @@ class SmartSliceStage(CuraStage):
 
     # Function to make our tools either visible or not and the other tools the opposite
     def setToolVisibility(self, our_tools_visible):
-        """
-        plugin_registry = PluginRegistry.getInstance()
-        for tool_id in Application.getInstance().getController().getAllTools().keys():
-            plugin_metadata = plugin_registry.getMetaData(tool_id)
-            tool_metadatas = plugin_metadata.get("tool", {})
-            if type(tool_metadatas) is dict:
-                tool_metadatas = [tool_metadatas]
-            for tool_metadata in tool_metadatas:
-                if tool_id in self._our_toolset:
-                    tool_metadata["visible"] = our_tools_visible
-                elif tool_id in self._default_toolset:
-                    tool_metadata["visible"] = not our_tools_visible
-                
-                Logger.log("d", "Visibility of <{}>: {}".format(plugin_metadata["id"],
-                                                                tool_metadata["visible"],
-                                                                )
-                )
-        """
-        tools = Application.getInstance().getController().getAllTools()
+        tools = CuraApplication.getInstance().getController().getAllTools()
         for name in tools:
             tool_meta_data = tools[name].getMetaData()
-            
+
             if name in self._our_toolset:
                 tool_meta_data["visible"] = our_tools_visible
             elif name in self._default_toolset:
                 tool_meta_data["visible"] = not our_tools_visible
-            
+
             Logger.log("d", "Visibility of <{}>: {}".format(name,
                                                             tool_meta_data["visible"],
                                                             )
             )
 
-        Application.getInstance().getController().toolsChanged.emit()
+        CuraApplication.getInstance().getController().toolsChanged.emit()
 
     @property
     def our_toolset(self):
@@ -207,16 +231,19 @@ class SmartSliceStage(CuraStage):
         component_path = os.path.join(base_path, "stage", "ui", "SmartSliceMenu.qml")
         self.addDisplayComponent("menu", component_path)
 
-        # Setting state after all plugins are loaded
-        self._was_buildvolume_hidden = not Application.getInstance().getBuildVolume().isVisible()
-
         # Get all visible tools and exclude our tools from the list
         self._default_toolset = self.getVisibleTools()
         for tool in self._default_toolset:
             if tool in self._our_toolset:
                 self._default_toolset.remove(tool)
-                
-        self._default_fallback_tool = Application.getInstance().getController().getFallbackTool()
+
+        self._default_fallback_tool = CuraApplication.getInstance().getController().getFallbackTool()
 
         # Undisplay our tools!
         self.setToolVisibility(False)
+
+    def _checkScene(self):
+        active_stage = CuraApplication.getInstance().getController().getActiveStage()
+
+        if active_stage.getPluginId() == "SmartSlicePlugin":
+            self._exit_stage_if_scene_is_invalid()
