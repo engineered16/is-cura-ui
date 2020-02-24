@@ -460,6 +460,8 @@ class SmartSlicePropertyHandler(QObject):
             self.connector.confirmValidation.emit()
         else:
             self.meshRotation = self._sceneNode.getOrientation()
+            self.applyLoad()
+            self.applyAnchor()
             self.connector._prepareValidation()
 
 
@@ -480,11 +482,11 @@ class SmartSlicePropertyHandler(QObject):
         else:
             self._material = self._activeExtruder.material
             self.connector._prepareValidation()
-            
+
+
     #
     #   FACE SELECTION
     #
-
 
     def applyAnchor(self):
         self.connector.resetAnchor0FacesPoc()
@@ -501,9 +503,6 @@ class SmartSlicePropertyHandler(QObject):
 
         self.connector.resetForce0FacesPoc()
         self.connector.appendForce0FacesPoc(self._loadedTris)
-
-        #Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(self.connector.getForce0VectorPoc()))
-        #Logger.log("d", "cloud_connector.getForce0FacesPoc(): {}".format(self.connector.getForce0FacesPoc()))
 
     def confirmFaceDraw(self, scene_node, face_id, selected_triangles):
         if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
