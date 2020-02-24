@@ -506,7 +506,7 @@ class SmartSliceCloudConnector(QObject):
         self._proxy.confirmationCancelClicked.connect(self.onConfirmationCancelClicked)
 
         self._proxy.loadMagnitudeChanged.connect(self._updateForce0Magnitude)
-        self._proxy.loadDirectionChanged.connect(self._updateForce0Direction)
+        #self._proxy.loadDirectionChanged.connect(self._updateForce0Direction)
 
         # Connecting signals
         self.doVerification.connect(self._doVerfication)
@@ -1161,6 +1161,7 @@ class SmartSliceCloudConnector(QObject):
         # Set the components on the force vector. In this example
         # we have 100 N, 200 N, and 50 N in the x, y, and z
         # directions respectfully.
+        Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(self.getForce0VectorPoc()))
         force1.force.set(
             self.getForce0VectorPoc()
         )
@@ -1284,7 +1285,7 @@ class SmartSliceCloudConnector(QObject):
 
     def resetForce0VectorPoc(self):
         self._poc_force = Force(
-            magnitude=self._proxy.loadMagnitude,
+            magnitude=self._proxy.reqsLoadMagnitude,
             pull=self._proxy.reqsLoadDirection
         )
 

@@ -456,6 +456,7 @@ class SmartSlicePropertyHandler(QObject):
     def applyLoad(self):
         load_vector = self._loadedTris[0].normal
 
+        self.connector.resetForce0VectorPoc()
         self.connector.updateForce0Vector(
             Vector(load_vector.r, load_vector.s, load_vector.t)
         )
@@ -463,8 +464,8 @@ class SmartSlicePropertyHandler(QObject):
         self.connector.resetForce0FacesPoc()
         self.connector.appendForce0FacesPoc(self._loadedTris)
 
-        Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(self.connector.getForce0VectorPoc()))
-        Logger.log("d", "cloud_connector.getForce0FacesPoc(): {}".format(self.connector.getForce0FacesPoc()))
+        #Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(self.connector.getForce0VectorPoc()))
+        #Logger.log("d", "cloud_connector.getForce0FacesPoc(): {}".format(self.connector.getForce0FacesPoc()))
 
     def confirmFaceDraw(self, scene_node, face_id, selected_triangles):
         if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:

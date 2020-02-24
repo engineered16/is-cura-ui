@@ -117,7 +117,6 @@ class SmartSliceSelectTool(Tool):
 
         Application.getInstance().activityChanged.emit()
 
-
     def _onActiveStateChanged(self):
         controller = Application.getInstance().getController()
         active_tool = controller.getActiveTool()

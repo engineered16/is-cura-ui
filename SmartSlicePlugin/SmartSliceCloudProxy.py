@@ -482,8 +482,7 @@ class SmartSliceCloudProxy(QObject):
             self.connector._confirmValidation()
         else:
             self.reqsLoadMagnitude = value
-            self._loadMagnitude = value
-            self.loadMagnitudeChanged.emit()
+            self.setLoadMagnitude()
             self.connector._prepareValidation()
 
     def setLoadDirection(self):
@@ -504,9 +503,11 @@ class SmartSliceCloudProxy(QObject):
         else:
             self.reqsLoadDirection = value
             self.setLoadDirection()
+
             select_tool = Application.getInstance().getController().getTool("SmartSlicePlugin_SelectTool")
             select_tool._handle.setFace(self.connector.propertyHandler._loadedTris)
             select_tool._handle.drawSelection()
+
             self.connector.propertyHandler.applyLoad()
             self.connector._prepareValidation()
 
