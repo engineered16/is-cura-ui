@@ -50,7 +50,8 @@ class SmartSliceContainerProperties():
     def __init__(self):
         #  Global Settings
         self.global_keys = {"layer_height",                 #   Layer Height 
-                            "layer_height_0"}               #   Initial Layer Height
+                            "layer_height_0",               #   Initial Layer Height
+                            "quality"}                      #   Quality Profile
 
         #  Per Extruder Settings
         self.extruder_keys = {"line_width",                 #  Line Width 

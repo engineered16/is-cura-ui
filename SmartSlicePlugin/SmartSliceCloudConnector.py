@@ -68,7 +68,6 @@ from .SmartSlicePropertyHandler import SmartSlicePropertyHandler
 
 i18n_catalog = i18nCatalog("smartslice")
 
-
 # #  Formatter class that handles token expansion in start/end gcode
 class GcodeStartEndFormatter(Formatter):
 
@@ -400,6 +399,8 @@ class SmartSliceCloudJob(Job):
             #modifier_mesh_node.setTransformation(modifier_mesh_transform_matrix)
 
             our_only_node_position = our_only_node.getWorldPosition()
+            modifier_mesh_node.setOrientation(self.connector.propertyHandler.meshRotation)
+            modifier_mesh_node.setScale(self.connector.propertyHandler.meshScale)
             modifier_mesh_node.setPosition(our_only_node_position,
                                             SceneNode.TransformSpace.World)
             Logger.log("d", "Moved modifiers to the global location: {}".format(our_only_node_position))
@@ -725,6 +726,9 @@ class SmartSliceCloudConnector(QObject):
                 self._proxy.setFactorOfSafety()
                 self.updateOptimizationState()
             else:
+                if self.propertyHandler.hasModMesh:
+                    self.propertyHandler.confirmRemoveModMesh()
+                    return
                 self._prepareValidation()
                 self.onConfirmationConfirmClicked()
                 return

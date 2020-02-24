@@ -16,11 +16,13 @@ from PyQt5.QtCore import pyqtProperty
 from PyQt5.QtCore import QObject
 
 #  Cura
+from UM.i18n import i18nCatalog
 from UM.Application import Application
 from UM.Preferences import Preferences
 from UM.Settings.ContainerStack import ContainerStack
 from UM.Scene.SceneNode import SceneNode
 from UM.Scene.Selection import Selection
+from UM.Message import Message
 from UM.Signal import Signal
 from UM.Logger import Logger
 from cura.CuraApplication import CuraApplication
@@ -33,6 +35,9 @@ from UM.PluginRegistry import PluginRegistry
 from .SmartSliceCloudProxy import SmartSliceCloudStatus
 from .SmartSliceProperty import SmartSliceProperty, SmartSliceLoadDirection, SmartSliceContainerProperties
 from .select_tool.SmartSliceSelectHandle import SelectionMode
+
+i18n_catalog = i18nCatalog("smartslice")
+
 
 """
   SmartSlicePropertyHandler(connector)
@@ -97,6 +102,8 @@ class SmartSlicePropertyHandler(QObject):
         #  Temporary Cache
         self._cachedScene = None
         self._cachedModMesh = None
+        self.hasModMesh = False
+        self.removeModMesh = False
         self._positionModMesh = None
         self._cachedFaceID = None
         self._cachedTriangles = None
@@ -297,7 +304,6 @@ class SmartSlicePropertyHandler(QObject):
                 Application.getInstance().getController().getScene().sceneChanged.emit(self._cachedModMesh)
 
 
-
     #
     #   CONFIRM/CANCEL PROPERTY CHANGES
     #
@@ -358,33 +364,42 @@ class SmartSlicePropertyHandler(QObject):
     def connectMeshSignals(self, changed_node):
         i = 0
         _root = self._sceneRoot 
-        hasModMesh = False
+        self.hasModMesh = False
 
         for node in _root.getAllChildren():
             if node.getName() == "3d":
                 if (self._sceneNode is None) or (self._sceneNode.getName() != _root.getAllChildren()[i+1].getName()):
-
                     self._sceneNode = _root.getAllChildren()[i+1]
                     Logger.log ("d", "\nFile Found:  " + self._sceneNode.getName() + "\n")
 
                     #  Set Initial Scale/Rotation
                     self.meshScale    = self._sceneNode.getScale()
                     self.meshRotation = self._sceneNode.getOrientation()
-
-                    #  TODO: Properly Disconnect this Signal, when figure out where to do so
-                    #self._sceneNode.transformationChanged.connect(self._onLocalTransformationChanged)
                     i += 1
             if node.getName() == "SmartSliceMeshModifier":        
                 self._cachedModMesh = node
                 self._positionModMesh = self._cachedModMesh.getWorldPosition()
-                hasModMesh = True
+                self.hasModMesh = True
             i += 1
             
         #  Check if Modifier Mesh has been Removed
         if self._cachedModMesh:
-            if not hasModMesh:
+            if not self.hasModMesh:
                 self.showModMeshDialog()
 
+    def removeSmartSliceModMesh(self, msg, action):
+        msg.hide()
+        if action == "continueModMesh":
+            for node in self._sceneRoot.getAllChildren():
+                if node.getName() == "SmartSliceMeshModifier":
+                    print ("Modifer Mesh Triggered")
+                    self._sceneRoot.removeChild(node)
+                    self.hasModMesh = False
+                    self._cachedModMesh = None
+            self.connector._prepareValidation()
+            self.connector.onConfirmationConfirmClicked()
+        else:
+            self.connector.onConfirmationCancelClicked()
 
     def showModMeshDialog(self):
         self._propertiesChanged.append(SmartSliceProperty.ModifierMesh)
@@ -392,6 +407,29 @@ class SmartSlicePropertyHandler(QObject):
         self._changedValues.append(self._positionModMesh)
         self.connector.showConfirmDialog()
 
+    def confirmRemoveModMesh(self):
+        self.connector.hideMessage()
+        msg = Message(title="Remove Modifier Mesh?",
+                      text="Continue and remove Smart Slice Modifier Mesh?",
+                      lifetime=0
+                      )
+        msg.addAction("continueModMesh",       #  action_id
+                      i18n_catalog.i18nc("@action",
+                                         "Continue"
+                                         ),
+                      "", #icon
+                      ""  #description
+                      )
+        msg.addAction("cancelModMesh",       #  action_id
+                      i18n_catalog.i18nc("@action",
+                                         "Cancel"
+                                         ),
+                      "", #icon
+                      "", #description
+                      button_style=Message.ActionButtonStyle.SECONDARY 
+                      )
+        msg.actionTriggered.connect(self.removeSmartSliceModMesh)
+        msg.show()
 
 
     #
