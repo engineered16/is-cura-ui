@@ -490,11 +490,15 @@ class SmartSlicePropertyHandler(QObject):
     #
 
     def applyAnchor(self):
+        if self._anchoredTris is None:
+            return
         self.connector.resetAnchor0FacesPoc()
         self.connector.appendAnchor0FacesPoc(self._anchoredTris)
         Logger.log("d", "cloud_connector.getAnchor0FacesPoc(): {}".format(self.connector.getAnchor0FacesPoc()))
 
     def applyLoad(self):
+        if self._loadedTris is None:
+            return
         load_vector = self._loadedTris[0].normal
 
         self.connector.resetForce0VectorPoc()
