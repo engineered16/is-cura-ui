@@ -30,6 +30,8 @@ from cura.Settings.SettingOverrideDecorator import SettingOverrideDecorator
 from UM.Settings.SettingInstance import InstanceState
 from UM.Math.Vector import Vector
 from UM.PluginRegistry import PluginRegistry
+from UM.Operations.RemoveSceneNodeOperation import RemoveSceneNodeOperation
+from UM.Operations.GroupedOperation import GroupedOperation
 
 #  Smart Slice
 from .SmartSliceCloudProxy import SmartSliceCloudStatus
@@ -392,10 +394,9 @@ class SmartSlicePropertyHandler(QObject):
         if action == "continueModMesh":
             for node in self._sceneRoot.getAllChildren():
                 if node.getName() == "SmartSliceMeshModifier":
-                    print ("Modifer Mesh Triggered")
-                    self._sceneRoot.removeChild(node)
-                    self.hasModMesh = False
-                    self._cachedModMesh = None
+                    op = GroupedOperation()
+                    op.addOperation(RemoveSceneNodeOperation(node))
+                    op.push()
             self.connector._prepareValidation()
             self.connector.onConfirmationConfirmClicked()
         else:
