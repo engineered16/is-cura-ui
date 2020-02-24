@@ -140,7 +140,7 @@ Item {
             checked: SmartSlice.Cloud.loadDirection
             onCheckedChanged: {
 				SmartSlice.Cloud.loadDirection = checked;
-				UM.ActiveTool.triggerAction("_onSelectedFaceChanged");
+				//UM.ActiveTool.triggerAction("_onSelectedFaceChanged");
 			}
         }
 

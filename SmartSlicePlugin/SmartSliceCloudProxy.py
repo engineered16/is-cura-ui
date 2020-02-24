@@ -503,10 +503,16 @@ class SmartSliceCloudProxy(QObject):
             self.connector._confirmValidation()
         else:
             self.reqsLoadDirection = value
-            self._loadDirection = value
-            self.loadDirectionChanged.emit()
+            self.setLoadDirection()
+            select_tool = Application.getInstance().getController().getTool("SmartSlicePlugin_SelectTool")
+            select_tool._handle.setFace(self.connector.propertyHandler._loadedTris)
+            select_tool._handle.drawSelection()
+            self.connector.propertyHandler.applyLoad()
             self.connector._prepareValidation()
 
+    #  NOTE:  This should only be accessed by QML 
+    def _applyLoad(self):
+        self.connector.propertyHandler.applyLoad()
 
     #
     #   SMART SLICE RESULTS

@@ -331,7 +331,6 @@ class SmartSliceCloudJob(Job):
             ).show()
         self.connector.propertyHandler.prepareCache()
 
-
     def _process_analysis_result(self, analysis : pywim.smartslice.result.Analysis):
         #Logger.log("d", "analysis: {}".format(analysis.to_json()))
         #Logger.log("d", "analysis.modifier_meshes: {}".format(analysis.modifier_meshes))
@@ -405,11 +404,9 @@ class SmartSliceCloudJob(Job):
                                             SceneNode.TransformSpace.World)
             Logger.log("d", "Moved modifiers to the global location: {}".format(our_only_node_position))
 
-            
             modifier_mesh_node.meshDataChanged.connect(self.connector.showConfirmDialog)
 
             Application.getInstance().getController().getScene().sceneChanged.emit(modifier_mesh_node)
-
 
         self.connector._proxy.resultSafetyFactor = analysis.structural.min_safety_factor
         self.connector._proxy.resultMaximalDisplacement = analysis.structural.max_displacement
@@ -442,6 +439,7 @@ class SmartSliceCloudJob(Job):
         self.connector._proxy.materialWeight = material_extra_info[1][pos]
         self.connector._proxy.materialCost = material_extra_info[2][pos]
         self.connector._proxy.materialName = material_extra_info[3][pos]
+
 
 class SmartSliceCloudVerificationJob(SmartSliceCloudJob):
 
@@ -977,6 +975,7 @@ class SmartSliceCloudConnector(QObject):
             elif self.status in SmartSliceCloudStatus.Optimizable:
                 self._confirmModMeshRemove()
             elif self.status is SmartSliceCloudStatus.Optimized:
+                Application.getInstance().getController().getActiveStage().onStageDeselected()
                 Application.getInstance().getController().setActiveStage("PreviewStage")
         else:
             self._jobs[self._current_job].cancel()
@@ -1011,6 +1010,7 @@ class SmartSliceCloudConnector(QObject):
                 self.status = SmartSliceCloudStatus.ReadyToVerify
                 Application.getInstance().activityChanged.emit()
         else:
+            Application.getInstance().getController().getActiveStage().setToolVisibility(False)
             Application.getInstance().getController().setActiveStage("PreviewStage")
 
 
@@ -1285,7 +1285,7 @@ class SmartSliceCloudConnector(QObject):
     def resetForce0VectorPoc(self):
         self._poc_force = Force(
             magnitude=self._proxy.loadMagnitude,
-            pull=self._proxy.loadDirection
+            pull=self._proxy.reqsLoadDirection
         )
 
     def getForce0VectorPoc(self):

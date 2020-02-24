@@ -90,38 +90,32 @@ class SmartSliceSelectTool(Tool):
         if not self.getEnabled():
             return
 
-        self._calculateMesh()
-
         curr_sf = Selection.getSelectedFace()
-
         if curr_sf is None:
             return
 
+        self._calculateMesh()
+
         scene_node, face_id = curr_sf
 
-        self.setFaceVisible(scene_node, face_id)
+        self._handle._connector.propertyHandler.onSelectedFaceChanged(scene_node, face_id)
+
+        #self.setFaceVisible(scene_node, face_id)
 
     def setFaceVisible(self, scene_node, face_id):
-        selected_triangles = list(self._interactive_mesh.select_planar_face(face_id))
-
-        selmesh = None #SelectableMesh( scene_node.getMeshData() )
-        selected_faces = None
-
-        self._handle.setFace(selected_triangles)
-            
-        #  Set mesh
-        self._handle._connector.propertyHandler._changedMesh = selmesh
-        self._handle._connector.propertyHandler._changedFaces = selected_faces
+        ph = self._handle._connector.propertyHandler
         
         if self.getAnchorSelectionActive():
             self._handle._arrow = False
-            self._anchor_face = (scene_node, face_id)
-            self._handle._connector.propertyHandler.confirmFaceDraw(scene_node=scene_node, face_id=face_id, selected_triangles=selected_triangles)
+            self._anchor_face = (ph._anchoredNode, ph._anchoredID)
+            self._handle.setFace(ph._anchoredTris)
 
         else:
             self._handle._arrow = True
-            self._load_face = (scene_node, face_id)
-            self._handle._connector.propertyHandler.confirmFaceDraw(scene_node=scene_node, face_id=face_id, selected_triangles=selected_triangles)
+            self._load_face = (ph._loadedNode, ph._loadedID)
+            self._handle.setFace(ph._loadedTris)
+
+        Application.getInstance().activityChanged.emit()
 
 
     def _onActiveStateChanged(self):
@@ -146,6 +140,7 @@ class SmartSliceSelectTool(Tool):
         return Version(OpenGL.getInstance().getOpenGLVersion()) >= Version("4.1 dummy-postfix")
 
     def setSelectionMode(self, mode):
+        Selection.clearFace()
         self._handle._connector.propertyHandler._selection_mode = mode
         Logger.log("d", "Changed selection mode to enum: {}".format(mode))
         #self._handle._connector.propertyHandler.selectedFacesChanged.emit()
@@ -157,9 +152,8 @@ class SmartSliceSelectTool(Tool):
     def setAnchorSelection(self):
         self._handle.clearSelection()
         self.setSelectionMode(SelectionMode.AnchorMode)
-        if self._handle._connector._proxy._anchorsApplied > 0 and self._anchor_face:
-            self.setFaceVisible(self._anchor_face[0], self._anchor_face[1])
-            self._handle._connector.propertyHandler.selectedFacesChanged.emit()
+        if self._handle._connector._proxy._anchorsApplied > 0:
+            self._handle.drawSelection()
 
     def getAnchorSelectionActive(self):
         return self._handle._connector.propertyHandler._selection_mode is SelectionMode.AnchorMode
@@ -167,9 +161,8 @@ class SmartSliceSelectTool(Tool):
     def setLoadSelection(self):
         self._handle.clearSelection()
         self.setSelectionMode(SelectionMode.LoadMode)
-        if self._handle._connector._proxy._loadsApplied > 0 and self._load_face:
-            self.setFaceVisible(self._load_face[0], self._load_face[1])
-            self._handle._connector.propertyHandler.selectedFacesChanged.emit()
+        if self._handle._connector._proxy._loadsApplied > 0:
+            self._handle.drawSelection()
 
     def getLoadSelectionActive(self):
         return self._handle._connector.propertyHandler._selection_mode is SelectionMode.LoadMode

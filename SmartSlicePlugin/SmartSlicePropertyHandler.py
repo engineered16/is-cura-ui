@@ -75,12 +75,12 @@ class SmartSlicePropertyHandler(QObject):
         self._changedMesh = None
         self._changedFaces = None
         self._changedForce = None
-        self._anchoredMesh = None
-        self._anchoredFaces = None
         self._anchoredID = None
-        self._loadedMesh = None
-        self._loadedFaces = None
+        self._anchoredNode = None
+        self._anchoredTris = None
         self._loadedID = None
+        self._loadedNode = None
+        self._loadedTris = None
         
         #  Cura Setup
         self._activeMachineManager = CuraApplication.getInstance().getMachineManager()
@@ -447,36 +447,24 @@ class SmartSlicePropertyHandler(QObject):
     #   FACE SELECTION
     #
 
-    selectedFacesChanged = Signal() 
 
-    def applyAnchorOrLoad(self, selected_triangles):
-        if self._selection_mode is SelectionMode.AnchorMode:
-            self.connector.resetAnchor0FacesPoc()
-            self.connector.appendAnchor0FacesPoc(selected_triangles)
-            Logger.log("d", "cloud_connector.getAnchor0FacesPoc(): {}".format(self.connector.getAnchor0FacesPoc()))
-        elif self._selection_mode is SelectionMode.LoadMode: 
-            load_vector = selected_triangles[0].normal
+    def applyAnchor(self):
+        self.connector.resetAnchor0FacesPoc()
+        self.connector.appendAnchor0FacesPoc(self._anchoredTris)
+        Logger.log("d", "cloud_connector.getAnchor0FacesPoc(): {}".format(self.connector.getAnchor0FacesPoc()))
 
-            self.connector.updateForce0Vector(
-                Vector(load_vector.r, load_vector.s, load_vector.t)
-            )
+    def applyLoad(self):
+        load_vector = self._loadedTris[0].normal
 
-            self.connector.resetForce0FacesPoc()
-            self.connector.appendForce0FacesPoc(selected_triangles)
+        self.connector.updateForce0Vector(
+            Vector(load_vector.r, load_vector.s, load_vector.t)
+        )
 
-            Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(self.connector.getForce0VectorPoc()))
-            Logger.log("d", "cloud_connector.getForce0FacesPoc(): {}".format(self.connector.getForce0FacesPoc()))
+        self.connector.resetForce0FacesPoc()
+        self.connector.appendForce0FacesPoc(self._loadedTris)
 
-    def drawAnchorOrLoad(self, scene_node, face_id, selected_triangles):
-        if self._selection_mode is SelectionMode.AnchorMode:
-            #  Set/Draw Anchor Selection in Scene
-            self.connector._proxy._anchorsApplied = 1
-            self._anchoredID = face_id
-        elif self._selection_mode is SelectionMode.LoadMode: 
-            #  Set/Draw Scene Properties
-            self.connector._proxy._loadsApplied = 1
-            self._loadedID = face_id
-        Application.getInstance().activityChanged.emit()
+        Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(self.connector.getForce0VectorPoc()))
+        Logger.log("d", "cloud_connector.getForce0FacesPoc(): {}".format(self.connector.getForce0FacesPoc()))
 
     def confirmFaceDraw(self, scene_node, face_id, selected_triangles):
         if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
@@ -511,6 +499,42 @@ class SmartSlicePropertyHandler(QObject):
             self.drawAnchorOrLoad(scene_node, face_id, selected_triangles)
             self.applyAnchorOrLoad(selected_triangles)
             self.selectedFacesChanged.emit()
+
+    def drawLoad(self):
+        select_tool = Application.getInstance().getController().getTool("SmartSlicePlugin_SelectTool")
+        select_tool._handle.setFace(self._loadedTris)
+        select_tool._handle.drawSelection()
+        Logger.log ("d", "PropertyHandler Loaded Face ID:  " + str(self._loadedID))
+
+    def drawAnchor(self):
+        select_tool = Application.getInstance().getController().getTool("SmartSlicePlugin_SelectTool")
+        select_tool._handle.setFace(self._anchoredTris)
+        select_tool._handle.drawSelection()
+        Logger.log ("d", "PropertyHandler Anchored Face ID:  " + str(self._anchoredID))
+
+
+    def onSelectedFaceChanged(self, scene_node, face_id):
+        select_tool = Application.getInstance().getController().getTool("SmartSlicePlugin_SelectTool")
+        selected_triangles = list(select_tool._interactive_mesh.select_planar_face(face_id))
+        if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
+            self._changedValues.append(face_id)
+            self._changedValues.append(scene_node)
+        else:
+            if self._selection_mode is SelectionMode.AnchorMode:
+                self._anchoredID = face_id
+                self._anchoredNode = scene_node
+                self._anchoredTris = selected_triangles
+                self.connector._proxy._anchorsApplied = 1
+                self.applyAnchor()
+                self.drawAnchor()
+            elif self._selection_mode is SelectionMode.LoadMode:
+                self._loadedID = face_id
+                self._loadedNode = scene_node
+                self._loadedTris = selected_triangles
+                self.connector._proxy._loadsApplied = 1
+                self.applyLoad()
+                self.drawLoad()
+            self.connector._prepareValidation()
 
     def updateMeshes(self):
         #  ANCHOR MODE
