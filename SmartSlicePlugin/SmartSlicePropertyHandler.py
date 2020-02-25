@@ -114,6 +114,8 @@ class SmartSlicePropertyHandler(QObject):
         Application.getInstance().getController().getTool("ScaleTool").operationStopped.connect(self.onMeshScaleChanged)
         Application.getInstance().getController().getTool("RotateTool").operationStopped.connect(self.onMeshRotationChanged)
 
+    
+    selectedFacesChanged = Signal()
 
     #
     #   CACHE HANDLING
@@ -393,7 +395,8 @@ class SmartSlicePropertyHandler(QObject):
     def confirmOptimizeModMesh(self):
         self.connector._proxy._optimize_confirmed = False
         msg = Message(title="",
-                      text="Modifier meshes will be removed for the optimization.\nDo you want to Continue?",
+                      text="Modifier meshes will be removed for the validation.\nDo you want to Continue?",
+                      #text="Modifier meshes will be removed for the optimization.\nDo you want to Continue?",
                       lifetime=0
                       )
         msg.addAction("cancelModMesh",
@@ -416,27 +419,31 @@ class SmartSlicePropertyHandler(QObject):
 
     def confirmRemoveModMesh(self):
         self.connector.hideMessage()
-        msg = Message(title="",
-                      text="Continue and remove Smart Slice Modifier Mesh?",
-                      lifetime=0
-                      )
-        msg.addAction("cancelModMesh",       #  action_id
-                      i18n_catalog.i18nc("@action",
-                                         "Cancel"
-                                         ),
-                      "",
-                      "",
-                      button_style=Message.ActionButtonStyle.SECONDARY 
-                      )
-        msg.addAction("continueModMesh",       #  action_id
-                      i18n_catalog.i18nc("@action",
-                                         "Continue"
-                                         ),
-                      "",
-                      ""
-                      )
-        msg.actionTriggered.connect(self.removeModMeshes)
-        msg.show()
+        index = len(self.connector._confirmDialog)
+        self.connector._confirmDialog.append(Message(title="",
+                                                     text="Continue and remove Smart Slice Modifier Mesh?",
+                                                     lifetime=0
+                                                     )
+                                            )
+        dialog = self.connector._confirmDialog[index]
+        dialog.addAction("cancelModMesh",       #  action_id
+                         i18n_catalog.i18nc("@action",
+                                             "Cancel"
+                                            ),
+                         "",
+                         "",
+                         button_style=Message.ActionButtonStyle.SECONDARY 
+                         )
+        dialog.addAction("continueModMesh",       #  action_id
+                         i18n_catalog.i18nc("@action",
+                                            "Continue"
+                                            ),
+                         "",
+                         ""
+                         )
+        dialog.actionTriggered.connect(self.removeModMeshes)
+        if index == 0:
+            dialog.show()
 
     def removeModMeshes(self, msg, action):
         msg.hide()
@@ -585,14 +592,23 @@ class SmartSlicePropertyHandler(QObject):
         Logger.log ("d", "PropertyHandler Anchored Face ID:  " + str(self._anchoredID))
 
     def onSelectedFaceChanged(self, scene_node, face_id):
+        #  Throw out "fake" selection changes
         if Selection.getSelectedFace() is None:
             return
+        if self._selection_mode is SelectionMode.AnchorMode:
+            if Selection.getSelectedFace()[1] == self._anchoredID:
+                return
+        elif self._selection_mode is SelectionMode.LoadMode:
+            if Selection.getSelectedFace()[1] == self._loadedID:
+                return
+                
         select_tool = Application.getInstance().getController().getTool("SmartSlicePlugin_SelectTool")
         selected_triangles = list(select_tool._interactive_mesh.select_planar_face(face_id))
         if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
             self._propertiesChanged.append(SmartSliceProperty.SelectedFace)
             self._changedValues.append(face_id)
             self._changedValues.append(scene_node)
+            self.connector.confirmPendingChanges()
         else:
             if self._selection_mode is SelectionMode.AnchorMode:
                 self._anchoredID = face_id

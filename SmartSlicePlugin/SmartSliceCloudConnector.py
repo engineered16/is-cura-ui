@@ -730,6 +730,10 @@ class SmartSliceCloudConnector(QObject):
             self.onConfirmationCancelClicked()
 
 
+    """
+      updateOptimizationState()
+
+    """
     def updateOptimizationState(self):
         #  Check if status has changed form the change
         if self._proxy.reqsMaxDeflect > self._proxy.resultMaximalDisplacement and (self._proxy.reqsSafetyFactor < self._proxy.resultSafetyFactor):
@@ -825,6 +829,7 @@ class SmartSliceCloudConnector(QObject):
             self._proxy.sliceIconVisible = True
         else:
             self._proxy.sliceIconVisible = False
+
 
     @property
     def status(self):
@@ -924,14 +929,6 @@ class SmartSliceCloudConnector(QObject):
             self.showConfirmDialog()
 
     def _doVerfication(self):
-        self.propertyHandler._cancelChanges = False
-        self._current_job += 1
-        self._jobs[self._current_job] = SmartSliceCloudVerificationJob(self)
-        self._jobs[self._current_job]._id = self._current_job
-        self._jobs[self._current_job].finished.connect(self._onJobFinished)
-        self._jobs[self._current_job].start()
-
-    def _doOptimization(self):
         #  Check if model has an existing modifier mesh
         #    and ask user if they would like to proceed if so
         if self.propertyHandler.hasModMesh:
@@ -939,10 +936,18 @@ class SmartSliceCloudConnector(QObject):
         else:
             self.propertyHandler._cancelChanges = False
             self._current_job += 1
-            self._jobs[self._current_job] = SmartSliceCloudOptimizeJob(self)
+            self._jobs[self._current_job] = SmartSliceCloudVerificationJob(self)
             self._jobs[self._current_job]._id = self._current_job
             self._jobs[self._current_job].finished.connect(self._onJobFinished)
             self._jobs[self._current_job].start()
+
+    def _doOptimization(self):
+        self.propertyHandler._cancelChanges = False
+        self._current_job += 1
+        self._jobs[self._current_job] = SmartSliceCloudOptimizeJob(self)
+        self._jobs[self._current_job]._id = self._current_job
+        self._jobs[self._current_job].finished.connect(self._onJobFinished)
+        self._jobs[self._current_job].start()
 
 
     '''
