@@ -35,19 +35,27 @@ def getMetaData():
             "name": i18n_catalog.i18nc("@item:inmenu", "Smart Slice"),
             "weight": 15
         },
-        "tool": [{"name": i18n_catalog.i18nc("@label", "Smart Slice Requirements"),
-                  "description": i18n_catalog.i18nc("@info:tooltip", "Allows user to set safety factor and maximum deflection"),
-                  "icon": "requirements_tool/tool_icon.svg",
-                  "tool_panel": "requirements_tool/SmartSliceRequirements.qml",
-                  "weight": 20
-                  },
-                 {"name": i18n_catalog.i18nc("@label", "Smart Slice SelectTool"),
-                  "description": i18n_catalog.i18nc("@info:tooltip", "Allows user to set boundaries on a model."),
-                  "icon": "select_tool/tool_icon.svg",
-                  "tool_panel": "select_tool/SmartSliceSelectTool.qml",
-                  "weight": 10
-                  }
-                 ]
+        "tool": [
+            {
+                "name": i18n_catalog.i18nc("@label", "Smart Slice Requirements"),
+                "description": i18n_catalog.i18nc("@info:tooltip", "Allows user to set safety factor and maximum deflection"),
+                "icon": "requirements_tool/tool_icon.svg",
+                "tool_panel": "requirements_tool/SmartSliceRequirements.qml",
+                "weight": 20    
+            },
+            {
+                "name": i18n_catalog.i18nc("@label", "Smart Slice SelectTool"),
+                "description": i18n_catalog.i18nc("@info:tooltip", "Allows user to set boundaries on a model."),
+                "icon": "select_tool/tool_icon.svg",
+                "tool_panel": "select_tool/SmartSliceSelectTool.qml",
+                "weight": 10
+            }
+        ],
+        "view": {
+            "name": i18n_catalog.i18nc("@item:inmenu", "Smart Slice View"),
+            "weight": 0,
+            "visible": False
+        }
     }
 
 
