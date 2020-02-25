@@ -205,7 +205,6 @@ Item {
                                     }
 
                                     // Override if our optimization is done
-                                    // --> SmartSliceProxy.SmartSliceCloudStatus
                                     if (SmartSlice.Cloud.sliceStatusEnum == 9) {
                                         labelDescriptionSafetyFactor.color = smartSlicePopupContents.successColor
                                         labelResultSafetyFactor.color = smartSlicePopupContents.successColor
@@ -229,7 +228,6 @@ Item {
                                     }
 
                                     // Override if our optimization is done
-                                    // --> SmartSliceProxy.SmartSliceCloudStatus
                                     if (SmartSlice.Cloud.sliceStatusEnum == 9) {
                                         labelDescriptionMaximumDisplacement.color = smartSlicePopupContents.successColor
                                         labelResultMaximalDisplacement.color = smartSlicePopupContents.successColor

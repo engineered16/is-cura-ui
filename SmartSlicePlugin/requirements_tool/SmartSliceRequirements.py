@@ -26,13 +26,4 @@ class SmartSliceRequirements(Tool):
 
         self._connector = extension.cloud
 
-        self._controller.activeToolChanged.connect(self._onToolSelected)
-
-    def _onToolSelected(self):
-        controller = Application.getInstance().getController()
-        active_tool = controller.getActiveTool()
-        
-        if active_tool == self:
-            stage = controller.getActiveStage()
-            controller.setFallbackTool(stage._our_toolset[1])
             

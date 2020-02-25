@@ -17,7 +17,7 @@ if os.path.isdir(third_party_dir):
 # Importing pywim for testing
 import pywim
 
-from . import SmartSliceExtension
+from . import SmartSliceExtension, SmartSliceView
 from .requirements_tool import SmartSliceRequirements
 from .select_tool import SmartSliceSelectTool
 from .stage import SmartSliceStage
@@ -55,7 +55,9 @@ def register(app):
     return {
         "extension": extension,
         "stage": SmartSliceStage.SmartSliceStage(extension.cloud),
-        "tool": [requirements_tool,
-                 select_tool,
-                 ]
+        "tool": [
+            requirements_tool,
+            select_tool,
+        ],
+        "view": SmartSliceView.SmartSliceView()
     }

@@ -456,6 +456,8 @@ class SmartSliceCloudOptimizeJob(SmartSliceCloudVerificationJob):
         super().__init__(connector)
 
         self.job_type = pywim.smartslice.job.JobType.optimization
+        
+
 
 class Force: # TODO - Move this or replace
     def __init__(self, normal : Vector = None, magnitude : float = 0.0, pull : bool = True):
@@ -924,6 +926,7 @@ class SmartSliceCloudConnector(QObject):
     doOptimization = pyqtSignal()
 
     def _prepareValidation(self):
+        Logger.log("d", "Validation Step Prepared")
         self._proxy._hasActiveValidate = False
         self.status = SmartSliceCloudStatus.ReadyToVerify
         Application.getInstance().activityChanged.emit()
@@ -959,6 +962,12 @@ class SmartSliceCloudConnector(QObject):
             self.doOptimization.emit()
 
     def _doOptimization(self):
+        
+        #  Check if model has an existing modifier mesh
+        #    and ask user if they would like to proceed if so
+        if self.propertyHandler.hasModMesh:
+            self.propertyHandler.confirmRemoveModMesh()
+
         self._current_job += 1
         self._jobs[self._current_job] = SmartSliceCloudOptimizeJob(self)
         self._jobs[self._current_job]._id = self._current_job

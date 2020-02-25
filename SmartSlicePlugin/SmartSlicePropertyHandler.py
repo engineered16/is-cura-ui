@@ -389,19 +389,6 @@ class SmartSlicePropertyHandler(QObject):
             if not self.hasModMesh:
                 self.showModMeshDialog()
 
-    def removeSmartSliceModMesh(self, msg, action):
-        msg.hide()
-        if action == "continueModMesh":
-            for node in self._sceneRoot.getAllChildren():
-                if node.getName() == "SmartSliceMeshModifier":
-                    op = GroupedOperation()
-                    op.addOperation(RemoveSceneNodeOperation(node))
-                    op.push()
-            self.connector._prepareValidation()
-            self.connector.onConfirmationConfirmClicked()
-        else:
-            self.connector.onConfirmationCancelClicked()
-
     def showModMeshDialog(self):
         self._propertiesChanged.append(SmartSliceProperty.ModifierMesh)
         self._changedValues.append(self._cachedModMesh)
@@ -431,6 +418,23 @@ class SmartSlicePropertyHandler(QObject):
                       )
         msg.actionTriggered.connect(self.removeSmartSliceModMesh)
         msg.show()
+
+    def removeSmartSliceModMesh(self, msg, action):
+        msg.hide()
+        if action == "continueModMesh":
+            for node in self._sceneRoot.getAllChildren():
+                if node.getName() == "SmartSliceMeshModifier":
+                    op = GroupedOperation()
+                    op.addOperation(RemoveSceneNodeOperation(node))
+                    op.push()
+            if self.connector.status in SmartSliceCloudStatus.Optimizable:
+                return
+            else:
+                self.connector._prepareValidation()
+                self.connector.onConfirmationConfirmClicked()
+            self.hasModMesh = False
+        else:
+            self.connector.onConfirmationCancelClicked()
 
 
     #
@@ -554,7 +558,6 @@ class SmartSlicePropertyHandler(QObject):
         select_tool._handle.setFace(self._anchoredTris)
         select_tool._handle.drawSelection()
         Logger.log ("d", "PropertyHandler Anchored Face ID:  " + str(self._anchoredID))
-
 
     def onSelectedFaceChanged(self, scene_node, face_id):
         select_tool = Application.getInstance().getController().getTool("SmartSlicePlugin_SelectTool")
