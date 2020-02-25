@@ -511,11 +511,6 @@ class SmartSliceCloudConnector(QObject):
         self._proxy.loadMagnitudeChanged.connect(self._updateForce0Magnitude)
         #self._proxy.loadDirectionChanged.connect(self._updateForce0Direction)
 
-        # Connecting signals
-        self.doVerification.connect(self._doVerfication)
-        self.confirmOptimization.connect(self._confirmOptimization)
-        self.doOptimization.connect(self._doOptimization)
-
         # Application stuff
         self.app_preferences = Application.getInstance().getPreferences()
         self.app_preferences.addPreference(self.http_protocol_preference, "https")
@@ -552,10 +547,6 @@ class SmartSliceCloudConnector(QObject):
 
         self._confirmDialog = []
         self.confirming = False
-        self.confirmValidation.connect(self._confirmValidation)
-        self.confirmOptimization.connect(self._confirmOptimization)
-
-        self.confirmationConcluded.connect(self.onConfirmationConcluded)
 
     onSmartSlicePrepared = pyqtSignal()
 
@@ -728,9 +719,9 @@ class SmartSliceCloudConnector(QObject):
                 self._proxy.setFactorOfSafety()
                 self.updateOptimizationState()
             else:
-                if self.propertyHandler.hasModMesh:
-                    self.propertyHandler.confirmRemoveModMesh()
-                    return
+                #if self.propertyHandler.hasModMesh:
+                #    self.propertyHandler.confirmRemoveModMesh()
+                #    return
                 self._prepareValidation()
                 self.onConfirmationConfirmClicked()
                 return
@@ -912,7 +903,6 @@ class SmartSliceCloudConnector(QObject):
     #
     #   CONFIRMATION PROMPT
     #
-    confirmationConcluded = pyqtSignal()
 
     def onConfirmationConcluded(self):
         self.propertyHandler.prepareCache()
@@ -920,10 +910,8 @@ class SmartSliceCloudConnector(QObject):
         self.hideMessage()
 
     confirmValidation = pyqtSignal()
-    doVerification = pyqtSignal()
     confirmOptimization = pyqtSignal()
     confirmModMeshRemove = pyqtSignal()
-    doOptimization = pyqtSignal()
 
     def _prepareValidation(self):
         Logger.log("d", "Validation Step Prepared")
@@ -931,48 +919,30 @@ class SmartSliceCloudConnector(QObject):
         self.status = SmartSliceCloudStatus.ReadyToVerify
         Application.getInstance().activityChanged.emit()
 
-    def _confirmValidation(self):
+    def confirmPendingChanges(self):
         if len(self.propertyHandler._propertiesChanged) > 0:
-            for prop in self.propertyHandler._propertiesChanged:
-                Logger.log ("d", "Property Found: " + str(prop))
             self.showConfirmDialog()
 
     def _doVerfication(self):
         self.propertyHandler._cancelChanges = False
-        if self._proxy._validate_confirmed:
-            self._current_job += 1
-            self._jobs[self._current_job] = SmartSliceCloudVerificationJob(self)
-            self._jobs[self._current_job]._id = self._current_job
-            self._jobs[self._current_job].finished.connect(self._onJobFinished)
-            self._jobs[self._current_job].start()
-
-    def _confirmOptimization(self):
-        self.showConfirmDialog()
-
-    def _confirmModMeshRemove(self):
-        #  If a modifier mesh has already been applied,
-        #   Display confirmation prompt before optimizing
-
-        if self._proxy._hasModMesh:
-            self._proxy._confirming_modmesh = True
-            self._proxy.confirmationWindowEnabled = True
-            self._proxy.confirmationWindowText = "Modifier meshes will be removed for the\noptimization. Do you want to continue?"
-            self._proxy.confirmationWindowEnabledChanged.emit()
-        else:
-            self.doOptimization.emit()
-
-    def _doOptimization(self):
-        
-        #  Check if model has an existing modifier mesh
-        #    and ask user if they would like to proceed if so
-        if self.propertyHandler.hasModMesh:
-            self.propertyHandler.confirmRemoveModMesh()
-
         self._current_job += 1
-        self._jobs[self._current_job] = SmartSliceCloudOptimizeJob(self)
+        self._jobs[self._current_job] = SmartSliceCloudVerificationJob(self)
         self._jobs[self._current_job]._id = self._current_job
         self._jobs[self._current_job].finished.connect(self._onJobFinished)
         self._jobs[self._current_job].start()
+
+    def _doOptimization(self):
+        #  Check if model has an existing modifier mesh
+        #    and ask user if they would like to proceed if so
+        if self.propertyHandler.hasModMesh:
+            self.propertyHandler.confirmOptimizeModMesh()
+        else:
+            self.propertyHandler._cancelChanges = False
+            self._current_job += 1
+            self._jobs[self._current_job] = SmartSliceCloudOptimizeJob(self)
+            self._jobs[self._current_job]._id = self._current_job
+            self._jobs[self._current_job].finished.connect(self._onJobFinished)
+            self._jobs[self._current_job].start()
 
 
     '''
@@ -984,11 +954,10 @@ class SmartSliceCloudConnector(QObject):
     def onSliceButtonClicked(self):
         if not self._jobs[self._current_job]:
             if self.status is SmartSliceCloudStatus.ReadyToVerify:
-                self.doVerification.emit()
+                self._doVerfication()
             elif self.status in SmartSliceCloudStatus.Optimizable:
-                self._confirmModMeshRemove()
+                self._doOptimization()
             elif self.status is SmartSliceCloudStatus.Optimized:
-                Application.getInstance().getController().getActiveStage().onStageDeselected()
                 Application.getInstance().getController().setActiveStage("PreviewStage")
         else:
             self._jobs[self._current_job].cancel()
@@ -1023,7 +992,6 @@ class SmartSliceCloudConnector(QObject):
                 self.status = SmartSliceCloudStatus.ReadyToVerify
                 Application.getInstance().activityChanged.emit()
         else:
-            Application.getInstance().getController().getActiveStage().onStageDeselected()
             Application.getInstance().getController().setActiveStage("PreviewStage")
 
 
@@ -1036,33 +1004,19 @@ class SmartSliceCloudConnector(QObject):
             - Otherwise, change to validate state
     '''
     def onConfirmationConfirmClicked(self):
-        #  Different behavior, when asking "Is okay to remove Modifier Mesh?"
-        if self._proxy._confirming_modmesh:
-            self.doOptimization.emit()
-            self._proxy._confirming_modmesh = False
-        else:
-            self.propertyHandler._onConfirmChanges()
-
-        # Close Dialog
-        self.confirmationConcluded.emit()
+        self.propertyHandler._onConfirmChanges()
+        self.onConfirmationConcluded()
 
     '''
       onConfirmationCancelClicked()
-        * Cancel Change to Validated Property
-        * Signal to UI to refresh with previous Validation Property Value
+        * Cancels all pending property changes
+        * Clears pending property change buffers
+        * Always Maintains the active cache state
+        * (Cache Values should always be used in calculations)
     '''
     def onConfirmationCancelClicked(self):
-        #  If asking the user to proceed and remove current modifier meshes
-        if self._proxy._confirming_modmesh:
-            '''
-                Remove Modifier Mesh Here
-            '''
-            1 # Stub
-
         self.propertyHandler._onCancelChanges()
-
-        # Close Dialog
-        self.confirmationConcluded.emit()
+        self.onConfirmationConcluded()
 
 
     #

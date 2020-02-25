@@ -1,7 +1,5 @@
 #   SmartSlicePropertyHandler.py
 #   Teton Simulation
-#   Authored on   January 3, 2019
-#   Last Modified January 3, 2019
 
 #
 #  Contains procedures for handling Cura Properties in accordance with SmartSlice
@@ -312,7 +310,7 @@ class SmartSlicePropertyHandler(QObject):
 
     def _onConfirmChanges(self):
         self.cacheChanges()
-        self.connector.confirmationConcluded.emit()
+        self.connector.onConfirmationConcluded()
 
     def _onCancelChanges(self):
         Logger.log ("d", "Cancelling Change in Smart Slice Environment")
@@ -320,7 +318,7 @@ class SmartSlicePropertyHandler(QObject):
         x = threading.Thread(target=self.resetCancelCheck)
         x.start()
         self.restoreCache()
-        self.connector.confirmationConcluded.emit()
+        self.connector.onConfirmationConcluded()
         Logger.log ("d", "Cancelled Change in Smart Slice Environment")
 
     """
@@ -387,17 +385,38 @@ class SmartSlicePropertyHandler(QObject):
         #  Check if Modifier Mesh has been Removed
         if self._cachedModMesh:
             if not self.hasModMesh:
-                self.showModMeshDialog()
+                self._propertiesChanged.append(SmartSliceProperty.ModifierMesh)
+                self._changedValues.append(self._cachedModMesh)
+                self._changedValues.append(self._positionModMesh)
+                self.confirmRemoveModMesh()
 
-    def showModMeshDialog(self):
-        self._propertiesChanged.append(SmartSliceProperty.ModifierMesh)
-        self._changedValues.append(self._cachedModMesh)
-        self._changedValues.append(self._positionModMesh)
-        self.connector.showConfirmDialog()
+    def confirmOptimizeModMesh(self):
+        self.connector._proxy._optimize_confirmed = False
+        msg = Message(title="",
+                      text="Modifier meshes will be removed for the optimization.\nDo you want to Continue?",
+                      lifetime=0
+                      )
+        msg.addAction("cancelModMesh",
+                      i18n_catalog.i18nc("@action",
+                                         "Cancel"
+                                         ),
+                      "",   # Icon
+                      "",   # Description
+                      button_style=Message.ActionButtonStyle.SECONDARY
+                      )
+        msg.addAction("continueModMesh",
+                      i18n_catalog.i18nc("@action",
+                                         "Continue"
+                                         ),
+                      "",   # Icon
+                      ""    # Description
+                      )
+        msg.actionTriggered.connect(self.removeModMeshes)
+        msg.show()
 
     def confirmRemoveModMesh(self):
         self.connector.hideMessage()
-        msg = Message(title="Remove Modifier Mesh?",
+        msg = Message(title="",
                       text="Continue and remove Smart Slice Modifier Mesh?",
                       lifetime=0
                       )
@@ -405,34 +424,40 @@ class SmartSlicePropertyHandler(QObject):
                       i18n_catalog.i18nc("@action",
                                          "Cancel"
                                          ),
-                      "", #icon
-                      "", #description
+                      "",
+                      "",
                       button_style=Message.ActionButtonStyle.SECONDARY 
                       )
         msg.addAction("continueModMesh",       #  action_id
                       i18n_catalog.i18nc("@action",
                                          "Continue"
                                          ),
-                      "", #icon
-                      ""  #description
+                      "",
+                      ""
                       )
-        msg.actionTriggered.connect(self.removeSmartSliceModMesh)
+        msg.actionTriggered.connect(self.removeModMeshes)
         msg.show()
 
-    def removeSmartSliceModMesh(self, msg, action):
+    def removeModMeshes(self, msg, action):
         msg.hide()
         if action == "continueModMesh":
+            self._cachedModMesh = None
+            self.hasModMesh = False
             for node in self._sceneRoot.getAllChildren():
-                if node.getName() == "SmartSliceMeshModifier":
+                stack = node.callDecoration("getStack")
+                if stack is None:
+                    continue
+                if stack.getProperty("infill_mesh", "value"):
                     op = GroupedOperation()
                     op.addOperation(RemoveSceneNodeOperation(node))
                     op.push()
-            if self.connector.status in SmartSliceCloudStatus.Optimizable:
-                return
-            else:
-                self.connector._prepareValidation()
-                self.connector.onConfirmationConfirmClicked()
-            self.hasModMesh = False
+            #if self.connector.status is SmartSliceCloudStatus.Optimizable:
+            #    self.connector._doOptimization()
+            if self.connector.status is SmartSliceCloudStatus.ReadyToVerify:
+                self.connector._doVerfication()
+            #else:
+            #    self.connector._prepareValidation()
+            #    self.connector.onConfirmationConfirmClicked()
         else:
             self.connector.onConfirmationCancelClicked()
 
@@ -560,9 +585,12 @@ class SmartSlicePropertyHandler(QObject):
         Logger.log ("d", "PropertyHandler Anchored Face ID:  " + str(self._anchoredID))
 
     def onSelectedFaceChanged(self, scene_node, face_id):
+        if Selection.getSelectedFace() is None:
+            return
         select_tool = Application.getInstance().getController().getTool("SmartSlicePlugin_SelectTool")
         selected_triangles = list(select_tool._interactive_mesh.select_planar_face(face_id))
         if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
+            self._propertiesChanged.append(SmartSliceProperty.SelectedFace)
             self._changedValues.append(face_id)
             self._changedValues.append(scene_node)
         else:

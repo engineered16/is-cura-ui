@@ -79,9 +79,7 @@ class SmartSliceCloudProxy(QObject):
         # Confirm Changes Dialog
         self._validationRaised = False
         self._confirmationWindowEnabled = False
-        self._validate_confirmed = True
-        self._optimize_confirmed = False
-        self._confirming_modmesh = False
+        self._optimize_confirmed = True
         self._hasActiveValidate = False
         self._hasModMesh = False # Currently ASSUMES a mod mesh is in place; TODO: Detect this property change
         self._confirmationText = ""
@@ -479,7 +477,7 @@ class SmartSliceCloudProxy(QObject):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing or (self.connector.status is SmartSliceCloudStatus.Optimized)):
             self.connector.propertyHandler._propertiesChanged.append(SmartSliceProperty.LoadMagnitude)
             self.connector.propertyHandler._changedValues.append(value)
-            self.connector._confirmValidation()
+            self.connector.confirmPendingChanges()
         else:
             self.reqsLoadMagnitude = value
             self.setLoadMagnitude()
@@ -499,7 +497,7 @@ class SmartSliceCloudProxy(QObject):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating or (self.connector.status is SmartSliceCloudStatus.BusyOptimizing) or (self.connector.status is SmartSliceCloudStatus.Optimized):
             self.connector.propertyHandler._propertiesChanged.append(SmartSliceProperty.LoadDirection)
             self.connector.propertyHandler._changedValues.append(value)
-            self.connector._confirmValidation()
+            self.connector.confirmPendingChanges()
         else:
             self.reqsLoadDirection = value
             self.setLoadDirection()
@@ -732,7 +730,7 @@ class SmartSliceCloudProxy(QObject):
         if self.connector.status is SmartSliceCloudStatus.BusyValidating:
             self._propertyChanged = SmartSliceProperty.Material
             self._changedMaterial = value
-            self.connector._confirmValidation()
+            self.connector.confirmPendingChanges()
         elif self._materialName is not value:
             self._materialName = value
             self.materialNameChanged.emit()
