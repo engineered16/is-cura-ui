@@ -1,5 +1,8 @@
 from __future__ import print_function
 
+# built-ins
+import math
+
 # Numpy
 import numpy
 
@@ -14,9 +17,13 @@ from CGAL.CGAL_Shape_detection import efficient_RANSAC
 
 
 class ShapeDetectedNode():
+    shape_index_name = "shape_index"
+
     def __init__(self, node):
         self.mesh = node.getMeshData()
         self._point_cloud = Point_set_3()  # Our set of surface points
+        self._point_cloud.add_normal_map()
+        self._point_cloud.add_int_map(self.shape_index_name)
         self._point_face = {}  # Needed to trace back the inliers to faces
 
     @property
@@ -27,12 +34,24 @@ class ShapeDetectedNode():
 
     def generatePointCloud(self):
         self._point_cloud.clear()
+        # self._point_cloud.int_map(
+        #     self.shape_index_name
+        # )
         self._point_face.clear()
         if not self.mesh.hasIndices():
             return self._point_cloud
 
         # Preparing data for every face
-        for face_id in range(self.mesh.hasIndices()):
+        face_ids = range(self.mesh.getFaceCount())
+        Logger.log("d", "Processing #{} faces.".format(len(face_ids)))
+        for face_id in face_ids:
+            #Logger.log(
+            #    "d",
+            #    "Processing face id: {}/{}".format(
+            #        face_id,
+            #        len(face_ids)-1
+            #        )
+            #)
             vector_a, vector_b, vector_c = self.mesh.getFaceNodes(face_id)
             vector_centroid = (vector_a + vector_b + vector_c) / 3.0
             surface_point_to_centroid_weight = 0.5
@@ -48,30 +67,42 @@ class ShapeDetectedNode():
             normal_vector = numpy.cross(vector_b - vector_a,
                                         vector_c - vector_a
                                         )
+            x, y, z = [float(entry) for entry in normal_vector.tolist()]
+            normal = Vector_3(x, y, z) 
+
+            # Normalize vector as the direction matters only
+            normal = normal / math.sqrt(normal.squared_length())
 
             for surface_point in (surface_point_a,
                                   surface_point_b,
                                   surface_point_c):
-                numpy_point_as_double = surface_point.tolist()
-                numpy_normal_as_double = normal_vector.tolist()
+                x, y, z = [float(entry) for entry in surface_point.tolist()]
+                point = Point_3(x, y, z)
 
-                point = Point_3(*numpy_point_as_double)
-                normal = Vector_3(*numpy_normal_as_double)
-
-                Logger.log("d", "numpy_point_as_double: {}".format(repr(numpy_point_as_double)))
-                Logger.log("d", "numpy_normal_as_double: {}".format(repr(numpy_normal_as_double)))
+                """
+                Logger.log(
+                    "d",
+                    "point: {}".format(point)
+                )
+                Logger.log(
+                    "d",
+                    "normal: {}".format(normal)
+                )
+                """
+                print(point, normal)
 
                 self._point_cloud.insert(point, normal)
                 if face_id not in self._point_face.keys():
                     self._point_face[face_id] = ()
-                self._point_face[face_id] += (surface_point,)
+                self._point_face[face_id] += (surface_point, )
 
     def analysePointCloud(self, cloud=None):
         if not cloud:
             cloud = self.point_cloud
 
-        shape_map = self._point_cloud.add_int_map("shape_index")
-        shapes = efficient_RANSAC(self._point_cloud,
+        Logger.log("d", "Running efficient_RANSAC...")
+        shape_map = self._point_cloud.int_map(self.shape_index_name)
+        '''shapes = efficient_RANSAC(self._point_cloud,
                                   shape_map,
                                   min_points=5,
                                   epsilon=1.,
@@ -82,6 +113,9 @@ class ShapeDetectedNode():
                                   spheres=True,
                                   cones=True,
                                   tori=True
+                                  )'''
+        shapes = efficient_RANSAC(self._point_cloud,
+                                  shape_map
                                   )
         print(len(shapes), "shapes(s) detected, first 3 shapes are:")
         for s in range(min(len(shapes), 10)):
