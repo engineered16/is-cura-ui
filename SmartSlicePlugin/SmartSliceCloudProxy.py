@@ -502,10 +502,6 @@ class SmartSliceCloudProxy(QObject):
             self.reqsLoadDirection = value
             self.setLoadDirection()
 
-            select_tool = Application.getInstance().getController().getTool("SmartSlicePlugin_SelectTool")
-            select_tool._handle.setFace(self.connector.propertyHandler._loadedTris)
-            select_tool._handle.drawSelection()
-
             self.connector.propertyHandler.applyLoad()
             self.connector._prepareValidation()
 

@@ -33,8 +33,7 @@ from UM.Operations.GroupedOperation import GroupedOperation
 
 #  Smart Slice
 from .SmartSliceCloudProxy import SmartSliceCloudStatus
-from .SmartSliceProperty import SmartSliceProperty, SmartSliceLoadDirection, SmartSliceContainerProperties
-from .select_tool.SmartSliceSelectHandle import SelectionMode
+from .SmartSliceProperty import SmartSliceProperty, SmartSliceLoadDirection, SmartSliceContainerProperties, SelectionMode
 
 i18n_catalog = i18nCatalog("smartslice")
 
@@ -58,6 +57,7 @@ class SmartSlicePropertyHandler(QObject):
         self._initialized = False
         
         #  General Purpose Cache Space
+        # TODO - merge _propertiesChanged and _changedValues into a single variable (dict?)
         self._propertiesChanged = []
         self._changedValues     = []
         self._hasChanges = False
@@ -75,16 +75,8 @@ class SmartSlicePropertyHandler(QObject):
         self._sceneNode = None
         self._sceneRoot = Application.getInstance().getController().getScene().getRoot()
 
-        #  Selection Proeprties
-        self._selection_mode = 1 # Default to AnchorMode
-        self._changedMesh = None
-        self._changedFaces = None
-        self._changedForce = None
-        self._anchoredID = None
-        self._anchoredNode = None
+        #  Selection Properties
         self._anchoredTris = None
-        self._loadedID = None
-        self._loadedNode = None
         self._loadedTris = None
         
         #  Cura Setup
@@ -100,13 +92,10 @@ class SmartSlicePropertyHandler(QObject):
         self._cancelChanges = False
 
         #  Temporary Cache
-        self._cachedScene = None
         self._cachedModMesh = None
         self.hasModMesh = False
         self.removeModMesh = False
         self._positionModMesh = None
-        self._cachedFaceID = None
-        self._cachedTriangles = None
         self._addProperties = True
 
         #  Attune to Scale/Rotate Operations
@@ -213,7 +202,7 @@ class SmartSlicePropertyHandler(QObject):
 
           #  Face Selection
             elif prop is SmartSliceProperty.SelectedFace:
-                self.updateMeshes()
+                #self.updateMeshes()
                 self.selectedFacesChanged.emit()
 
           #  Material
@@ -230,10 +219,6 @@ class SmartSlicePropertyHandler(QObject):
 
             i += 0
         self.clearChangedProperties()
-
-        if self._cachedFaceID is not None:
-            self.applyAnchorOrLoad(self._cachedTriangles)
-            self._cachedFaceID = None
 
     #  Restore Properties from Cache
     cacheRestored = Signal()
@@ -545,97 +530,29 @@ class SmartSlicePropertyHandler(QObject):
         self.connector.resetForce0FacesPoc()
         self.connector.appendForce0FacesPoc(self._loadedTris)
 
-    def confirmFaceDraw(self, scene_node, face_id, selected_triangles):
-        if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
-            self._cachedScene = scene_node
-            self._cachedTriangles = selected_triangles
-            self._cachedFaceID = face_id
-            if self._selection_mode is SelectionMode.AnchorMode:
-                if self._anchoredID != face_id:
-                    self._propertiesChanged.append(SmartSliceProperty.SelectedFace)
-                    self.connector.confirmValidation.emit()
-            elif self._selection_mode is SelectionMode.LoadMode:
-                if self._loadedID != face_id:
-                    self._propertiesChanged.append(SmartSliceProperty.SelectedFace)
-                    self.connector.confirmValidation.emit()
-        else:
-            if self._selection_mode is SelectionMode.AnchorMode:
-                if self._anchoredID is not None and (self._anchoredID is face_id):
-                    self.updateMeshes()
-                    Application.getInstance().activityChanged.emit()
-                    return
-                else:
-                    self._anchoredID = face_id
-            elif self._selection_mode is SelectionMode.LoadMode:
-                if self._loadedID is not None and (self._loadedID is face_id):
-                    self.updateMeshes()
-                    Application.getInstance().activityChanged.emit()
-                    return
-                else:
-                    self._loadedID = face_id
-            self.connector._prepareValidation()
-            self.updateMeshes()
-            self.drawAnchorOrLoad(scene_node, face_id, selected_triangles)
-            self.applyAnchorOrLoad(selected_triangles)
-            self.selectedFacesChanged.emit()
-
-    def drawLoad(self):
-        select_tool = Application.getInstance().getController().getTool("SmartSlicePlugin_SelectTool")
-        select_tool._handle.setFace(self._loadedTris)
-        select_tool._handle.drawSelection()
-        Logger.log ("d", "PropertyHandler Loaded Face ID:  " + str(self._loadedID))
-
-    def drawAnchor(self):
-        select_tool = Application.getInstance().getController().getTool("SmartSlicePlugin_SelectTool")
-        select_tool._handle.setFace(self._anchoredTris)
-        select_tool._handle.drawSelection()
-        Logger.log ("d", "PropertyHandler Anchored Face ID:  " + str(self._anchoredID))
-
-    def onSelectedFaceChanged(self, scene_node, face_id):
+    #def onSelectedFaceChanged(self, scene_node, face_id):
+    def selectedFaceChanged(self, selected_triangles, selection_mode):
         #  Throw out "fake" selection changes
         if Selection.getSelectedFace() is None:
             return
-        if self._selection_mode is SelectionMode.AnchorMode:
-            if Selection.getSelectedFace()[1] == self._anchoredID:
-                return
-        elif self._selection_mode is SelectionMode.LoadMode:
-            if Selection.getSelectedFace()[1] == self._loadedID:
-                return
                 
-        select_tool = Application.getInstance().getController().getTool("SmartSlicePlugin_SelectTool")
-        selected_triangles = list(select_tool._interactive_mesh.select_planar_face(face_id))
+        #select_tool = Application.getInstance().getController().getTool("SmartSlicePlugin_SelectTool")
+        #selected_triangles = list(select_tool._interactive_mesh.select_planar_face(face_id))
         if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
             self._propertiesChanged.append(SmartSliceProperty.SelectedFace)
-            self._changedValues.append(face_id)
-            self._changedValues.append(scene_node)
+            #self._changedValues.append(face_id) # Doesn't look like these appended values are used ??
+            #self._changedValues.append(scene_node)
             self.connector.confirmPendingChanges()
         else:
-            if self._selection_mode is SelectionMode.AnchorMode:
-                self._anchoredID = face_id
-                self._anchoredNode = scene_node
+            if selection_mode == SelectionMode.AnchorMode:
                 self._anchoredTris = selected_triangles
                 self.connector._proxy._anchorsApplied = 1
                 self.applyAnchor()
-                self.drawAnchor()
-            elif self._selection_mode is SelectionMode.LoadMode:
-                self._loadedID = face_id
-                self._loadedNode = scene_node
+            elif selection_mode == SelectionMode.LoadMode:
                 self._loadedTris = selected_triangles
                 self.connector._proxy._loadsApplied = 1
                 self.applyLoad()
-                self.drawLoad()
             self.connector._prepareValidation()
-
-    def updateMeshes(self):
-        #  ANCHOR MODE
-        if self._selection_mode == SelectionMode.AnchorMode:
-            self._anchoredMesh = self._changedMesh
-            self._anchoredFaces = self._changedFaces
-        #  LOAD MODE
-        elif self._selection_mode == SelectionMode.LoadMode:
-            self._loadedMesh = self._changedMesh
-            self._loadedFaces = self._changedFaces
-
 
     #
     #   CURA PROPERTY SIGNAL LISTENERS

@@ -1,5 +1,7 @@
+from typing import Optional
 
 from UM.Mesh.MeshData import MeshData
+from UM.Scene.SceneNode import SceneNode
 
 def makeInteractiveMesh(mesh_data : MeshData) -> 'pywim.geom.tri.Mesh':
     import pywim
@@ -31,3 +33,9 @@ def makeInteractiveMesh(mesh_data : MeshData) -> 'pywim.geom.tri.Mesh':
     int_mesh.analyze_mesh()
 
     return int_mesh
+
+def findChildSceneNode(node : SceneNode, node_type : type) -> Optional[SceneNode]:
+    for c in node.getAllChildren():
+        if isinstance(c, node_type):
+            return c
+    return None

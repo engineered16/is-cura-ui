@@ -21,10 +21,10 @@ from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtQml import QQmlComponent, QQmlContext # @UnresolvedImport
 
 #  Local Imports
-from ..utils import makeInteractiveMesh
+from ..utils import makeInteractiveMesh, findChildSceneNode
+from ..stage import SmartSliceScene
 from ..SmartSliceExtension import SmartSliceExtension
-from .SmartSliceSelectHandle import SelectionMode
-from .SmartSliceSelectHandle import SmartSliceSelectHandle
+from ..SmartSliceProperty import SelectionMode
 
 i18n_catalog = i18nCatalog("smartslice")
 
@@ -35,7 +35,9 @@ class SmartSliceSelectTool(Tool):
     def __init__(self, extension : SmartSliceExtension):
         super().__init__()
         self.extension = extension
-        self._handle = SmartSliceSelectHandle(self.extension)
+
+        self._connector = extension.cloud # SmartSliceCloudConnector
+        self._mode = SelectionMode.AnchorMode
 
         #self._shortcut_key = Qt.Key_S
 
@@ -46,45 +48,17 @@ class SmartSliceSelectTool(Tool):
 
         Selection.selectedFaceChanged.connect(self._onSelectedFaceChanged)
 
-        self._scene = self.getController().getScene()
-        self._scene_node_name = None
-        self._interactive_mesh = None # pywim.geom.tri.Mesh
         self._load_face = None
-        self._anchor_face = None
 
         self._controller.activeToolChanged.connect(self._onActiveStateChanged)
+
+        self._connector._proxy.loadDirectionChanged.connect(self._onLoadDirectionChanged)
 
     ##  Handle mouse and keyboard events
     #
     #   \param event type(Event)
     def event(self, event):
         return super().event(event)
-
-    def _calculateMesh(self):
-        scene = Application.getInstance().getController().getScene()
-        nodes = Selection.getAllSelectedObjects()
-
-        if len(nodes) > 0:
-            sn = nodes[0]
-            #self._handle._connector._proxy._activeExtruderStack = nodes[0].callDecoration("getExtruderStack")
-
-            if self._scene_node_name is None or sn.getName() != self._scene_node_name:
-
-                mesh_data = sn.getMeshData()
-
-                if mesh_data:
-                    Logger.log('d', 'Compute interactive mesh from SceneNode {}'.format(sn.getName()))
-                    
-                    self._scene_node_name = sn.getName()
-                    self._interactive_mesh = makeInteractiveMesh(mesh_data)
-                    self._load_face = None
-                    self._anchor_face = None
-
-                    controller = Application.getInstance().getController()
-                    camTool = controller.getCameraTool()
-                    aabb = sn.getBoundingBox()
-                    if aabb:
-                        camTool.setOrigin(aabb.center)
 
     def _onSelectedFaceChanged(self, curr_sf=None):
         if not self.getEnabled():
@@ -94,28 +68,32 @@ class SmartSliceSelectTool(Tool):
         if curr_sf is None:
             return
 
-        self._calculateMesh()
+        node, face_id = curr_sf
 
-        scene_node, face_id = curr_sf
+        smart_slice_node = findChildSceneNode(node, SmartSliceScene.Root)
 
-        self._handle._connector.propertyHandler.onSelectedFaceChanged(scene_node, face_id)
-
-        #self.setFaceVisible(scene_node, face_id)
-
-    def setFaceVisible(self, scene_node, face_id):
-        ph = self._handle._connector.propertyHandler
-        
-        if self.getAnchorSelectionActive():
-            self._handle._arrow = False
-            self._anchor_face = (ph._anchoredNode, ph._anchoredID)
-            self._handle.setFace(ph._anchoredTris)
-
+        if self._mode == SelectionMode.AnchorMode:
+            if smart_slice_node.anchor_face is None:
+                smart_slice_node.anchor_face = SmartSliceScene.AnchorFace('AnchorFace0')
+                smart_slice_node.addChild(smart_slice_node.anchor_face)
+            face = smart_slice_node.anchor_face
         else:
-            self._handle._arrow = True
-            self._load_face = (ph._loadedNode, ph._loadedID)
-            self._handle.setFace(ph._loadedTris)
+            if smart_slice_node.load_face is None:
+                smart_slice_node.load_face = SmartSliceScene.LoadFace('LoadFace0')
+                smart_slice_node.addChild(smart_slice_node.load_face)
+            face = smart_slice_node.load_face
 
-        Application.getInstance().activityChanged.emit()
+            self._load_face = face
+
+        tris = list(smart_slice_node.getInteractiveMesh().select_planar_face(face_id))
+
+        face.setMeshDataFromPywimTriangles(tris)
+
+        self._connector.propertyHandler.selectedFaceChanged(tris, self._mode)
+
+    def _onLoadDirectionChanged(self):
+        if self._load_face:
+            self._load_face.setArrowDirection(self._connector._proxy.loadDirection)
 
     def _onActiveStateChanged(self):
         controller = Application.getInstance().getController()
@@ -140,28 +118,11 @@ class SmartSliceSelectTool(Tool):
 
     def setSelectionMode(self, mode):
         Selection.clearFace()
-        self._handle._connector.propertyHandler._selection_mode = mode
-        Logger.log("d", "Changed selection mode to enum: {}".format(mode))
-        #self._handle._connector.propertyHandler.selectedFacesChanged.emit()
-        #self._onSelectedFaceChanged()
-
-    def getSelectionMode(self):
-        return self._handle._connector.propertyHandler._selection_mode
+        self._mode = mode
+        Logger.log("d", "Changed selection mode to: {}".format(mode))
 
     def setAnchorSelection(self):
-        self._handle.clearSelection()
         self.setSelectionMode(SelectionMode.AnchorMode)
-        if self._handle._connector._proxy._anchorsApplied > 0:
-            self._handle.drawSelection()
-
-    def getAnchorSelectionActive(self):
-        return self._handle._connector.propertyHandler._selection_mode is SelectionMode.AnchorMode
 
     def setLoadSelection(self):
-        self._handle.clearSelection()
         self.setSelectionMode(SelectionMode.LoadMode)
-        if self._handle._connector._proxy._loadsApplied > 0:
-            self._handle.drawSelection()
-
-    def getLoadSelectionActive(self):
-        return self._handle._connector.propertyHandler._selection_mode is SelectionMode.LoadMode

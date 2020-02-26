@@ -24,6 +24,9 @@ from UM.Scene.Iterator.DepthFirstIterator import DepthFirstIterator
 from cura.Stages.CuraStage import CuraStage
 from cura.CuraApplication import CuraApplication
 
+from . import SmartSliceScene
+from ..utils import findChildSceneNode
+
 i18n_catalog = i18nCatalog("smartslice")
 
 #
@@ -126,6 +129,20 @@ class SmartSliceStage(CuraStage):
         if not Selection.hasSelection():
             Selection.add(printable_node)
 
+        aabb = printable_node.getBoundingBox()
+        if aabb:
+            controller.getCameraTool().setOrigin(aabb.center)
+
+        smart_slice_node = findChildSceneNode(printable_node, SmartSliceScene.Root)
+
+        if not smart_slice_node:
+            smart_slice_node = SmartSliceScene.Root()
+            smart_slice_node.initialize(printable_node)
+
+        for c in controller.getScene().getRoot().getAllChildren():
+            if isinstance(c, SmartSliceScene.Root):
+                c.setVisible(True)
+
         # Ensure we have tools defined and apply them here
         use_tool = self._our_toolset[0]
         self.setToolVisibility(True)
@@ -142,8 +159,6 @@ class SmartSliceStage(CuraStage):
             self._connector.propertyHandler.cacheChanges()
             self._connector.propertyHandler._initialized = True
 
-        
-
     #   onStageDeselected:
     #       Sets attributes that allow the Smart Slice Stage to properly deactivate
     #       This occurs before the next Cura Stage is activated
@@ -158,7 +173,9 @@ class SmartSliceStage(CuraStage):
         if self._previous_tool:
             application.getController().setActiveTool(self._default_fallback_tool)
 
-        #  Hide all visible SmartSlice UI Components
+        for c in controller.getScene().getRoot().getAllChildren():
+            if isinstance(c, SmartSliceScene.Root):
+                c.setVisible(False)
 
     def getVisibleTools(self):
         visible_tools = []
@@ -245,8 +262,10 @@ class SmartSliceStage(CuraStage):
         # Undisplay our tools!
         self.setToolVisibility(False)
 
+        #self._scene.initialize()
+
     def _checkScene(self):
         active_stage = CuraApplication.getInstance().getController().getActiveStage()
 
-        if active_stage.getPluginId() == "SmartSlicePlugin":
+        if active_stage and active_stage.getPluginId() == self.getPluginId():
             self._exit_stage_if_scene_is_invalid()

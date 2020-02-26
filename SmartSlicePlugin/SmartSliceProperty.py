@@ -70,3 +70,6 @@ class SmartSliceContainerProperties():
                               "infill_sparse_thickness",    #  Infill Line Width
                               "alternate_extra_perimeter"}  #  Alternate Extra Walls
 
+class SelectionMode:
+    AnchorMode = 1
+    LoadMode = 2
