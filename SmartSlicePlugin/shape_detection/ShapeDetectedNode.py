@@ -22,8 +22,6 @@ class ShapeDetectedNode():
     def __init__(self, node):
         self.mesh = node.getMeshData()
         self._point_cloud = Point_set_3()  # Our set of surface points
-        self._point_cloud.add_normal_map()
-        self._point_cloud.add_int_map(self.shape_index_name)
         self._point_face = {}  # Needed to trace back the inliers to faces
 
     @property
@@ -34,24 +32,16 @@ class ShapeDetectedNode():
 
     def generatePointCloud(self):
         self._point_cloud.clear()
-        # self._point_cloud.int_map(
-        #     self.shape_index_name
-        # )
+        self._point_cloud.add_normal_map()
+        self._point_cloud.add_int_map(self.shape_index_name)
         self._point_face.clear()
         if not self.mesh.hasIndices():
             return self._point_cloud
 
         # Preparing data for every face
         face_ids = range(self.mesh.getFaceCount())
-        Logger.log("d", "Processing #{} faces.".format(len(face_ids)))
+        Logger.log("d", "Processing {} faces.".format(len(face_ids)))
         for face_id in face_ids:
-            #Logger.log(
-            #    "d",
-            #    "Processing face id: {}/{}".format(
-            #        face_id,
-            #        len(face_ids)-1
-            #        )
-            #)
             vector_a, vector_b, vector_c = self.mesh.getFaceNodes(face_id)
             vector_centroid = (vector_a + vector_b + vector_c) / 3.0
             surface_point_to_centroid_weight = 0.5
@@ -68,7 +58,7 @@ class ShapeDetectedNode():
                                         vector_c - vector_a
                                         )
             x, y, z = [float(entry) for entry in normal_vector.tolist()]
-            normal = Vector_3(x, y, z) 
+            normal = Vector_3(x, y, z)
 
             # Normalize vector as the direction matters only
             normal = normal / math.sqrt(normal.squared_length())
@@ -78,18 +68,6 @@ class ShapeDetectedNode():
                                   surface_point_c):
                 x, y, z = [float(entry) for entry in surface_point.tolist()]
                 point = Point_3(x, y, z)
-
-                """
-                Logger.log(
-                    "d",
-                    "point: {}".format(point)
-                )
-                Logger.log(
-                    "d",
-                    "normal: {}".format(normal)
-                )
-                """
-                print(point, normal)
 
                 self._point_cloud.insert(point, normal)
                 if face_id not in self._point_face.keys():
@@ -102,7 +80,7 @@ class ShapeDetectedNode():
 
         Logger.log("d", "Running efficient_RANSAC...")
         shape_map = self._point_cloud.int_map(self.shape_index_name)
-        '''shapes = efficient_RANSAC(self._point_cloud,
+        shapes = efficient_RANSAC(self._point_cloud,
                                   shape_map,
                                   min_points=5,
                                   epsilon=1.,
@@ -113,11 +91,8 @@ class ShapeDetectedNode():
                                   spheres=True,
                                   cones=True,
                                   tori=True
-                                  )'''
-        shapes = efficient_RANSAC(self._point_cloud,
-                                  shape_map
                                   )
-        print(len(shapes), "shapes(s) detected, first 3 shapes are:")
+        print(len(shapes), "shapes(s) detected, first 10 shapes are:")
         for s in range(min(len(shapes), 10)):
             print(" *", s, ":", shapes[s])
 
@@ -133,17 +108,17 @@ class ShapeDetectedNode():
                 nb_cones += 1
             if _type == "cylinder":
                 nb_cylinders += 1
-            if _type == "planes":
+            if _type == "plane":
                 nb_planes += 1
-            if _type == "spheres":
+            if _type == "sphere":
                 nb_spheres += 1
             if _type == "torus":
                 nb_tori += 1
         print("Number of shapes by type:")
         print(" *", nb_cones, "cone(s)")
         print(" *", nb_cylinders, "cylinder(s)")
-        print(" *", nb_planes, "planes(s)")
-        print(" *", nb_spheres, "spheres(s)")
+        print(" *", nb_planes, "plane(s)")
+        print(" *", nb_spheres, "sphere(s)")
         print(" *", nb_tori, "torus/i")
 
         for shape in shapes:
