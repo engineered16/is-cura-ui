@@ -126,3 +126,12 @@ class SmartSliceSelectTool(Tool):
 
     def setLoadSelection(self):
         self.setSelectionMode(SelectionMode.LoadMode)
+
+    def getSelectionMode(self):
+        return self._mode
+
+    def getAnchorSelectionActive(self):
+        return self._mode == SelectionMode.AnchorMode
+
+    def getLoadSelectionActive(self):
+        return self._mode == SelectionMode.LoadMode
