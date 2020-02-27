@@ -14,6 +14,7 @@ from UM.View.GL.OpenGL import OpenGL
 from UM.Scene.Selection import Selection
 from UM.Scene.SceneNode import SceneNode
 
+from cura.CuraApplication import CuraApplication
 from cura.Scene.CuraSceneNode import CuraSceneNode
 
 #  QT / QML Imports
@@ -53,12 +54,27 @@ class SmartSliceSelectTool(Tool):
         self._controller.activeToolChanged.connect(self._onActiveStateChanged)
 
         self._connector._proxy.loadDirectionChanged.connect(self._onLoadDirectionChanged)
+        self._connector._proxy.loadMagnitudeChanged.connect(self._onLoadMagnitudeChanged)
 
     ##  Handle mouse and keyboard events
     #
     #   \param event type(Event)
     def event(self, event):
         return super().event(event)
+
+    def _onSelectionChanged(self):
+        super()._onSelectionChanged()
+
+        # I think there should be a better way, but this is in place
+        # to force a full render when the selection changes. Without
+        # this a different event is required (e.g. a camera rotate) to
+        # get a render update after clicking on or off the shown scene node.
+        # This behavior is probably indicative of something we're doing
+        # wrong - we might need to dive into this at some point
+        window = CuraApplication.getInstance().getMainWindow()
+        if window:
+            window._full_render_required = True
+            window.update()
 
     def _onSelectedFaceChanged(self, curr_sf=None):
         if not self.getEnabled():
@@ -72,6 +88,8 @@ class SmartSliceSelectTool(Tool):
 
         smart_slice_node = findChildSceneNode(node, SmartSliceScene.Root)
 
+        tris = list(smart_slice_node.getInteractiveMesh().select_planar_face(face_id))
+
         if self._mode == SelectionMode.AnchorMode:
             if smart_slice_node.anchor_face is None:
                 smart_slice_node.anchor_face = SmartSliceScene.AnchorFace('AnchorFace0')
@@ -80,12 +98,11 @@ class SmartSliceSelectTool(Tool):
         else:
             if smart_slice_node.load_face is None:
                 smart_slice_node.load_face = SmartSliceScene.LoadFace('LoadFace0')
+                smart_slice_node.load_face.force.magnitude = self._connector._proxy.reqsLoadMagnitude
                 smart_slice_node.addChild(smart_slice_node.load_face)
             face = smart_slice_node.load_face
 
             self._load_face = face
-
-        tris = list(smart_slice_node.getInteractiveMesh().select_planar_face(face_id))
 
         face.setMeshDataFromPywimTriangles(tris)
 
@@ -94,6 +111,10 @@ class SmartSliceSelectTool(Tool):
     def _onLoadDirectionChanged(self):
         if self._load_face:
             self._load_face.setArrowDirection(self._connector._proxy.loadDirection)
+
+    def _onLoadMagnitudeChanged(self):
+        if self._load_face:
+            self._load_face.force.magnitude = self._connector._proxy.loadMagnitude
 
     def _onActiveStateChanged(self):
         controller = Application.getInstance().getController()

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Any
 
 from UM.Logger import Logger
 from UM.Mesh.MeshBuilder import MeshBuilder
@@ -13,6 +13,26 @@ from ..utils import makeInteractiveMesh
 
 import pywim
 import numpy
+
+#class Anchor:
+#    def __init__(self):
+#        self.face = []
+
+class Force:
+    def __init__(self, normal : Vector = None, magnitude : float = 0.0, pull : bool = False):
+        self.normal = normal if normal else Vector(1.0, 0.0, 0.0)
+        self.magnitude = magnitude
+        self.pull = pull
+        #self.face = []
+
+    def loadVector(self) -> Vector:
+        scale = self.magnitude if self.pull else -self.magnitude
+
+        return Vector(
+            self.normal.x * scale,
+            self.normal.y * scale,
+            self.normal.z * scale,
+        )
 
 class Root(SceneNode):
     def __init__(self):
@@ -45,6 +65,9 @@ class HighlightFace(SceneNode):
     def _annotatedMeshData(self, mb : MeshBuilder):
         pass
 
+    def getTriangleIndices(self) -> List[int]:
+        return [t.id for t in self._triangles]
+
     def setMeshDataFromPywimTriangles(self, tris : List[pywim.geom.tri.Triangle]):
         self._triangles = tris
 
@@ -66,7 +89,7 @@ class LoadFace(HighlightFace):
     def __init__(self, name : str):
         super().__init__(name)
 
-        self._invert_arrow = False
+        self.force = Force()
 
         self._arrow_head_length = 8
         self._arrow_tail_length = 22
@@ -74,8 +97,15 @@ class LoadFace(HighlightFace):
         self._arrow_head_width = 2.8
         self._arrow_tail_width = 0.8
 
-    def setArrowDirection(self, inverted):
-        self._invert_arrow = inverted
+    def setMeshDataFromPywimTriangles(self, tris : List[pywim.geom.tri.Triangle]):
+        super().setMeshDataFromPywimTriangles(tris)
+
+        if len(tris) > 0:
+            n = tris[0].normal
+            self.force.normal = Vector(n.r, n.s, n.t)
+
+    def setArrowDirection(self, checked):
+        self.force.pull = checked # Check box checked indicates pulling force
         self.setMeshDataFromPywimTriangles(self._triangles)
 
     def _annotatedMeshData(self, mb : MeshBuilder):
@@ -104,7 +134,7 @@ class LoadFace(HighlightFace):
                          center.y + n.y * self._arrow_total_length,
                          center.z + n.z * self._arrow_total_length)
         
-        if self._invert_arrow:
+        if self.force.pull:
             p_base0 = Vector(center.x + n.x * self._arrow_tail_length,
                              center.y + n.y * self._arrow_tail_length,
                              center.z + n.z * self._arrow_tail_length)

@@ -478,7 +478,7 @@ class SmartSliceCloudProxy(QObject):
             self.connector.propertyHandler._propertiesChanged.append(SmartSliceProperty.LoadMagnitude)
             self.connector.propertyHandler._changedValues.append(value)
             self.connector.confirmPendingChanges()
-        else:
+        elif value != self.reqsLoadMagnitude:
             self.reqsLoadMagnitude = value
             self.setLoadMagnitude()
             self.connector._prepareValidation()
@@ -498,16 +498,16 @@ class SmartSliceCloudProxy(QObject):
             self.connector.propertyHandler._propertiesChanged.append(SmartSliceProperty.LoadDirection)
             self.connector.propertyHandler._changedValues.append(value)
             self.connector.confirmPendingChanges()
-        else:
+        elif value != self.reqsLoadDirection:
             self.reqsLoadDirection = value
             self.setLoadDirection()
-
-            self.connector.propertyHandler.applyLoad()
             self.connector._prepareValidation()
 
     #  NOTE:  This should only be accessed by QML 
     def _applyLoad(self):
-        self.connector.propertyHandler.applyLoad()
+        ## is this called from anywhere?
+        return
+        ##
 
     #
     #   SMART SLICE RESULTS

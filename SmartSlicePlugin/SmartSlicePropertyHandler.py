@@ -74,10 +74,6 @@ class SmartSlicePropertyHandler(QObject):
         #  Scene (for mesh/transform signals)
         self._sceneNode = None
         self._sceneRoot = Application.getInstance().getController().getScene().getRoot()
-
-        #  Selection Properties
-        self._anchoredTris = None
-        self._loadedTris = None
         
         #  Cura Setup
         self._activeMachineManager = CuraApplication.getInstance().getMachineManager()
@@ -482,8 +478,6 @@ class SmartSlicePropertyHandler(QObject):
             self.connector.confirmValidation.emit()
         else:
             self.meshRotation = self._sceneNode.getOrientation()
-            self.applyLoad()
-            self.applyAnchor()
             self.connector._prepareValidation()
 
 
@@ -510,26 +504,6 @@ class SmartSlicePropertyHandler(QObject):
     #   FACE SELECTION
     #
 
-    def applyAnchor(self):
-        if self._anchoredTris is None:
-            return
-        self.connector.resetAnchor0FacesPoc()
-        self.connector.appendAnchor0FacesPoc(self._anchoredTris)
-        Logger.log("d", "cloud_connector.getAnchor0FacesPoc(): {}".format(self.connector.getAnchor0FacesPoc()))
-
-    def applyLoad(self):
-        if self._loadedTris is None:
-            return
-        load_vector = self._loadedTris[0].normal
-
-        self.connector.resetForce0VectorPoc()
-        self.connector.updateForce0Vector(
-            Vector(load_vector.r, load_vector.s, load_vector.t)
-        )
-
-        self.connector.resetForce0FacesPoc()
-        self.connector.appendForce0FacesPoc(self._loadedTris)
-
     #def onSelectedFaceChanged(self, scene_node, face_id):
     def selectedFaceChanged(self, selected_triangles, selection_mode):
         #  Throw out "fake" selection changes
@@ -545,13 +519,9 @@ class SmartSlicePropertyHandler(QObject):
             self.connector.confirmPendingChanges()
         else:
             if selection_mode == SelectionMode.AnchorMode:
-                self._anchoredTris = selected_triangles
                 self.connector._proxy._anchorsApplied = 1
-                self.applyAnchor()
             elif selection_mode == SelectionMode.LoadMode:
-                self._loadedTris = selected_triangles
                 self.connector._proxy._loadsApplied = 1
-                self.applyLoad()
             self.connector._prepareValidation()
 
     #

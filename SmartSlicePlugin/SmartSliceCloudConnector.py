@@ -65,6 +65,8 @@ from .SmartSliceCloudProxy import SmartSliceCloudStatus
 from .SmartSliceCloudProxy import SmartSliceCloudProxy
 from .SmartSliceProperty import SmartSliceProperty
 from .SmartSlicePropertyHandler import SmartSlicePropertyHandler
+from .stage import SmartSliceScene
+from .utils import findChildSceneNode
 
 i18n_catalog = i18nCatalog("smartslice")
 
@@ -456,23 +458,6 @@ class SmartSliceCloudOptimizeJob(SmartSliceCloudVerificationJob):
         super().__init__(connector)
 
         self.job_type = pywim.smartslice.job.JobType.optimization
-        
-
-
-class Force: # TODO - Move this or replace
-    def __init__(self, normal : Vector = None, magnitude : float = 0.0, pull : bool = True):
-        self.normal = normal if normal else Vector(1.0, 0.0, 0.0)
-        self.magnitude = magnitude
-        self.pull = pull
-
-    def loadVector(self) -> Vector:
-        scale = self.magnitude if self.pull else -self.magnitude
-
-        return Vector(
-            self.normal.x * scale,
-            self.normal.y * scale,
-            self.normal.z * scale,
-        )
 
 class SmartSliceCloudConnector(QObject):
     http_protocol_preference = "smartslice/http_protocol"
@@ -508,7 +493,7 @@ class SmartSliceCloudConnector(QObject):
         self._proxy.confirmationConfirmClicked.connect(self.onConfirmationConfirmClicked)
         self._proxy.confirmationCancelClicked.connect(self.onConfirmationCancelClicked)
 
-        self._proxy.loadMagnitudeChanged.connect(self._updateForce0Magnitude)
+        #self._proxy.loadMagnitudeChanged.connect(self._updateForce0Magnitude)
         #self._proxy.loadDirectionChanged.connect(self._updateForce0Direction)
 
         # Application stuff
@@ -539,9 +524,6 @@ class SmartSliceCloudConnector(QObject):
 
         # POC
         self._poc_default_infill_direction = 45
-        self.resetAnchor0FacesPoc()
-        self.resetForce0FacesPoc()
-        self.resetForce0VectorPoc()
 
         Application.getInstance().engineCreatedSignal.connect(self._onEngineCreated)
 
@@ -1041,6 +1023,11 @@ class SmartSliceCloudConnector(QObject):
         #       The lines below will partly need to be executed as "for model in models: bla bla.."
         mesh_node = mesh_nodes[0]
 
+        smart_slice_node = findChildSceneNode(mesh_node, SmartSliceScene.Root)
+
+        if not smart_slice_node:
+            Logger.logException("Could not find the Smart Slice node on mesh node %s", mesh_node.getName())
+
         active_extruder_position = mesh_node.callDecoration("getActiveExtruderPosition")
         if active_extruder_position is None:
             active_extruder_position = 0
@@ -1119,8 +1106,10 @@ class SmartSliceCloudConnector(QObject):
 
         # Add the face Ids from the STL mesh that the user selected for
         # this anchor
+        anchor_tris = smart_slice_node.anchor_face.getTriangleIndices()
+        Logger.log("d", "Smart Slice Load Triangles: {}".format(anchor_tris))
         anchor1.face.extend(
-            self.getAnchor0FacesPoc()
+            anchor_tris
         )
 
         step.boundary_conditions.append(anchor1)
@@ -1133,15 +1122,18 @@ class SmartSliceCloudConnector(QObject):
         # Set the components on the force vector. In this example
         # we have 100 N, 200 N, and 50 N in the x, y, and z
         # directions respectfully.
-        Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(self.getForce0VectorPoc()))
+        load_vec = smart_slice_node.load_face.force.loadVector()
+        Logger.log("d", "Smart Slice Load Vector: {}".format(load_vec))
         force1.force.set(
-            self.getForce0VectorPoc()
+            [float(load_vec.x), float(load_vec.y), float(load_vec.z)]
         )
 
         # Add the face Ids from the STL mesh that the user selected for
         # this force
+        face_tris = smart_slice_node.load_face.getTriangleIndices()
+        Logger.log("d", "Smart Slice Load Triangles: {}".format(face_tris))
         force1.face.extend(
-            self.getForce0FacesPoc()
+            face_tris
         )
 
         step.loads.append(force1)
@@ -1242,58 +1234,6 @@ class SmartSliceCloudConnector(QObject):
         threemf_file.close()
 
         return True
-
-    def _updateForce0Magnitude(self):
-        self._poc_force.magnitude = self._proxy.loadMagnitude
-        Logger.log("d", "Load magnitude changed, new force vector: {}".format(self._poc_force.loadVector()))
-
-    def _updateForce0Direction(self):
-        self._poc_force.pull = self._proxy.loadDirection
-        Logger.log("d", "Load direction changed, new force vector: {}".format(self._poc_force.loadVector()))
-
-    def updateForce0Vector(self, normal : Vector):
-        self._poc_force.normal = normal
-        Logger.log("d", "Load normal changed, new force vector: {}".format(self._poc_force.loadVector()))
-
-    def resetForce0VectorPoc(self):
-        self._poc_force = Force(
-            magnitude=self._proxy.reqsLoadMagnitude,
-            pull=self._proxy.reqsLoadDirection
-        )
-
-    def getForce0VectorPoc(self):
-        vec = self._poc_force.loadVector()
-        return [
-            float(vec.x),
-            float(vec.y),
-            float(vec.z)
-        ]
-
-    def appendForce0FacesPoc(self, face_ids):
-        for face_id in face_ids:
-            if not isinstance(face_id, int):
-                face_id = face_id.id
-            if face_id not in self._poc_force0_faces:
-                self._poc_force0_faces += (face_id, )
-
-    def resetForce0FacesPoc(self):
-        self._poc_force0_faces = ()
-
-    def getForce0FacesPoc(self):
-        return self._poc_force0_faces
-
-    def appendAnchor0FacesPoc(self, face_ids):
-        for face_id in face_ids:
-            if not isinstance(face_id, int):
-                face_id = face_id.id
-            if face_id not in self._poc_anchor0_faces:
-                self._poc_anchor0_faces += (face_id, )
-
-    def resetAnchor0FacesPoc(self):
-        self._poc_anchor0_faces = ()
-
-    def getAnchor0FacesPoc(self):
-        return self._poc_anchor0_faces
 
     ##  Check if a node has per object settings and ensure that they are set correctly in the message
     #   \param node Node to check.
