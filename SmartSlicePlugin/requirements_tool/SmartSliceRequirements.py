@@ -26,10 +26,4 @@ class SmartSliceRequirements(Tool):
 
         self._connector = extension.cloud
 
-        self._controller.activeToolChanged.connect(self._onToolSelected)
-
-    def _onToolSelected(self):
-        if not self._connector._proxy.shouldRaiseWarning:
-            self._connector._proxy.confirmationWindowEnabled = False
-            self._connector._proxy.confirmationWindowEnabledChanged.emit()
             

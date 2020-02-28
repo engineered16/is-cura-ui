@@ -64,16 +64,15 @@ Item
             width: UM.Theme.getSize("setting_control").width;
             height: UM.Theme.getSize("setting_control").height;
             style: UM.Theme.styles.text_field;
-            validator: DoubleValidator
-            {
-                bottom: 1.0  // Every value below this makes scientifically no sense
-                decimals: 4
-                locale: "en_US"
-            }
+
             onEditingFinished:
             {
-                var modified_text = text.replace(",", ".") // User convenience. We use dots for decimal values
-                SmartSlice.Cloud.targetFactorOfSafety = modified_text; // Will be converted from string to the target data type via SmartSliceVariables
+                SmartSlice.Cloud.targetFactorOfSafety = SmartSlice.Cloud.bufferSafetyFactor; // Will be converted from string to the target data type via SmartSliceVariables
+            }
+            onTextChanged:
+            { 
+                SmartSlice.Cloud.bufferSafetyFactor = text;
+                SmartSlice.Cloud.settingEdited();
             }
 
             text: SmartSlice.Cloud.targetFactorOfSafety
@@ -86,26 +85,20 @@ Item
             width: UM.Theme.getSize("setting_control").width;
             height: UM.Theme.getSize("setting_control").height;
             style: UM.Theme.styles.text_field;
-            validator: DoubleValidator
-            {
-                bottom: 0.01  // Setting lowest value here
-                decimals: 4
-                locale: "en_US"
-            }
+
             onEditingFinished:
             {
-                var modified_text = text.replace(",", ".") // User convenience. We use dots for decimal values
-                SmartSlice.Cloud.targetMaximalDisplacement = modified_text; // Will be converted from string to the target data type via SmartSliceVariables
+                SmartSlice.Cloud.targetMaximalDisplacement = SmartSlice.Cloud.bufferDisplacement; // Will be converted from string to the target data type via SmartSliceVariables
+            }
+            onTextChanged:
+            { 
+                SmartSlice.Cloud.bufferDisplacement = text;
+                SmartSlice.Cloud.settingEdited = true;
             }
 
             text: SmartSlice.Cloud.targetMaximalDisplacement
             placeholderText: ""
             property string unit: "[mm]";
-
-            Connections {
-                target: SmartSlice.Cloud
-                onTargetMaximalDisplacementChanged: { valueMaxDeflect.text = SmartSlice.Cloud.targetMaximalDisplacement }
-            }
         }
 
     }

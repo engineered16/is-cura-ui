@@ -39,11 +39,9 @@ class SmartSliceSelectHandle(ToolHandle):
 
         self._connector.onSmartSlicePrepared.connect(self._onSmartSlicePrepared)
 
-
     def _onSmartSlicePrepared(self):
         #  Connect to UI 'Cancel Changes' Signal
-        self._connector.propertyHandler.selectedFacesChanged.connect(self.drawSelection)
-        self._connector.propertyHandler._selection_mode = SelectionMode.LoadMode
+        self._connector.propertyHandler._selection_mode = SelectionMode.AnchorMode
         self._connector._proxy.loadDirectionChanged.connect(self.drawSelection)
 
     # Override ToolHandle._onSelectionCenterChanged so that we can set the full transformation
@@ -71,10 +69,16 @@ class SmartSliceSelectHandle(ToolHandle):
         if self._tri is None:
             return
 
+        ph = self._connector.propertyHandler
+        if ph._selection_mode is SelectionMode.AnchorMode:
+            self.setFace(ph._anchoredTris)
+        else:
+            self.setFace(ph._loadedTris)
+
         #  Construct Edges using MeshBuilder Cubes
         mb = MeshBuilder()
 
-        Logger.log("d", "Drawing Face Selection")
+        Logger.log("d", "Drawing Face Selection:  " + str(self._tri))
 
         for tri in self._tri:
             mb.addFace(tri.v1, tri.v2, tri.v3, color=self._selected_color)

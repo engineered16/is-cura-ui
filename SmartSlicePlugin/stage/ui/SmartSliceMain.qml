@@ -189,60 +189,6 @@ Item {
                                 Layout.fillWidth: true
                                 spacing: UM.Theme.getSize("default_margin").width
 
-                                function updateSafetyFactorColor() {
-                                    if (SmartSlice.Cloud.resultSafetyFactor > SmartSlice.Cloud.targetFactorOfSafety) {
-                                        labelDescriptionSafetyFactor.color = smartSlicePopupContents.warningColor
-                                        labelResultSafetyFactor.color = smartSlicePopupContents.warningColor
-                                        labelTargetSafetyFactor.color = smartSlicePopupContents.warningColor
-                                    } else if (SmartSlice.Cloud.resultSafetyFactor < SmartSlice.Cloud.targetFactorOfSafety) {
-                                        labelDescriptionSafetyFactor.color = smartSlicePopupContents.errorColor
-                                        labelResultSafetyFactor.color = smartSlicePopupContents.errorColor
-                                        labelTargetSafetyFactor.color = smartSlicePopupContents.errorColor
-                                    } else {
-                                        labelDescriptionSafetyFactor.color = smartSlicePopupContents.successColor
-                                        labelResultSafetyFactor.color = smartSlicePopupContents.successColor
-                                        labelTargetSafetyFactor.color = smartSlicePopupContents.successColor
-                                    }
-
-                                    // Override if our optimization is done
-                                    if (SmartSlice.Cloud.sliceStatusEnum == 9) {
-                                        labelDescriptionSafetyFactor.color = smartSlicePopupContents.successColor
-                                        labelResultSafetyFactor.color = smartSlicePopupContents.successColor
-                                        labelTargetSafetyFactor.color = smartSlicePopupContents.successColor
-                                    }
-                                }
-
-                                function updateMaximalDisplacementColor() {
-                                    if (SmartSlice.Cloud.resultMaximalDisplacement < SmartSlice.Cloud.targetMaximalDisplacement) {
-                                        labelDescriptionMaximumDisplacement.color = smartSlicePopupContents.warningColor
-                                        labelResultMaximalDisplacement.color = smartSlicePopupContents.warningColor
-                                        labelTargetMaximalDisplacement.color = smartSlicePopupContents.warningColor
-                                    } else if (SmartSlice.Cloud.resultMaximalDisplacement > SmartSlice.Cloud.targetMaximalDisplacement) {
-                                        labelDescriptionMaximumDisplacement.color = smartSlicePopupContents.errorColor
-                                        labelResultMaximalDisplacement.color = smartSlicePopupContents.errorColor
-                                        labelTargetMaximalDisplacement.color = smartSlicePopupContents.errorColor
-                                    } else {
-                                        labelDescriptionMaximumDisplacement.color = smartSlicePopupContents.successColor
-                                        labelResultMaximalDisplacement.color = smartSlicePopupContents.successColor
-                                        labelTargetMaximalDisplacement.color = smartSlicePopupContents.successColor
-                                    }
-
-                                    // Override if our optimization is done
-                                    if (SmartSlice.Cloud.sliceStatusEnum == 9) {
-                                        labelDescriptionMaximumDisplacement.color = smartSlicePopupContents.successColor
-                                        labelResultMaximalDisplacement.color = smartSlicePopupContents.successColor
-                                        labelTargetMaximalDisplacement.color = smartSlicePopupContents.successColor
-                                    }
-                                }
-
-                                Connections {
-                                    target: SmartSlice.Cloud
-                                    onSliceStatusEnumChanged: {
-                                        layoutRequirements.updateSafetyFactorColor()
-                                        layoutRequirements.updateMaximalDisplacementColor()
-                                    }
-                                }
-
                                 ColumnLayout {
                                     Layout.fillWidth: true
                                     spacing: UM.Theme.getSize("default_margin").height
@@ -260,14 +206,14 @@ Item {
                                         text: "Factor of Safety:"
 
                                         font: smartSlicePopupContents.description_font
-                                        color: smartSlicePopupContents.description_color
+                                        color: SmartSlice.Cloud.safetyFactorColor
                                     }
                                     Label {
                                         id: labelDescriptionMaximumDisplacement
                                         text: "Max Displacement:"
 
                                         font: smartSlicePopupContents.description_font
-                                        color: smartSlicePopupContents.description_color
+                                        color: SmartSlice.Cloud.maxDisplaceColor
                                     }
                                 }
                                 ColumnLayout {
@@ -287,13 +233,12 @@ Item {
 
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
-                                        color: smartSlicePopupContents.value_color
+                                        color: SmartSlice.Cloud.safetyFactorColor
 
                                         Connections {
                                             target: SmartSlice.Cloud
                                             onResultSafetyFactorChanged: {
                                                 labelResultSafetyFactor.text = parseFloat(Math.round(SmartSlice.Cloud.resultSafetyFactor * 1000) / 1000).toFixed(3)
-                                                layoutRequirements.updateSafetyFactorColor()
                                             }
                                         }
 
@@ -304,13 +249,12 @@ Item {
 
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
-                                        color: smartSlicePopupContents.value_color
+                                        color: SmartSlice.Cloud.maxDisplaceColor
 
                                         Connections {
                                             target: SmartSlice.Cloud
                                             onResultMaximalDisplacementChanged: {
                                                 labelResultMaximalDisplacement.text = parseFloat(Math.round(SmartSlice.Cloud.resultMaximalDisplacement * 1000) / 1000).toFixed(3)
-                                                layoutRequirements.updateMaximalDisplacementColor()
                                             }
                                         }
 
@@ -334,13 +278,12 @@ Item {
 
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
-                                        color: smartSlicePopupContents.value_color
+                                        color: SmartSlice.Cloud.safetyFactorColor
 
                                         Connections {
                                             target: SmartSlice.Cloud
                                             onTargetFactorOfSafetyChanged: {
                                                 labelTargetSafetyFactor.text = parseFloat(Math.round(SmartSlice.Cloud.targetFactorOfSafety * 1000) / 1000).toFixed(3)
-                                                layoutRequirements.updateSafetyFactorColor()
                                             }
                                         }
 
@@ -351,20 +294,18 @@ Item {
 
                                         Layout.alignment: Qt.AlignRight
                                         font: smartSlicePopupContents.value_font
-                                        color: smartSlicePopupContents.value_color
+                                        color: SmartSlice.Cloud.maxDisplaceColor
 
                                         Connections {
                                             target: SmartSlice.Cloud
                                             onTargetMaximalDisplacementChanged: {
                                                 labelTargetMaximalDisplacement.text = parseFloat(Math.round(SmartSlice.Cloud.targetMaximalDisplacement * 1000) / 1000).toFixed(3)
-                                                layoutRequirements.updateMaximalDisplacementColor()
                                             }
                                         }
 
                                         text: parseFloat(Math.round(SmartSlice.Cloud.targetMaximalDisplacement * 1000) / 1000).toFixed(3)
                                     }
                                 }
-
                             }
 
 
@@ -692,84 +633,6 @@ Item {
                     //  Show Validation Dialog
                     SmartSlice.Cloud.secondaryButtonClicked()
                 }
-            }
-        }
-    }
-
-    /*
-        CONFIRMATION PROMPTS
-    */
-    Rectangle {
-        id: smartSliceConfirm
-
-        width: UM.Theme.getSize("action_panel_widget").width
-        height: myColumn.height + 2 * UM.Theme.getSize("thick_margin").width
-
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
-
-        color: UM.Theme.getColor("main_background")
-        border.width: UM.Theme.getSize("default_lining").width
-        border.color: UM.Theme.getColor("lining")
-        radius: UM.Theme.getSize("default_radius").width
-
-        visible: SmartSlice.Cloud.confirmationWindowEnabled
-
-        Connections {
-            target: SmartSlice.Cloud
-            onConfirmationWindowEnabledChanged: { smartSliceConfirm.visible = SmartSlice.Cloud.confirmationWindowEnabled }
-            onConfirmationWindowTextChanged: { smartSliceConfirmText.text = SmartSlice.Cloud.confirmationWindowText }
-        }
-
-        Label {
-            id: smartSliceConfirmText
-            anchors.top: parent.top
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.topMargin: UM.Theme.getSize("thick_margin").width
-            text: SmartSlice.Cloud.confirmationWindowText
-        }
-        
-        Cura.PrimaryButton {
-            id: smartSliceConfirmContinue
-
-            anchors.bottom: parent.bottom
-            anchors.right: parent.right
-
-            anchors.bottomMargin: UM.Theme.getSize("thick_margin").height
-            anchors.rightMargin: UM.Theme.getSize("thick_margin").width
-
-            enabled: true
-            text: "Continue"
-
-            /*
-                Re-optimize Continue Button Click Event
-            */
-            onClicked: {
-                //  Show Validation Dialog
-                //  TODO: Generalize this reoptimize cancellation for validation as well
-                SmartSlice.Cloud.confirmationConfirmClicked()
-            }
-        }
-
-        Cura.SecondaryButton {
-            id: smartSliceConfirmCancel
-
-            anchors.right: smartSliceConfirmContinue.left
-            anchors.bottom: parent.bottom
-
-            anchors.rightMargin: UM.Theme.getSize("thick_margin").width
-            anchors.bottomMargin: UM.Theme.getSize("thick_margin").height
-
-            enabled: true
-            text: "Cancel"
-
-            /*
-                Re-optimize Cancel Button Click Event
-            */
-            onClicked: {
-                //  Show Validation Dialog
-                //  TODO: Generalize this reoptimize cancellation for validation as well
-                SmartSlice.Cloud.confirmationCancelClicked()
             }
         }
     }

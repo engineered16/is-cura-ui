@@ -140,7 +140,6 @@ Item {
             checked: SmartSlice.Cloud.loadDirection
             onCheckedChanged: {
 				SmartSlice.Cloud.loadDirection = checked;
-				UM.ActiveTool.triggerAction("_onSelectedFaceChanged");
 			}
         }
 
@@ -168,7 +167,12 @@ Item {
 
             onEditingFinished:
             {
-                SmartSlice.Cloud.loadMagnitude = text; // Will be converted from string to the target data type via SmartSliceVariables
+                SmartSlice.Cloud.loadMagnitude = SmartSlice.Cloud.bufferMagnitude; // Will be converted from string to the target data type via SmartSliceVariables
+            }
+            onTextChanged:
+            { 
+                SmartSlice.Cloud.bufferMagnitude = text;
+                SmartSlice.Cloud.settingEdited = true;
             }
 
             text: SmartSlice.Cloud.loadMagnitude
