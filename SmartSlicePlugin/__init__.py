@@ -1,9 +1,13 @@
 import os
 import sys
 
+from PyQt5.QtCore import QUrl
+from PyQt5.QtQml import qmlRegisterType
+
 from UM.i18n import i18nCatalog
 i18n_catalog = i18nCatalog("smartslice")
 from UM.Logger import Logger
+from UM.PluginRegistry import PluginRegistry
 
 from .utils import SystemUtils
 
@@ -19,7 +23,7 @@ import pywim
 
 from . import SmartSliceExtension, SmartSliceView
 from .requirements_tool import SmartSliceRequirements
-from .select_tool import SmartSliceSelectTool
+from .select_tool import SmartSliceSelectTool, BoundaryConditionList
 from .stage import SmartSliceStage
 
 extension = SmartSliceExtension.SmartSliceExtension()
@@ -61,6 +65,22 @@ def getMetaData():
 
 
 def register(app):
+    qmlRegisterType(
+        BoundaryConditionList.BoundaryConditionListModel,
+        "SmartSlice",
+        1, 0,
+        "BoundaryConditionListModel"
+    )
+
+    directory = os.path.dirname(os.path.abspath(__file__))
+
+    x = qmlRegisterType(
+        QUrl.fromLocalFile(os.path.join(directory, "select_tool", "BoundaryConditionList.qml")),
+        "SmartSlice",
+        1, 0,
+        "BoundaryConditionList"
+    )
+    
     return {
         "extension": extension,
         "stage": _stage,

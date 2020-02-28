@@ -29,7 +29,8 @@ Item {
     //width: childrenRect.width
     width: selectAnchorButton.width * 3 - 2*UM.Theme.getSize("default_margin").width
     //height: childrenRect.height
-    height: selectAnchorButton.height + UM.Theme.getSize("default_margin").width
+    //height: selectAnchorButton.height + UM.Theme.getSize("default_margin").width
+    height: selectAnchorButton.height + UM.Theme.getSize("default_margin").width + bcListAnchors.height
 
     UM.I18nCatalog {
         id: catalog;
@@ -56,10 +57,10 @@ Item {
 
         onClicked: {
             UM.ActiveTool.triggerAction("setAnchorSelection");
+            bcListAnchors.model.activate();
             selectAnchorButton.checked = true;
             selectLoadButton.checked = false;
         }
-        //checked: constraintsRoot.anchorActive
     }
 
     Button {
@@ -76,12 +77,36 @@ Item {
 
         onClicked: {
             UM.ActiveTool.triggerAction("setLoadSelection");
+            bcListForces.model.activate();
             selectAnchorButton.checked = false;
             selectLoadButton.checked = true;
         }
-        //checked: constraintsRoot.loadActive
     }
 
+    SmartSlice.BoundaryConditionList {
+        id: bcListAnchors
+        visible: selectAnchorButton.checked
+        addButtonText: "Add Anchor"
+        boundaryConditionType: 0
+
+        anchors.left: selectAnchorButton.left
+        anchors.top: selectAnchorButton.bottom
+    }
+
+    SmartSlice.BoundaryConditionList {
+        id: bcListForces
+        visible: selectLoadButton.checked
+        addButtonText: "Add Force"
+        boundaryConditionType: 1
+        
+        anchors.left: selectAnchorButton.left
+        anchors.top: selectAnchorButton.bottom
+
+        onSelectionChanged: {
+            checkboxLoadDialogFlipDirection.checked = model.loadDirection;
+            textLoadDialogMagnitude.text = model.loadMagnitude;
+        }
+    }
 
     Rectangle {
         id: applyLoadDialog
@@ -137,9 +162,11 @@ Item {
 
             text: "Flip Direction"
             
-            checked: SmartSlice.Cloud.loadDirection
+            //checked: SmartSlice.Cloud.loadDirection
+            checked: bcListForces.model.loadDirection
             onCheckedChanged: {
-				SmartSlice.Cloud.loadDirection = checked;
+                bcListForces.model.loadDirection = checked
+				//SmartSlice.Cloud.loadDirection = checked;
 				//UM.ActiveTool.triggerAction("_onSelectedFaceChanged");
 			}
         }
@@ -166,9 +193,10 @@ Item {
             anchors.left: parent.left
             anchors.leftMargin: UM.Theme.getSize("default_margin").width
 
-            onEditingFinished:
-            {
-                SmartSlice.Cloud.loadMagnitude = text; // Will be converted from string to the target data type via SmartSliceVariables
+            onTextChanged: {
+            //onEditingFinished: {
+                //SmartSlice.Cloud.loadMagnitude = text; // Will be converted from string to the target data type via SmartSliceVariables
+                bcListForces.model.loadMagnitude = text;
             }
 
             text: SmartSlice.Cloud.loadMagnitude

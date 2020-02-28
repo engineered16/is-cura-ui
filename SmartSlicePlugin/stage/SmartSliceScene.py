@@ -40,8 +40,8 @@ class Root(SceneNode):
 
         self._interactive_mesh = None
 
-        self.anchor_face = None # AnchorFace
-        self.load_face = None # LoadFace
+        #self.anchor_face = None # AnchorFace
+        #self.load_face = None # LoadFace
 
     def initialize(self, parent : SceneNode):
         parent.addChild(self)
@@ -56,17 +56,30 @@ class Root(SceneNode):
     def getInteractiveMesh(self) -> pywim.geom.tri.Mesh:
         return self._interactive_mesh
 
+    def getActiveSelectNode(self) -> 'HighlightFace':
+        for c in self.getChildren():
+            if c.getActiveSelect():
+                return c
+        return None
+
 class HighlightFace(SceneNode):
     def __init__(self, name : str):
         super().__init__(name=name, visible=True)
 
         self._triangles = []
+        self._active_select = False
 
     def _annotatedMeshData(self, mb : MeshBuilder):
         pass
 
     def getTriangleIndices(self) -> List[int]:
         return [t.id for t in self._triangles]
+
+    def getActiveSelect(self) -> bool:
+        return self._active_select
+
+    def setActiveSelect(self, active):
+        self._active_select = active
 
     def setMeshDataFromPywimTriangles(self, tris : List[pywim.geom.tri.Triangle]):
         self._triangles = tris

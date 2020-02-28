@@ -1,4 +1,5 @@
-#  Ultimaker Imports
+from typing import Any
+
 from UM.i18n import i18nCatalog
 
 from UM.Application import Application
@@ -49,7 +50,8 @@ class SmartSliceSelectTool(Tool):
 
         Selection.selectedFaceChanged.connect(self._onSelectedFaceChanged)
 
-        self._load_face = None
+        #self._load_face = None
+        self._bc_list = None
 
         self._controller.activeToolChanged.connect(self._onActiveStateChanged)
 
@@ -61,6 +63,9 @@ class SmartSliceSelectTool(Tool):
     #   \param event type(Event)
     def event(self, event):
         return super().event(event)
+
+    def setActiveBoundaryConditionList(self, bc_list):
+        self._bc_list = bc_list
 
     def _onSelectionChanged(self):
         super()._onSelectionChanged()
@@ -88,33 +93,29 @@ class SmartSliceSelectTool(Tool):
 
         smart_slice_node = findChildSceneNode(node, SmartSliceScene.Root)
 
+        if self._bc_list is None:
+            return
+
+        bc_node = self._bc_list.getActiveNode()
+
+        if bc_node is None:
+            return
+
         tris = list(smart_slice_node.getInteractiveMesh().select_planar_face(face_id))
 
-        if self._mode == SelectionMode.AnchorMode:
-            if smart_slice_node.anchor_face is None:
-                smart_slice_node.anchor_face = SmartSliceScene.AnchorFace('AnchorFace0')
-                smart_slice_node.addChild(smart_slice_node.anchor_face)
-            face = smart_slice_node.anchor_face
-        else:
-            if smart_slice_node.load_face is None:
-                smart_slice_node.load_face = SmartSliceScene.LoadFace('LoadFace0')
-                smart_slice_node.load_face.force.magnitude = self._connector._proxy.reqsLoadMagnitude
-                smart_slice_node.addChild(smart_slice_node.load_face)
-            face = smart_slice_node.load_face
-
-            self._load_face = face
-
-        face.setMeshDataFromPywimTriangles(tris)
+        bc_node.setMeshDataFromPywimTriangles(tris)
 
         self._connector.propertyHandler.selectedFaceChanged(tris, self._mode)
 
     def _onLoadDirectionChanged(self):
-        if self._load_face:
-            self._load_face.setArrowDirection(self._connector._proxy.loadDirection)
+        raise Exception('Shouldn\'t be hitting this function any more - TODO remove')
+        if isinstance(bc_node, SmartSliceScene.LoadFace):
+            bc_node.setArrowDirection(self._connector._proxy.loadDirection)
 
     def _onLoadMagnitudeChanged(self):
-        if self._load_face:
-            self._load_face.force.magnitude = self._connector._proxy.loadMagnitude
+        raise Exception('Shouldn\'t be hitting this function any more - TODO remove')
+        if isinstance(bc_node, SmartSliceScene.LoadFace):
+            bc_node.force.magnitude = self._connector._proxy.loadMagnitude
 
     def _onActiveStateChanged(self):
         controller = Application.getInstance().getController()
