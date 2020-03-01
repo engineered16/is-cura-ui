@@ -159,6 +159,10 @@ class SmartSliceStage(CuraStage):
             self._connector.propertyHandler.cacheChanges()
             self._connector.propertyHandler._initialized = True
 
+        self._connector.updateSliceWidget()
+
+        
+
     #   onStageDeselected:
     #       Sets attributes that allow the Smart Slice Stage to properly deactivate
     #       This occurs before the next Cura Stage is activated

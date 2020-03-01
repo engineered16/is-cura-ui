@@ -98,7 +98,7 @@ Item {
         visible: selectLoadButton.checked
         addButtonText: "Add Force"
         boundaryConditionType: 1
-        
+
         anchors.left: selectAnchorButton.left
         anchors.top: selectAnchorButton.bottom
 
@@ -161,7 +161,7 @@ Item {
             anchors.leftMargin: UM.Theme.getSize("default_margin").width
 
             text: "Flip Direction"
-            
+
             //checked: SmartSlice.Cloud.loadDirection
             checked: bcListForces.model.loadDirection
             onCheckedChanged: {
@@ -193,9 +193,15 @@ Item {
             anchors.left: parent.left
             anchors.leftMargin: UM.Theme.getSize("default_margin").width
 
-            onTextChanged: {
-            //onEditingFinished: {
-                //SmartSlice.Cloud.loadMagnitude = text; // Will be converted from string to the target data type via SmartSliceVariables
+            onEditingFinished:
+            {
+                SmartSlice.Cloud.loadMagnitude = SmartSlice.Cloud.bufferMagnitude; // Will be converted from string to the target data type via SmartSliceVariables
+            }
+
+            onTextChanged:
+            {
+                SmartSlice.Cloud.bufferMagnitude = text;
+                SmartSlice.Cloud.settingEdited = true;
                 bcListForces.model.loadMagnitude = text;
             }
 

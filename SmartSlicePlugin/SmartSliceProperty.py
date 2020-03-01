@@ -29,14 +29,12 @@ class SmartSliceProperty(Enum):
     # Global Props
       GlobalProperty   = 1000
       ExtruderProperty = 1001
-    
 
 class SmartSliceLoadDirection(Enum):
     Pull = 1
     Push = 2
 
-
-'''  
+'''
     Cura Property Keys that Explicitly affect SmartSlice results
 
     For list of settings that affect validation/optimization see:
@@ -49,12 +47,12 @@ class SmartSliceLoadDirection(Enum):
 class SmartSliceContainerProperties():
     def __init__(self):
         #  Global Settings
-        self.global_keys = {"layer_height",                 #   Layer Height 
+        self.global_keys = ["layer_height",                 #   Layer Height
                             "layer_height_0",               #   Initial Layer Height
-                            "quality"}                      #   Quality Profile
+                            "quality"]                      #   Quality Profile
 
         #  Per Extruder Settings
-        self.extruder_keys = {"line_width",                 #  Line Width 
+        self.extruder_keys = ["line_width",                 #  Line Width
                               "wall_line_width",            #  Wall Line Width
                               "wall_line_width_x",          #  Outer Wall Line Width
                               "wall_line_width_0",          #  Inner Wall Line Width
@@ -68,8 +66,15 @@ class SmartSliceContainerProperties():
                               "infill_angles",              #  Infill Angles
                               "infill_line_distance",       #  Infill Line Distance
                               "infill_sparse_thickness",    #  Infill Line Width
-                              "alternate_extra_perimeter"}  #  Alternate Extra Walls
+                              "alternate_extra_perimeter"]  #  Alternate Extra Walls
 
 class SelectionMode:
     AnchorMode = 1
     LoadMode = 2
+
+class SmartSlicePropertyColor():
+    SubheaderColor = "#A9A9A9"
+    WarningColor = "#F3BA1A"
+    ErrorColor = "#F15F63"
+    SuccessColor = "#5DBA47"
+

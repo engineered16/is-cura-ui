@@ -12,7 +12,7 @@ def makeInteractiveMesh(mesh_data : MeshData) -> 'pywim.geom.tri.Mesh':
 
     for i in range(mesh_data.getVertexCount()):
         int_mesh.add_vertex(i, verts[i][0], verts[i][1], verts[i][2])
-    
+
     faces = mesh_data.getIndices()
 
     if faces is not None:
@@ -30,7 +30,9 @@ def makeInteractiveMesh(mesh_data : MeshData) -> 'pywim.geom.tri.Mesh':
 
             int_mesh.add_triangle(i // 3, v1, v2, v3)
 
-    int_mesh.analyze_mesh()
+    # Cura keeps around degenerate triangles, so we need to as well
+    # so we don't end up with a mismatch in triangle ids
+    int_mesh.analyze_mesh(remove_degenerate_triangles=False)
 
     return int_mesh
 

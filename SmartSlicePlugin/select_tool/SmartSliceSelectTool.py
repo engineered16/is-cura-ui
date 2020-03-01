@@ -55,8 +55,8 @@ class SmartSliceSelectTool(Tool):
 
         self._controller.activeToolChanged.connect(self._onActiveStateChanged)
 
-        self._connector._proxy.loadDirectionChanged.connect(self._onLoadDirectionChanged)
-        self._connector._proxy.loadMagnitudeChanged.connect(self._onLoadMagnitudeChanged)
+        #self._connector._proxy.loadDirectionChanged.connect(self._onLoadDirectionChanged)
+        #self._connector._proxy.loadMagnitudeChanged.connect(self._onLoadMagnitudeChanged)
 
     ##  Handle mouse and keyboard events
     #
@@ -105,7 +105,22 @@ class SmartSliceSelectTool(Tool):
 
         bc_node.setMeshDataFromPywimTriangles(tris)
 
-        self._connector.propertyHandler.selectedFaceChanged(tris, self._mode)
+        # TODO what to notify on selected face changed?
+        #self._connector.propertyHandler.onSelectedFaceChanged(node, face_id)
+        #self.setFaceVisible(scene_node, face_id)
+
+    def setFaceVisible(self, scene_node, face_id):
+        ph = self._handle._connector.propertyHandler
+
+        if self.getAnchorSelectionActive():
+            self._handle._arrow = False
+            self._anchor_face = (ph._anchoredNode, ph._anchoredID)
+            self._handle.setFace(ph._anchoredTris)
+
+        else:
+            self._handle._arrow = True
+            self._load_face = (ph._loadedNode, ph._loadedID)
+            self._handle.setFace(ph._loadedTris)
 
     def _onLoadDirectionChanged(self):
         raise Exception('Shouldn\'t be hitting this function any more - TODO remove')
