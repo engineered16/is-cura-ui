@@ -61,7 +61,6 @@ class SmartSlicePropertyHandler(QObject):
         #  General Purpose Cache Space
         self._propertiesChanged  = []
         self._changedValues      = []
-        self._hasChanges = False
         self._global_cache = {}
         self._extruder_cache = {}
         #  General Purpose properties which affect Smart Slice
@@ -69,18 +68,13 @@ class SmartSlicePropertyHandler(QObject):
 
         #  Mesh Properties
         self.meshScale = None
-        self._newScale = None
         self.meshRotation = None
-        self._newRotation = None
         #  Scene (for mesh/transform signals)
         self._sceneNode = None
         self._sceneRoot = Application.getInstance().getController().getScene().getRoot()
 
         #  Selection Proeprties
         self._selection_mode = 1 # Default to AnchorMode
-        self._changedMesh = None
-        self._changedFaces = None
-        self._changedForce = None
         self._anchoredID = None
         self._anchoredNode = None
         self._anchoredTris = None
@@ -101,13 +95,9 @@ class SmartSlicePropertyHandler(QObject):
         self._cancelChanges = False
 
         #  Temporary Cache
-        self._cachedScene = None
         self._cachedModMesh = None
         self.hasModMesh = False
-        self.removeModMesh = False
         self._positionModMesh = None
-        self._cachedFaceID = None
-        self._cachedTriangles = None
         self._addProperties = True
 
         #  Attune to Scale/Rotate Operations
@@ -151,12 +141,9 @@ class SmartSlicePropertyHandler(QObject):
                 self._global_cache[key] = self._globalStack.getProperty(key, "value")
 
         #  Clear Properties Changed of Global Settings
-        _props = 0
-        for prop in self._propertiesChanged:
-            if prop is SmartSliceProperty.GlobalProperty:
-                _props += 1
-        for i in range(_props):
-            self._propertiesChanged.remove(SmartSliceProperty.GlobalProperty)
+        self._propertiesChanged = [
+            p for p in self._propertiesChanged if p != SmartSliceProperty.GlobalProperty
+        ]
             
     """
       cacheExtruder()
@@ -172,12 +159,9 @@ class SmartSlicePropertyHandler(QObject):
                 self._extruder_cache[key] = self._activeExtruder.getProperty(key, "value")
 
         #  Clear Properties Changed of Extruder Settings
-        _props = 0
-        for prop in self._propertiesChanged:
-            if prop is SmartSliceProperty.ExtruderProperty:
-                _props += 1
-        for i in range(_props):
-            self._propertiesChanged.remove(SmartSliceProperty.ExtruderProperty)
+        self._propertiesChanged = [
+            p for p in self._propertiesChanged if p != SmartSliceProperty.ExtruderProperty
+        ]
 
     """
       cacheSmartSlice()
@@ -240,41 +224,36 @@ class SmartSlicePropertyHandler(QObject):
         self.proxy.setFactorOfSafety()
         self.proxy.setMaximalDisplacement()
 
-        if self._cachedFaceID is not None:
-            self.applyAnchorOrLoad(self._cachedTriangles)
-            self._cachedFaceID = None
-
     """
       restoreCache()
         Restores all cached values for properties upon user cancellation
     """
     def restoreCache(self):
-        self._addProperties = False
         # Restore/Clear Global Property Changes
         for property in self._container_properties.global_keys:
             if self._global_cache[property] != self._globalStack.getProperty(property, "value"):
-                self._globalStack.setProperty(property, "value", self._global_cache[property])
+                self._globalStack.setProperty(property, "value", self._global_cache[property], set_from_cache=True)
         for property in self._container_properties.global_keys:
-            self._globalStack.setProperty(property, "state", InstanceState.Default)
-        _props = 0
-        for prop in self._propertiesChanged:
-            if prop is SmartSliceProperty.GlobalProperty:
-                _props += 1
-        for i in range(_props):
-            self._propertiesChanged.remove(SmartSliceProperty.GlobalProperty)
+            self._globalStack.setProperty(property, "state", InstanceState.Default, set_from_cache=True)
+
+        self._propertiesChanged = [
+            p for p in self._propertiesChanged if p != SmartSliceProperty.GlobalProperty
+        ]
 
         #  Restore/Clear Extruder Property Changes
         for property in self._container_properties.extruder_keys:
             if self._extruder_cache[property] != self._activeExtruder.getProperty(property, "value"):
-                self._activeExtruder.setProperty(property, "value", self._extruder_cache[property])
+                self._activeExtruder.setProperty(property, "value", self._extruder_cache[property], set_from_cache=True)
         for property in self._container_properties.extruder_keys:
-            self._activeExtruder.setProperty(property, "state", InstanceState.Default)
-        _props = 0
-        for prop in self._propertiesChanged:
-            if prop is SmartSliceProperty.ExtruderProperty:
-                _props += 1
-        for i in range(_props):
-            self._propertiesChanged.remove(SmartSliceProperty.ExtruderProperty)
+            self._activeExtruder.setProperty(property, "state", InstanceState.Default, set_from_cache=True)
+
+        self._propertiesChanged = [
+            p for p in self._propertiesChanged if p != SmartSliceProperty.ExtruderProperty
+        ]
+
+        self._addProperties = False
+        self._activeMachineManager.forceUpdateAllSettings()
+        self._addProperties = True
 
         #  Restore/Clear SmartSlice Property Changes
         _props = 0
@@ -584,10 +563,11 @@ class SmartSlicePropertyHandler(QObject):
     def _onCancelChanges(self):
         Logger.log ("d", "Cancelling Change in Smart Slice Environment")
         self._cancelChanges = True
-        x = threading.Thread(target=self._resetCancelCheck)
-        x.start()
+        #t = threading.Thread(target=self._resetCancelCheck)
+        #t.start()
         self.restoreCache()
         self.prepareCache()
+        self._cancelChanges = False
         Logger.log ("d", "Cancelled Change in Smart Slice Environment")
 
     """
@@ -624,8 +604,6 @@ class SmartSlicePropertyHandler(QObject):
 
     # On EXTRUDER Property Changed
     def _onExtruderPropertyChanged(self, key: str, property_name: str):
-        print ("Check")
-
         if key not in self._container_properties.extruder_keys:
             return
         elif self._activeExtruder.getProperty(key, property_name) == self._extruder_cache[key]:
