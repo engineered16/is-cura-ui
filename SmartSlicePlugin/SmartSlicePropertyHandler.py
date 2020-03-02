@@ -260,7 +260,6 @@ class SmartSlicePropertyHandler(QObject):
         for prop in self._propertiesChanged:
             Logger.log ("d", "Property Found: " + str(prop))
             _props += 1
-            self._lastCancel = prop
             if prop is SmartSliceProperty.MaxDisplacement:
                 self.proxy.setMaximalDisplacement()
             elif prop is SmartSliceProperty.FactorOfSafety:
