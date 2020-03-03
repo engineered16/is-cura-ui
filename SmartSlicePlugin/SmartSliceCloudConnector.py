@@ -686,7 +686,7 @@ class SmartSliceCloudConnector(QObject):
                                 Pushes to OPTIMIZE when the change is a requirement, e.g. Safety Factor/Maximum Displacement
                                 Pushes to VALIDATE otherwise
     """
-    def showConfirmDialog(self):
+    def showConfirmDialog(self, scene_node=None):
         validationMsg = "Modifying this setting will invalidate your results.\nDo you want to continue and lose the current\n validation results?"
         optimizationMsg = "Modifying this setting will invalidate your results.\nDo you want to continue and lose your \noptimization results?"
 
@@ -967,6 +967,17 @@ class SmartSliceCloudConnector(QObject):
             pass
 
     def _onJobFinished(self, job):
+        error = self._jobs[self._current_job].getError()
+
+        if error:
+            self.prepareValidation()
+            Logger.logException("e", str(error))
+            Message(
+                title='Smart Slice job unexpectedly failed',
+                text=str(error)
+            ).show()
+            return
+
         if self._jobs[self._current_job] is None:
             Logger.log("d", "Smart Slice Job was Cancelled")
         elif not self._jobs[self._current_job].canceled:
