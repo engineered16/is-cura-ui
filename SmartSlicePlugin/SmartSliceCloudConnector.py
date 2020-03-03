@@ -58,6 +58,7 @@ from cura.Settings.ExtruderManager import ExtruderManager
 from cura.Scene.BuildPlateDecorator import BuildPlateDecorator
 from cura.Scene.CuraSceneNode import CuraSceneNode
 from cura.Scene.SliceableObjectDecorator import SliceableObjectDecorator
+from cura.Settings.ExtruderStack import ExtruderStack
 from cura.UI.PrintInformation import PrintInformation
 
 # Our extension
@@ -313,16 +314,17 @@ class SmartSliceCloudJob(Job):
         # self.job_type == pywim.smartslice.job.JobType.optimization
         if task and task.result and len(task.result.analyses) > 0:
             analysis = task.result.analyses[0]
-            self._process_analysis_result(analysis)
+            optimized = previous_connector_status in SmartSliceCloudStatus.Optimizable
+            self._process_analysis_result(analysis, optimized)
 
             # Overriding if our result is going to be optimized...
-            if previous_connector_status in SmartSliceCloudStatus.Optimizable:
+            if optimized:
                 self.connector.status = SmartSliceCloudStatus.Optimized
                 self.connector.previous_connector_status = self.connector.status
             else:
                 self.connector.prepareOptimization()
         else:            
-            if self.connector.status is not SmartSliceCloudStatus.ReadyToVerify:
+            if self.connector.status != SmartSliceCloudStatus.ReadyToVerify:
                 self.connector.status = previous_connector_status
                 self.connector.prepareOptimization() # Double Check Requirements
             Message(
@@ -332,13 +334,33 @@ class SmartSliceCloudJob(Job):
 
         self.connector.propertyHandler.prepareCache()
 
-    def _process_analysis_result(self, analysis : pywim.smartslice.result.Analysis):
-        #Logger.log("d", "analysis: {}".format(analysis.to_json()))
-        #Logger.log("d", "analysis.modifier_meshes: {}".format(analysis.modifier_meshes))
-
-        # MODIFIER MESHES STUFF
+    def _process_analysis_result(self, analysis : pywim.smartslice.result.Analysis, optimized : bool):
         # TODO: We need a per node solution here as soon as we want to analysis multiple models.
         our_only_node =  self.connector.getSliceableNodes()[0]
+
+        active_extruder = self.connector.getNodeActiveExtruder(our_only_node)
+
+        if optimized and active_extruder:
+            # TODO - Move this into a common class or function to apply an am.Config to GlobalStack/ExtruderStack
+            if analysis.print_config.infill:
+                infill_density = analysis.print_config.infill.density
+                infill_pattern = analysis.print_config.infill.pattern
+
+                if infill_pattern is None or infill_pattern == pywim.am.InfillType.unknown:
+                    infill_pattern = pywim.am.InfillType.grid
+
+                infill_pattern_name = infill_pattern.name
+
+                # Account for difference in reference to triangle pattern between pywim and Cura
+                if infill_pattern_name == 'triangle':
+                    infill_pattern_name = 'triangles'
+
+                if infill_density:
+                    Logger.debug("Update extruder infill density to {}".format(infill_density))
+                    active_extruder.setProperty("infill_sparse_density", "value", infill_density)
+                    active_extruder.setProperty("infill_pattern", "value", infill_pattern_name)
+
+        # MODIFIER MESHES STUFF
         #our_only_node_stack = our_only_node.callDecoration("getStack")
         for modifier_mesh in analysis.modifier_meshes:
             # Building the scene node
@@ -576,6 +598,26 @@ class SmartSliceCloudConnector(QObject):
 
     def getProxy(self, engine, script_engine):
         return self._proxy
+
+    def getNodeActiveExtruder(self, node : SceneNode) -> ExtruderStack:
+        active_extruder_position = node.callDecoration("getActiveExtruderPosition")
+        if active_extruder_position is None:
+            active_extruder_position = 0
+        else:
+            active_extruder_position = int(active_extruder_position)
+
+        # Only use the extruder that is active on our mesh_node
+        # The back end only supports a single extruder, currently.
+        # Ignore any extruder that is not the active extruder.
+        machine_extruders = list(filter(
+            lambda extruder: extruder.position == active_extruder_position,
+            self.active_machine.extruderList
+        ))
+
+        if len(machine_extruders) > 0:
+            return machine_extruders[0]
+
+        return None
 
     def _onEngineCreated(self):
         qmlRegisterSingletonType(SmartSliceCloudProxy,
@@ -1073,26 +1115,13 @@ class SmartSliceCloudConnector(QObject):
         #       The lines below will partly need to be executed as "for model in models: bla bla.."
         mesh_node = mesh_nodes[0]
 
-        active_extruder_position = mesh_node.callDecoration("getActiveExtruderPosition")
-        if active_extruder_position is None:
-            active_extruder_position = 0
-        else:
-            active_extruder_position = int(active_extruder_position)
-
         # Only use the extruder that is active on our mesh_node
         # The back end only supports a single extruder, currently.
         # Ignore any extruder that is not the active extruder.
-        machine_extruders = list(filter(
-            lambda extruder: extruder.position == active_extruder_position,
-            self.active_machine.extruderList
-        ))
-
-        material_guids_per_extruder = []
-        for extruder in machine_extruders:
-            material_guids_per_extruder.append(extruder.material.getMetaData().get("GUID", ""))
+        machine_extruder = self.getNodeActiveExtruder(mesh_node)
 
         # TODO: Needs to be determined from the used model
-        guid = material_guids_per_extruder[active_extruder_position]
+        guid = machine_extruder.material.getMetaData().get("GUID", "")
 
         # Determine material properties from material database
         this_dir = os.path.split(__file__)[0]
@@ -1237,7 +1266,7 @@ class SmartSliceCloudConnector(QObject):
         # Setup the slicer configuration. See each class for more
         # information.
         extruders = ()
-        for extruder_stack in machine_extruders:
+        for extruder_stack in [machine_extruder]:
             extruder_nr = extruder_stack.getProperty("extruder_nr", "value")
             extruder_object = pywim.chop.machine.Extruder(diameter=extruder_stack.getProperty("machine_nozzle_size",
                                                                                      "value"))
@@ -1257,7 +1286,7 @@ class SmartSliceCloudConnector(QObject):
             job.extruders.append(extruder_materials)
 
         if len(extruders) == 0:
-            Logger.error("Did not find the extruder with position %i", active_extruder_position)
+            Logger.error("Did not find the extruder with position %i", machine_extruder.position)
 
         printer = pywim.chop.machine.Printer(name=self.active_machine.getName(),
                                              extruders=extruders

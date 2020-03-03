@@ -250,5 +250,5 @@ class SmartSliceStage(CuraStage):
     def _checkScene(self):
         active_stage = CuraApplication.getInstance().getController().getActiveStage()
 
-        if active_stage.getPluginId() == "SmartSlicePlugin":
+        if active_stage and active_stage.getPluginId() == "SmartSlicePlugin":
             self._exit_stage_if_scene_is_invalid()
