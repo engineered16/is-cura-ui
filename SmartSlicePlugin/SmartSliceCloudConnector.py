@@ -513,14 +513,20 @@ class Force: # TODO - Move this or replace
         self.magnitude = magnitude
         self.pull = pull
 
-    def loadVector(self) -> Vector:
+    def loadVector(self, rotation : Matrix = None) -> Vector:
         scale = self.magnitude if self.pull else -self.magnitude
 
-        return Vector(
+        v = Vector(
             self.normal.x * scale,
             self.normal.y * scale,
             self.normal.z * scale,
         )
+
+        if rotation:
+            vT = numpy.dot(rotation.getData(), v.getData())
+            return Vector(vT[0], vT[1], vT[2])
+
+        return v
 
 class SmartSliceCloudConnector(QObject):
     http_protocol_preference = "smartslice/http_protocol"
@@ -1221,16 +1227,28 @@ class SmartSliceCloudConnector(QObject):
 
         # Add any other boundary conditions in a similar manner...
 
+        # Copied from Cura/plugins/3MFWriter/ThreeMFWriter.py
+        # The print coordinate system is different than what Cura uses internally (Y and Z flipped)
+        # so we need to transform the mesh transformation matrix
+        cura_to_print = Matrix()
+        cura_to_print._data[1, 1] = 0
+        cura_to_print._data[1, 2] = -1
+        cura_to_print._data[2, 1] = 1
+        cura_to_print._data[2, 2] = 0
+
+        mesh_transformation = mesh_node.getLocalTransformation()
+        mesh_transformation.preMultiply(cura_to_print)
+
+        # Decompose the transformation matrix but only pick out the rotation component
+        _, mesh_rotation, _, _ = mesh_transformation.decompose()
+
+        applied_load_vec = self.getForce0VectorPoc(mesh_rotation)
+
+        Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(applied_load_vec))
+
         # Create an applied force
         force1 = pywim.chop.model.Force(name='force1')
-
-        # Set the components on the force vector. In this example
-        # we have 100 N, 200 N, and 50 N in the x, y, and z
-        # directions respectfully.
-        Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(self.getForce0VectorPoc()))
-        force1.force.set(
-            self.getForce0VectorPoc()
-        )
+        force1.force.set(applied_load_vec)
 
         # Add the face Ids from the STL mesh that the user selected for
         # this force
@@ -1358,8 +1376,8 @@ class SmartSliceCloudConnector(QObject):
             pull=self._proxy.reqsLoadDirection
         )
 
-    def getForce0VectorPoc(self):
-        vec = self._poc_force.loadVector()
+    def getForce0VectorPoc(self, rotation : Matrix = None):
+        vec = self._poc_force.loadVector(rotation=rotation)
         return [
             float(vec.x),
             float(vec.y),
