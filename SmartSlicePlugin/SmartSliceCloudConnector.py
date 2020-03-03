@@ -314,9 +314,9 @@ class SmartSliceCloudJob(Job):
 
         try:
             job = self.prepareJob(self.job_type)
-            Logger.info("Smart Slice job prepared: {}".format(job))
+            Logger.log("i", "Smart Slice job prepared: {}".format(job))
         except SmartSliceCloudJob.JobException as exc:
-            Logger.warning("Smart Slice job cannot be prepared: {}".format(exc.problem))
+            Logger.log("w", "Smart Slice job cannot be prepared: {}".format(exc.problem))
 
             self.connector.status = previous_connector_status
 
@@ -332,7 +332,7 @@ class SmartSliceCloudJob(Job):
         try:
             os.remove(job)
         except:
-            Logger.warning("Unable to remove temporary 3MF {}".format(job))
+            Logger.log("w", "Unable to remove temporary 3MF {}".format(job))
 
         # self.job_type == pywim.smartslice.job.JobType.optimization
         if task and task.result and len(task.result.analyses) > 0:
@@ -375,7 +375,7 @@ class SmartSliceCloudJob(Job):
                 infill_pattern_name = self.connector.infill_pattern_pywim_to_cura_dict[infill_pattern]
 
                 if infill_density:
-                    Logger.debug("Update extruder infill density to {}".format(infill_density))
+                    Logger.log("d", "Update extruder infill density to {}".format(infill_density))
                     active_extruder.setProperty("infill_sparse_density", "value", infill_density, set_from_cache=True)
                     active_extruder.setProperty("infill_pattern", "value", infill_pattern_name, set_from_cache=True)
                     Application.getInstance().getMachineManager().forceUpdateAllSettings()
@@ -1311,7 +1311,7 @@ class SmartSliceCloudConnector(QObject):
             job.extruders.append(extruder_materials)
 
         if len(extruders) == 0:
-            Logger.error("Did not find the extruder with position %i", machine_extruder.position)
+            Logger.log("e", "Did not find the extruder with position %i", machine_extruder.position)
 
         printer = pywim.chop.machine.Printer(name=self.active_machine.getName(),
                                              extruders=extruders
