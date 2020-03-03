@@ -140,6 +140,11 @@ class SmartSliceCloudJob(Job):
     # This job is responsible for uploading the backup file to cloud storage.
     # As it can take longer than some other tasks, we schedule this using a Cura Job.
 
+    class JobException(Exception):
+        def __init__(self, problem : str):
+            super().__init__(problem)
+            self.problem = problem
+
     def __init__(self, connector) -> None:
         super().__init__()
         self.connector = connector
@@ -307,8 +312,21 @@ class SmartSliceCloudJob(Job):
         self.connector.status = self.ui_status_per_job_type[self.job_type]
         Job.yieldThread()  # Should allow the UI to update earlier
 
-        job = self.prepareJob(self.job_type)
-        Logger.log("i", "Job prepared: {}".format(job))
+        try:
+            job = self.prepareJob(self.job_type)
+            Logger.info("Smart Slice job prepared: {}".format(job))
+        except SmartSliceCloudJob.JobException as exc:
+            Logger.warning("Smart Slice job cannot be prepared: {}".format(exc.problem))
+
+            self.connector.status = previous_connector_status
+
+            Message(
+                title='Smart Slice',
+                text=i18n_catalog.i18nc("@info:status", exc.problem)
+            ).show()
+
+            return
+
         task = self.processCloudJob(job)
 
         try:
@@ -328,7 +346,7 @@ class SmartSliceCloudJob(Job):
                 self.connector.previous_connector_status = self.connector.status
             else:
                 self.connector.prepareOptimization()
-        else:            
+        else:
             if self.connector.status != SmartSliceCloudStatus.ReadyToVerify:
                 self.connector.status = previous_connector_status
                 self.connector.prepareOptimization() # Double Check Requirements
@@ -354,11 +372,7 @@ class SmartSliceCloudJob(Job):
                 if infill_pattern is None or infill_pattern == pywim.am.InfillType.unknown:
                     infill_pattern = pywim.am.InfillType.grid
 
-                infill_pattern_name = infill_pattern.name
-
-                # Account for difference in reference to triangle pattern between pywim and Cura
-                if infill_pattern_name == 'triangle':
-                    infill_pattern_name = 'triangles'
+                infill_pattern_name = self.connector.infill_pattern_pywim_to_cura_dict[infill_pattern]
 
                 if infill_density:
                     Logger.debug("Update extruder infill density to {}".format(infill_density))
@@ -490,7 +504,7 @@ class SmartSliceCloudOptimizeJob(SmartSliceCloudVerificationJob):
         super().__init__(connector)
 
         self.job_type = pywim.smartslice.job.JobType.optimization
-        
+
 
 
 class Force: # TODO - Move this or replace
@@ -527,10 +541,11 @@ class SmartSliceCloudConnector(QObject):
         self._jobs = {}
         self._current_job = 0
         self._jobs[self._current_job] = None
-        self.infill_pattern_cura_to_pywim_dict = {"grid": pywim.am.InfillType.grid,
-                                                  "triangles": pywim.am.InfillType.triangle,
-                                                  "cubic": pywim.am.InfillType.cubic
-                                                  }
+        self.infill_pattern_cura_to_pywim_dict = {
+            "grid": pywim.am.InfillType.grid,
+            "triangles": pywim.am.InfillType.triangle,
+            #"cubic": pywim.am.InfillType.cubic
+        }
         self.infill_pattern_pywim_to_cura_dict = {value: key for key, value in self.infill_pattern_cura_to_pywim_dict.items()}
 
         # Proxy
@@ -656,8 +671,7 @@ class SmartSliceCloudConnector(QObject):
                                                                  ""  # description
                                                                  )
             self.debug_save_smartslice_package_message.actionTriggered.connect(self._onSaveDebugPackage)
-            self.debug_save_smartslice_package_message.show()            
-        
+            self.debug_save_smartslice_package_message.show()
 
     """
       showConfirmDialog()
@@ -684,14 +698,14 @@ class SmartSliceCloudConnector(QObject):
                 self._confirmDialog.append(Message(title="Lose Validation Results?",
                                   text=validationMsg,
                                   lifetime=0,))
-                                  
+
                 self._confirmDialog[index].addAction("cancel",# action_id
                                                      i18n_catalog.i18nc("@action",
                                                                         "Cancel"
                                                                         ), # name
                                                      "", #icon
                                                      "", #description
-                                                     button_style=Message.ActionButtonStyle.SECONDARY 
+                                                     button_style=Message.ActionButtonStyle.SECONDARY
                                                      )
                 self._confirmDialog[index].addAction("continue",# action_id
                                                      i18n_catalog.i18nc("@action",
@@ -703,20 +717,20 @@ class SmartSliceCloudConnector(QObject):
                 self._confirmDialog[index].actionTriggered.connect(self.onConfirmAction_Validate)
                 if index == 0:
                     self._confirmDialog[index].show()
-                
+
             elif self.status is SmartSliceCloudStatus.BusyOptimizing or (self.status is SmartSliceCloudStatus.Optimized):
                 index = len(self._confirmDialog)
                 self._confirmDialog.append(Message(title="Lose Optimization Results?",
                                   text=optimizationMsg,
                                   lifetime=0,))
-                                  
+
                 self._confirmDialog[index].addAction("cancel",# action_id
                                                      i18n_catalog.i18nc("@action",
                                                                         "Cancel"
                                                                         ), # name
                                                      "", #icon
                                                      "", #description
-                                                     button_style=Message.ActionButtonStyle.SECONDARY 
+                                                     button_style=Message.ActionButtonStyle.SECONDARY
                                                      )
                 self._confirmDialog[index].addAction("continue",# action_id
                                                      i18n_catalog.i18nc("@action",
@@ -731,7 +745,7 @@ class SmartSliceCloudConnector(QObject):
 
     """
       hideMessage()
-        When settings are cached/reverted, numerous other dialogs are often 
+        When settings are cached/reverted, numerous other dialogs are often
           raised by Cura, indicating a global/extruder property has been changed.
         hideMessage() silences the initial dialog and prepares for the next
           change by clearing the current list of dialogs
@@ -975,7 +989,7 @@ class SmartSliceCloudConnector(QObject):
         #  Make sure a property has actually changed before prompting
         if len(self.propertyHandler._propertiesChanged) > 0:
             self.showConfirmDialog()
-    
+
     '''
       continueChanges()
         * Confirm change to Parameter/Setting
@@ -1244,11 +1258,14 @@ class SmartSliceCloudConnector(QObject):
 
         # infill pattern - Cura vs. pywim
         infill_pattern = self.propertyHandler.getExtruderProperty("infill_pattern")
-        if infill_pattern in self.infill_pattern_cura_to_pywim_dict.keys():
-            print_config.infill.pattern = self.infill_pattern_cura_to_pywim_dict[infill_pattern]
-        else:
-            print_config.infill.pattern = pywim.am.InfillType.unknown
 
+        if infill_pattern not in self.infill_pattern_cura_to_pywim_dict.keys():
+            raise SmartSliceCloudJob.JobException(
+                "Smart Slice does not support the infill pattern: {}\n".format(infill_pattern) +
+                "Supported infill patterns are: {}".format(', '.join(self.infill_pattern_cura_to_pywim_dict.keys()))
+            )
+
+        print_config.infill.pattern = self.infill_pattern_cura_to_pywim_dict[infill_pattern]
         print_config.infill.density = self.propertyHandler.getExtruderProperty("infill_sparse_density")
 
         # infill_angles - Setting defaults from the CuraEngine
