@@ -362,8 +362,9 @@ class SmartSliceCloudJob(Job):
 
                 if infill_density:
                     Logger.debug("Update extruder infill density to {}".format(infill_density))
-                    active_extruder.setProperty("infill_sparse_density", "value", infill_density)
-                    active_extruder.setProperty("infill_pattern", "value", infill_pattern_name)
+                    active_extruder.setProperty("infill_sparse_density", "value", infill_density, set_from_cache=True)
+                    active_extruder.setProperty("infill_pattern", "value", infill_pattern_name, set_from_cache=True)
+                    Application.getInstance().getMachineManager().forceUpdateAllSettings()
 
         # MODIFIER MESHES STUFF
         #our_only_node_stack = our_only_node.callDecoration("getStack")
@@ -468,7 +469,11 @@ class SmartSliceCloudJob(Job):
         self.connector._proxy.materialLength = material_extra_info[0][pos]
         self.connector._proxy.materialWeight = material_extra_info[1][pos]
         self.connector._proxy.materialCost = material_extra_info[2][pos]
-        self.connector._proxy.materialName = material_extra_info[3][pos]
+        # Below is commented out because we don't necessarily need it right now.
+        # We aren't sending multiple materials to optimize, so the material here
+        # won't change. And this assignment causes the "Lose Validation Results"
+        # pop-up to show.
+        #self.connector._proxy.materialName = material_extra_info[3][pos]
 
 
 class SmartSliceCloudVerificationJob(SmartSliceCloudJob):
@@ -787,8 +792,6 @@ class SmartSliceCloudConnector(QObject):
                 #    self.propertyHandler.confirmRemoveModMesh()
                 #    return
                 self.prepareValidation()
-                self.confirmChanges()
-                return
             self.continueChanges()
         elif action == "cancel":
             self.cancelChanges()
@@ -974,7 +977,7 @@ class SmartSliceCloudConnector(QObject):
             self.showConfirmDialog()
     
     '''
-      confirmChanges()
+      continueChanges()
         * Confirm change to Parameter/Setting
         * Store change to SmartSlice Cache
         * Close Confirmation Dialog
