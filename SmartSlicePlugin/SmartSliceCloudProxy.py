@@ -552,13 +552,13 @@ class SmartSliceCloudProxy(QObject):
 
     @loadDirection.setter
     def loadDirection(self, value):
+        if value == self.reqsLoadDirection:
+            return
         if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
             self.connector.propertyHandler._propertiesChanged.append(SmartSliceProperty.LoadDirection)
             self.connector.propertyHandler._changedValues.append(value)
             self.connector.confirmPendingChanges()
         else:
-            if value == self.reqsLoadDirection:
-                return
             self.reqsLoadDirection = value
             self.setLoadDirection()
 
@@ -569,7 +569,7 @@ class SmartSliceCloudProxy(QObject):
             self.connector.propertyHandler.applyLoad()
             self.connector.prepareValidation()
 
-    #  NOTE:  This should only be accessed by QML 
+    #  NOTE:  This should only be accessed by QML
     def _applyLoad(self):
         self.connector.propertyHandler.applyLoad()
 
