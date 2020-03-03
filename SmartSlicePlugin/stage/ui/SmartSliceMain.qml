@@ -596,7 +596,7 @@ Item {
                 Connections {
                     target: SmartSlice.Cloud
                     onSliceButtonEnabledChanged: { smartSliceButton.enabled = SmartSlice.Cloud.sliceButtonEnabled }
-                    onSliceButtonFillWidthChanged: { smartSliceButton.Layout.fillWidth = smartSlice.Cloud.sliceButtonFillWidth }
+                    onSliceButtonFillWidthChanged: { smartSliceButton.Layout.fillWidth = SmartSlice.Cloud.sliceButtonFillWidth }
                 }
 
                 /*

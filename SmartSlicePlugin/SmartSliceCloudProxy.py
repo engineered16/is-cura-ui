@@ -805,7 +805,6 @@ class SmartSliceCloudProxy(QObject):
     @materialLength.setter
     def materialLength(self, value):
         if not self._materialLength == value:
-            Logger.log("d", "materialLength: <{}> -> <{}>".format(self._materialLength, value))
             self._materialLength = value
             self.materialLengthChanged.emit()
 
@@ -818,7 +817,6 @@ class SmartSliceCloudProxy(QObject):
     @materialWeight.setter
     def materialWeight(self, value):
         if not self._materialWeight == value:
-            Logger.log("d", "materialWeight: <{}> -> <{}>".format(self._materialWeight, value))
             self._materialWeight = value
             self.materialWeightChanged.emit()
 
@@ -831,7 +829,6 @@ class SmartSliceCloudProxy(QObject):
     @materialCost.setter
     def materialCost(self, value):
         if not self._materialCost == value:
-            Logger.log("d", "materialCost: <{}> -> <{}>".format(self._materialCost, value))
             self._materialCost = value
             self.materialCostChanged.emit()
 

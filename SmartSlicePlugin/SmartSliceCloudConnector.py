@@ -311,6 +311,11 @@ class SmartSliceCloudJob(Job):
         Logger.log("i", "Job prepared: {}".format(job))
         task = self.processCloudJob(job)
 
+        try:
+            os.remove(job)
+        except:
+            Logger.warning("Unable to remove temporary 3MF {}".format(job))
+
         # self.job_type == pywim.smartslice.job.JobType.optimization
         if task and task.result and len(task.result.analyses) > 0:
             analysis = task.result.analyses[0]
