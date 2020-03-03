@@ -270,7 +270,7 @@ class SmartSliceCloudJob(Job):
 
             if task.status == pywim.http.thor.TaskStatus.failed:
                 error_message = Message()
-                error_message.setTitle("SmartSlice plugin")
+                error_message.setTitle("Smart Slice Solver")
                 error_message.setText(i18n_catalog.i18nc("@info:status", "Error while processing the job:\n{}".format(task.error)))
                 error_message.show()
                 self.connector.cancelCurrentJob()
@@ -284,7 +284,7 @@ class SmartSliceCloudJob(Job):
                 return task
             else:
                 error_message = Message()
-                error_message.setTitle("SmartSlice plugin")
+                error_message.setTitle("Smart Slice Solver")
                 error_message.setText(i18n_catalog.i18nc("@info:status", "Unexpected status occured:\n{}".format(task.error)))
                 error_message.show()
                 self.connector.cancelCurrentJob()
@@ -294,7 +294,7 @@ class SmartSliceCloudJob(Job):
                 return None
         else:
             notification_message = Message()
-            notification_message.setTitle("SmartSlice plugin")
+            notification_message.setTitle("Smart Slice")
             notification_message.setText(i18n_catalog.i18nc("@info:status", "Job has been canceled!".format(task.error)))
             notification_message.show()
             self.connector.cancelCurrentJob()
@@ -302,7 +302,7 @@ class SmartSliceCloudJob(Job):
     def run(self) -> None:
         if not self.job_type:
             error_message = Message()
-            error_message.setTitle("SmartSlice plugin")
+            error_message.setTitle("Smart Slice")
             error_message.setText(i18n_catalog.i18nc("@info:status", "Job type not set for processing:\nDon't know what to do!"))
             error_message.show()
             self.connector.cancelCurrentJob()
@@ -973,23 +973,24 @@ class SmartSliceCloudConnector(QObject):
             pass
 
     def _onJobFinished(self, job):
-        error = self._jobs[self._current_job].getError()
-
-        if error:
-            self.prepareValidation()
-            Logger.logException("e", str(error))
-            Message(
-                title='Smart Slice job unexpectedly failed',
-                text=str(error)
-            ).show()
-            return
-
         if self._jobs[self._current_job] is None:
             Logger.log("d", "Smart Slice Job was Cancelled")
-        elif not self._jobs[self._current_job].canceled:
-            self.propertyHandler._propertiesChanged = []
-            self._jobs[self._current_job] = None
-            self._proxy.shouldRaiseConfirmation = False
+        else:
+            error = self._jobs[self._current_job].getError()
+
+            if error:
+                self.prepareValidation()
+                Logger.logException("e", str(error))
+                Message(
+                    title='Smart Slice job unexpectedly failed',
+                    text=str(error)
+                ).show()
+                return
+
+            if not self._jobs[self._current_job].canceled:
+                self.propertyHandler._propertiesChanged = []
+                self._jobs[self._current_job] = None
+                self._proxy.shouldRaiseConfirmation = False
 
 
     #
