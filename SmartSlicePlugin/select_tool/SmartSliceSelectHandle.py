@@ -78,8 +78,6 @@ class SmartSliceSelectHandle(ToolHandle):
         #  Construct Edges using MeshBuilder Cubes
         mb = MeshBuilder()
 
-        Logger.log("d", "Drawing Face Selection:  " + str(self._tri))
-
         for tri in self._tri:
             mb.addFace(tri.v1, tri.v2, tri.v3, color=self._selected_color)
 

@@ -222,7 +222,6 @@ class SmartSliceCloudProxy(QObject):
     @sliceStatusEnum.setter
     def sliceStatusEnum(self, value):
         if self._sliceStatusEnum is not value:
-            Logger.log("d", "sliceStatusEnum: <{}> -> <{}>".format(self._sliceStatusEnum, value))
             self._sliceStatusEnum = value
             self.sliceStatusEnumChanged.emit()
 
@@ -233,7 +232,6 @@ class SmartSliceCloudProxy(QObject):
     @sliceStatus.setter
     def sliceStatus(self, value):
         if self._sliceStatus is not value:
-            Logger.log("d", "sliceStatus: <{}> -> <{}>".format(self._sliceStatus, value))
             self._sliceStatus = value
             self.sliceStatusChanged.emit()
 
@@ -244,7 +242,6 @@ class SmartSliceCloudProxy(QObject):
     @sliceHint.setter
     def sliceHint(self, value):
         if self._sliceHint is not value:
-            Logger.log("d", "sliceHint: <{}> -> <{}>".format(self._sliceHint, value))
             self._sliceHint = value
             self.sliceHintChanged.emit()
 
@@ -255,7 +252,6 @@ class SmartSliceCloudProxy(QObject):
     @sliceButtonText.setter
     def sliceButtonText(self, value):
         if self._sliceButtonText is not value:
-            Logger.log("d", "sliceButtonText: <{}> -> <{}>".format(self._sliceButtonText, value))
             self._sliceButtonText = value
             self.sliceButtonTextChanged.emit()
 
@@ -266,7 +262,6 @@ class SmartSliceCloudProxy(QObject):
     @secondaryButtonText.setter
     def secondaryButtonText(self, value):
         if self._secondaryButtonText is not value:
-            Logger.log("d", "_secondaryButtonText: <{}> -> <{}>".format(self._secondaryButtonText, value))
             self._secondaryButtonText = value
             self.secondaryButtonTextChanged.emit()
 
@@ -277,7 +272,6 @@ class SmartSliceCloudProxy(QObject):
     @sliceButtonEnabled.setter
     def sliceButtonEnabled(self, value):
         if self._sliceButtonEnabled is not value:
-            Logger.log("d", "sliceButtonEnabled: <{}> -> <{}>".format(self._sliceButtonEnabled, value))
             self._sliceButtonEnabled = value
             self.sliceButtonEnabledChanged.emit()
 
@@ -288,7 +282,6 @@ class SmartSliceCloudProxy(QObject):
     @sliceButtonVisible.setter
     def sliceButtonVisible(self, value):
         if self._sliceButtonVisible is not value:
-            Logger.log("d", "sliceButtonVisible: <{}> -> <{}>".format(self._sliceVisibleEnabled, value))
             self._sliceButtonVisible = value
             self.sliceButtonVisibleChanged.emit()
 
@@ -299,7 +292,6 @@ class SmartSliceCloudProxy(QObject):
     @sliceButtonFillWidth.setter
     def sliceButtonFillWidth(self, value):
         if self._sliceButtonFillWidth is not value:
-            Logger.log("d", "sliceButtonFillWidth Enabled: <{}> -> <{}>".format(self._sliceButtonFillWidth, value))
             self._sliceButtonFillWidth = value
             self.sliceButtonFillWidthChanged.emit()
 
@@ -310,7 +302,6 @@ class SmartSliceCloudProxy(QObject):
     @secondaryButtonFillWidth.setter
     def secondaryButtonFillWidth(self, value):
         if self._secondaryButtonFillWidth is not value:
-            Logger.log("d", "seceondaryButtonFillWidth Enabled: <{}> -> <{}>".format(self._secondaryButtonFillWidth, value))
             self._secondaryButtonFillWidth = value
             self.secondaryButtonFillWidthChanged.emit()
 
@@ -321,7 +312,6 @@ class SmartSliceCloudProxy(QObject):
     @secondaryButtonVisible.setter
     def secondaryButtonVisible(self, value):
         if self._secondaryButtonVisible is not value:
-            Logger.log("d", "sliceButtonEnabled: <{}> -> <{}>".format(self._secondaryButtonVisible, value))
             self._secondaryButtonVisible = value
             self.secondaryButtonVisibleChanged.emit()
 
@@ -363,7 +353,6 @@ class SmartSliceCloudProxy(QObject):
     @sliceIconImage.setter
     def sliceIconImage(self, value):
         if self._sliceIconImage is not value:
-            Logger.log("d", "sliceIconImage: <{}> -> <{}>".format(self._sliceIconImage, value))
             self._sliceIconImage = value
             self.sliceIconImageChanged.emit()
 
@@ -376,7 +365,6 @@ class SmartSliceCloudProxy(QObject):
     @sliceIconVisible.setter
     def sliceIconVisible(self, value):
         if self._sliceIconVisible is not value:
-            Logger.log("d", "sliceIconVisible: <{}> -> <{}>".format(self._sliceIconVisible, value))
             self._sliceIconVisible = value
             self.sliceIconVisibleChanged.emit()
 

@@ -624,8 +624,6 @@ class SmartSlicePropertyHandler(QObject):
 
     # On EXTRUDER Property Changed
     def _onExtruderPropertyChanged(self, key: str, property_name: str):
-        print ("Check")
-
         if key not in self._container_properties.extruder_keys:
             return
         elif self._activeExtruder.getProperty(key, property_name) == self._extruder_cache[key]:
