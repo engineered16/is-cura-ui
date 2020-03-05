@@ -15,6 +15,7 @@ import zipfile
 import re
 import math
 import typing
+from pathlib import Path
 
 import numpy
 
@@ -572,11 +573,7 @@ class SmartSliceCloudConnector(QObject):
 
         # Debug stuff
         self.app_preferences.addPreference(self.debug_save_smartslice_package_preference, False)
-        if Platform.isLinux():
-            default_save_smartslice_package_location = os.path.expandvars("$HOME")
-        elif Platform.isWindows():
-            default_save_smartslice_package_location = os.path.join("$HOMEDRIVE", "$HOMEPATH")
-            default_save_smartslice_package_location = os.path.expandvars(default_save_smartslice_package_location)
+        default_save_smartslice_package_location = str(Path.home())
         self.app_preferences.addPreference(self.debug_save_smartslice_package_location, default_save_smartslice_package_location)
         self.debug_save_smartslice_package_message = None
 
