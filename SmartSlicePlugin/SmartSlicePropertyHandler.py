@@ -5,35 +5,28 @@
 #  Contains procedures for handling Cura Properties in accordance with SmartSlice
 #
 
-import copy
 import time, threading
-from copy import copy
 
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtCore import pyqtProperty
 from PyQt5.QtCore import QObject
 
 #  Cura
 from UM.i18n import i18nCatalog
 from UM.Application import Application
-from UM.Preferences import Preferences
-from UM.Settings.ContainerStack import ContainerStack
 from UM.Scene.SceneNode import SceneNode
 from UM.Scene.Selection import Selection
 from UM.Message import Message
 from UM.Signal import Signal
 from UM.Logger import Logger
-from cura.CuraApplication import CuraApplication
-from cura.Settings.SettingOverrideDecorator import SettingOverrideDecorator
-from UM.Settings.SettingInstance import SettingInstance, InstanceState
+from UM.Settings.SettingInstance import InstanceState
 from UM.Math.Vector import Vector
-from UM.PluginRegistry import PluginRegistry
 from UM.Operations.RemoveSceneNodeOperation import RemoveSceneNodeOperation
 from UM.Operations.GroupedOperation import GroupedOperation
 
+from cura.CuraApplication import CuraApplication
+
 #  Smart Slice
 from .SmartSliceCloudProxy import SmartSliceCloudStatus
-from .SmartSliceProperty import SmartSliceProperty, SmartSliceLoadDirection, SmartSliceContainerProperties
+from .SmartSliceProperty import SmartSliceProperty, SmartSliceContainerProperties
 from .select_tool.SmartSliceSelectHandle import SelectionMode
 
 i18n_catalog = i18nCatalog("smartslice")

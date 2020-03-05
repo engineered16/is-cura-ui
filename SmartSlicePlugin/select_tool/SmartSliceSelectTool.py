@@ -80,6 +80,11 @@ class SmartSliceSelectTool(Tool):
                     self._load_face = None
                     self._anchor_face = None
 
+                    self._handle.clearSelection()
+                    self._handle._connector._proxy._anchorsApplied = 0
+                    self._handle._connector._proxy._loadsApplied = 0
+                    self.extension.cloud._onApplicationActivityChanged()
+
                     controller = Application.getInstance().getController()
                     camTool = controller.getCameraTool()
                     aabb = sn.getBoundingBox()
@@ -131,6 +136,8 @@ class SmartSliceSelectTool(Tool):
             else:
                 Selection.setFaceSelectMode(False)
                 Logger.log("d", "Disabled faceSelectMode!")
+
+            self._calculateMesh()
 
     ##  Get whether the select face feature is supported.
     #   \return True if it is supported, or False otherwise.

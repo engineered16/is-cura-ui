@@ -697,57 +697,59 @@ class SmartSliceCloudConnector(QObject):
         optimizationMsg = "Modifying this setting will invalidate your results.\nDo you want to continue and lose your \noptimization results?"
 
         #  Silence recursively opened windows, when reverting property values
-        if not self.propertyHandler._cancelChanges:
-            #  Create a Confirmation Dialog Component
-            if self.status is SmartSliceCloudStatus.BusyValidating:
-                index = len(self._confirmDialog)
-                self._confirmDialog.append(Message(title="Lose Validation Results?",
-                                  text=validationMsg,
-                                  lifetime=0,))
+        if self.propertyHandler._cancelChanges or len(self.propertyHandler._propertiesChanged) == 0:
+            return
 
-                self._confirmDialog[index].addAction("cancel",# action_id
-                                                     i18n_catalog.i18nc("@action",
-                                                                        "Cancel"
-                                                                        ), # name
-                                                     "", #icon
-                                                     "", #description
-                                                     button_style=Message.ActionButtonStyle.SECONDARY
-                                                     )
-                self._confirmDialog[index].addAction("continue",# action_id
-                                                     i18n_catalog.i18nc("@action",
-                                                                        "Continue"
-                                                                        ), # name
-                                                     "", #icon
-                                                     "" #description
-                                                     )
-                self._confirmDialog[index].actionTriggered.connect(self.onConfirmAction_Validate)
-                if index == 0:
-                    self._confirmDialog[index].show()
+        #  Create a Confirmation Dialog Component
+        if self.status is SmartSliceCloudStatus.BusyValidating:
+            index = len(self._confirmDialog)
+            self._confirmDialog.append(Message(title="Lose Validation Results?",
+                                text=validationMsg,
+                                lifetime=0,))
 
-            elif self.status is SmartSliceCloudStatus.BusyOptimizing or (self.status is SmartSliceCloudStatus.Optimized):
-                index = len(self._confirmDialog)
-                self._confirmDialog.append(Message(title="Lose Optimization Results?",
-                                  text=optimizationMsg,
-                                  lifetime=0,))
+            self._confirmDialog[index].addAction("cancel",# action_id
+                                                    i18n_catalog.i18nc("@action",
+                                                                    "Cancel"
+                                                                    ), # name
+                                                    "", #icon
+                                                    "", #description
+                                                    button_style=Message.ActionButtonStyle.SECONDARY
+                                                    )
+            self._confirmDialog[index].addAction("continue",# action_id
+                                                    i18n_catalog.i18nc("@action",
+                                                                    "Continue"
+                                                                    ), # name
+                                                    "", #icon
+                                                    "" #description
+                                                    )
+            self._confirmDialog[index].actionTriggered.connect(self.onConfirmAction_Validate)
+            if index == 0:
+                self._confirmDialog[index].show()
 
-                self._confirmDialog[index].addAction("cancel",# action_id
-                                                     i18n_catalog.i18nc("@action",
-                                                                        "Cancel"
-                                                                        ), # name
-                                                     "", #icon
-                                                     "", #description
-                                                     button_style=Message.ActionButtonStyle.SECONDARY
-                                                     )
-                self._confirmDialog[index].addAction("continue",# action_id
-                                                     i18n_catalog.i18nc("@action",
-                                                                        "Continue"
-                                                                        ), # name
-                                                     "", #icon
-                                                     "" #description
-                                                     )
-                self._confirmDialog[index].actionTriggered.connect(self.onConfirmAction_Optimize)
-                if index == 0:
-                    self._confirmDialog[index].show()
+        elif self.status is SmartSliceCloudStatus.BusyOptimizing or (self.status is SmartSliceCloudStatus.Optimized):
+            index = len(self._confirmDialog)
+            self._confirmDialog.append(Message(title="Lose Optimization Results?",
+                                text=optimizationMsg,
+                                lifetime=0,))
+
+            self._confirmDialog[index].addAction("cancel",# action_id
+                                                    i18n_catalog.i18nc("@action",
+                                                                    "Cancel"
+                                                                    ), # name
+                                                    "", #icon
+                                                    "", #description
+                                                    button_style=Message.ActionButtonStyle.SECONDARY
+                                                    )
+            self._confirmDialog[index].addAction("continue",# action_id
+                                                    i18n_catalog.i18nc("@action",
+                                                                    "Continue"
+                                                                    ), # name
+                                                    "", #icon
+                                                    "" #description
+                                                    )
+            self._confirmDialog[index].actionTriggered.connect(self.onConfirmAction_Optimize)
+            if index == 0:
+                self._confirmDialog[index].show()
 
     """
       hideMessage()
