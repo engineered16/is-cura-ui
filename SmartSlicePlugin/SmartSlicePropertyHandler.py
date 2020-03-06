@@ -481,7 +481,14 @@ class SmartSlicePropertyHandler(QObject):
                 return
 
         select_tool = Application.getInstance().getController().getTool("SmartSlicePlugin_SelectTool")
-        selected_triangles = list(select_tool._interactive_mesh.select_planar_face(face_id))
+
+        selected_triangles = select_tool._interactive_mesh.select_planar_face(face_id)
+        if len(selected_triangles) <= 2:
+            selected_triangles_cyl = select_tool._interactive_mesh.try_select_cylinder_face(face_id)
+            if selected_triangles_cyl is not None and len(selected_triangles_cyl) > 2:
+                selected_triangles = selected_triangles_cyl
+
+        selected_triangles = list(selected_triangles)
                 
         #  If busy, add it to 'pending changes' and ask user to confirm
         if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
