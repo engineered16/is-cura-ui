@@ -44,42 +44,36 @@ class ShapeDetectedNode():
         Logger.log("d", "Processing {} faces.".format(len(face_ids)))
         for face_id in face_ids:
             vector_a, vector_b, vector_c = self.mesh.getFaceNodes(face_id)
-            print("vector_a", vector_a)
-            print("vector_b", vector_b)
-            print("vector_c", vector_c)
 
             normal_vector = numpy.cross(vector_b - vector_a,
                                         vector_c - vector_a
                                         )
-            x, y, z = [float(entry) for entry in normal_vector.tolist()]
-            normal = Vector_3(x, y, z)
-
-            # Normalize vector as the direction matters only
-            normal = normal / math.sqrt(normal.squared_length())
+            norm = numpy.linalg.norm(normal_vector, ord=1)
+            normal_vector = normal_vector/norm
+            normal_as_list = [float(entry) for entry in normal_vector.tolist()]
+            normal_vector = Vector_3(*normal_as_list)
 
             surface_points = []
             vector_ab = vector_b - vector_a
             vector_ac = vector_c - vector_a
-            print("vector_ab", vector_ab)
-            print("vector_ac", vector_ac)
             for point_n in range(1, 201):
                 a1 = 1.0 / self.plastic_number
                 a2 = (1.0 / self.plastic_number)**2
                 r_1 = (0.5 + a1 * point_n) % 1
                 r_2 = (0.5 + a2 * point_n) % 1
                 if (r_1 + r_2) <= 1:
-                    vector_p = vector_ac * r_1 + vector_ab * r_2
+                    location_vector = vector_ac * r_1 + vector_ab * r_2
                 else:
-                    vector_p = vector_ac * (1 - r_1) + vector_ab * (1 - r_2)
-                vector_p += vector_a
-                print("vector_p", vector_p)
-                print("normal", normal)
-                point_p = [float(entry) for entry in vector_p.tolist()]
-                point_p = Point_3(*point_p)
-                surface_points.append(point_p)
+                    location_vector = vector_ac * (1 - r_1) + vector_ab * (1 - r_2)
+                location_vector += vector_a
+                location_as_list = [float(entry) for entry in location_vector.tolist()]
+                all_coodinates_as_str_in_list = [str(x) for x in location_as_list + normal_as_list]
+                print(",".join(all_coodinates_as_str_in_list))
+                location_vector = Point_3(*location_as_list)
+                surface_points.append(location_vector)
 
             for surface_point in surface_points:
-                self._point_cloud.insert(surface_point, normal)
+                self._point_cloud.insert(surface_point, normal_vector)
                 if face_id not in self._point_face.keys():
                     self._point_face[face_id] = ()
                 self._point_face[face_id] += (surface_point, )
@@ -95,8 +89,8 @@ class ShapeDetectedNode():
                                   shape_map,
                                   # probability=5,  # [%]
                                   min_points=5,
-                                  # epsilon=1.,
-                                  # normal_threshold=0.85,
+                                  epsilon=1.,
+                                  normal_threshold=0.85,
                                   # cluster_epsilon=1.2,
                                   planes=True,
                                   cylinders=True,
