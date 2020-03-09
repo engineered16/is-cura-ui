@@ -1027,7 +1027,6 @@ class SmartSliceCloudConnector(QObject):
 
     def prepareValidation(self):
         Logger.log("d", "Validation Step Prepared")
-        self._proxy._hasActiveValidate = False
         self.status = SmartSliceCloudStatus.ReadyToVerify
         Application.getInstance().activityChanged.emit()
 

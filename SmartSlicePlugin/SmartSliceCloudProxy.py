@@ -61,11 +61,7 @@ class SmartSliceCloudProxy(QObject):
         self._secondaryButtonVisible = False
 
         # Confirm Changes Dialog
-        self._validationRaised = False
         self._confirmationWindowEnabled = False
-        self._optimize_confirmed = True
-        self._hasActiveValidate = False
-        self._hasModMesh = False # Currently ASSUMES a mod mesh is in place; TODO: Detect this property change
         self._confirmationText = ""
 
         # Proxy Values (DO NOT USE DIRECTLY)
@@ -73,7 +69,6 @@ class SmartSliceCloudProxy(QObject):
         self._targetMaximalDisplacement = 1.0
         self._loadsApplied = 0
         self._anchorsApplied = 0
-        self._loadEdited = False
         self._loadMagnitude = 10.0
         self._loadDirection = False
 

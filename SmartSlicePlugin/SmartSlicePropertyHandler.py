@@ -26,7 +26,6 @@ from .select_tool.SmartSliceSelectHandle import SelectionMode
 
 i18n_catalog = i18nCatalog("smartslice")
 
-
 """
   SmartSlicePropertyHandler(connector)
     connector: CloudConnector, used for interacting with rest of SmartSlice plugin
@@ -309,7 +308,6 @@ class SmartSlicePropertyHandler(QObject):
                 the commented 'text=' should be used instead of the current 'text='
     """
     def confirmOptimizeModMesh(self):
-        self.proxy._optimize_confirmed = False
         msg = Message(title="",
                       text="Modifier meshes will be removed for the validation.\nDo you want to Continue?",
                       #text="Modifier meshes will be removed for the optimization.\nDo you want to Continue?",
