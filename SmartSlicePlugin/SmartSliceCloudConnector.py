@@ -15,6 +15,7 @@ import zipfile
 import re
 import math
 import typing
+from pathlib import Path
 
 import numpy
 
@@ -58,6 +59,7 @@ from cura.Settings.ExtruderManager import ExtruderManager
 from cura.Scene.BuildPlateDecorator import BuildPlateDecorator
 from cura.Scene.CuraSceneNode import CuraSceneNode
 from cura.Scene.SliceableObjectDecorator import SliceableObjectDecorator
+from cura.Settings.ExtruderStack import ExtruderStack
 from cura.UI.PrintInformation import PrintInformation
 
 # Our extension
@@ -138,6 +140,11 @@ class ConnectivityChecker(QObject):
 class SmartSliceCloudJob(Job):
     # This job is responsible for uploading the backup file to cloud storage.
     # As it can take longer than some other tasks, we schedule this using a Cura Job.
+
+    class JobException(Exception):
+        def __init__(self, problem : str):
+            super().__init__(problem)
+            self.problem = problem
 
     def __init__(self, connector) -> None:
         super().__init__()
@@ -264,7 +271,7 @@ class SmartSliceCloudJob(Job):
 
             if task.status == pywim.http.thor.TaskStatus.failed:
                 error_message = Message()
-                error_message.setTitle("SmartSlice plugin")
+                error_message.setTitle("Smart Slice Solver")
                 error_message.setText(i18n_catalog.i18nc("@info:status", "Error while processing the job:\n{}".format(task.error)))
                 error_message.show()
                 self.connector.cancelCurrentJob()
@@ -278,7 +285,7 @@ class SmartSliceCloudJob(Job):
                 return task
             else:
                 error_message = Message()
-                error_message.setTitle("SmartSlice plugin")
+                error_message.setTitle("Smart Slice Solver")
                 error_message.setText(i18n_catalog.i18nc("@info:status", "Unexpected status occured:\n{}".format(task.error)))
                 error_message.show()
                 self.connector.cancelCurrentJob()
@@ -288,7 +295,7 @@ class SmartSliceCloudJob(Job):
                 return None
         else:
             notification_message = Message()
-            notification_message.setTitle("SmartSlice plugin")
+            notification_message.setTitle("Smart Slice")
             notification_message.setText(i18n_catalog.i18nc("@info:status", "Job has been canceled!".format(task.error)))
             notification_message.show()
             self.connector.cancelCurrentJob()
@@ -296,7 +303,7 @@ class SmartSliceCloudJob(Job):
     def run(self) -> None:
         if not self.job_type:
             error_message = Message()
-            error_message.setTitle("SmartSlice plugin")
+            error_message.setTitle("Smart Slice")
             error_message.setText(i18n_catalog.i18nc("@info:status", "Job type not set for processing:\nDon't know what to do!"))
             error_message.show()
             self.connector.cancelCurrentJob()
@@ -306,23 +313,42 @@ class SmartSliceCloudJob(Job):
         self.connector.status = self.ui_status_per_job_type[self.job_type]
         Job.yieldThread()  # Should allow the UI to update earlier
 
-        job = self.prepareJob(self.job_type)
-        Logger.log("i", "Job prepared: {}".format(job))
+        try:
+            job = self.prepareJob(self.job_type)
+            Logger.log("i", "Smart Slice job prepared: {}".format(job))
+        except SmartSliceCloudJob.JobException as exc:
+            Logger.log("w", "Smart Slice job cannot be prepared: {}".format(exc.problem))
+
+            self.connector.status = previous_connector_status
+
+            Message(
+                title='Smart Slice',
+                text=i18n_catalog.i18nc("@info:status", exc.problem)
+            ).show()
+
+            return
+
         task = self.processCloudJob(job)
+
+        try:
+            os.remove(job)
+        except:
+            Logger.log("w", "Unable to remove temporary 3MF {}".format(job))
 
         # self.job_type == pywim.smartslice.job.JobType.optimization
         if task and task.result and len(task.result.analyses) > 0:
             analysis = task.result.analyses[0]
-            self._process_analysis_result(analysis)
+            optimized = previous_connector_status in SmartSliceCloudStatus.Optimizable
+            self._process_analysis_result(analysis, optimized)
 
             # Overriding if our result is going to be optimized...
-            if previous_connector_status in SmartSliceCloudStatus.Optimizable:
+            if optimized:
                 self.connector.status = SmartSliceCloudStatus.Optimized
                 self.connector.previous_connector_status = self.connector.status
             else:
                 self.connector.prepareOptimization()
-        else:            
-            if self.connector.status is not SmartSliceCloudStatus.ReadyToVerify:
+        else:
+            if self.connector.status != SmartSliceCloudStatus.ReadyToVerify:
                 self.connector.status = previous_connector_status
                 self.connector.prepareOptimization() # Double Check Requirements
             Message(
@@ -332,13 +358,30 @@ class SmartSliceCloudJob(Job):
 
         self.connector.propertyHandler.prepareCache()
 
-    def _process_analysis_result(self, analysis : pywim.smartslice.result.Analysis):
-        #Logger.log("d", "analysis: {}".format(analysis.to_json()))
-        #Logger.log("d", "analysis.modifier_meshes: {}".format(analysis.modifier_meshes))
-
-        # MODIFIER MESHES STUFF
+    def _process_analysis_result(self, analysis : pywim.smartslice.result.Analysis, optimized : bool):
         # TODO: We need a per node solution here as soon as we want to analysis multiple models.
         our_only_node =  self.connector.getSliceableNodes()[0]
+
+        active_extruder = self.connector.getNodeActiveExtruder(our_only_node)
+
+        if optimized and active_extruder:
+            # TODO - Move this into a common class or function to apply an am.Config to GlobalStack/ExtruderStack
+            if analysis.print_config.infill:
+                infill_density = analysis.print_config.infill.density
+                infill_pattern = analysis.print_config.infill.pattern
+
+                if infill_pattern is None or infill_pattern == pywim.am.InfillType.unknown:
+                    infill_pattern = pywim.am.InfillType.grid
+
+                infill_pattern_name = self.connector.infill_pattern_pywim_to_cura_dict[infill_pattern]
+
+                if infill_density:
+                    Logger.log("d", "Update extruder infill density to {}".format(infill_density))
+                    active_extruder.setProperty("infill_sparse_density", "value", infill_density, set_from_cache=True)
+                    active_extruder.setProperty("infill_pattern", "value", infill_pattern_name, set_from_cache=True)
+                    Application.getInstance().getMachineManager().forceUpdateAllSettings()
+
+        # MODIFIER MESHES STUFF
         #our_only_node_stack = our_only_node.callDecoration("getStack")
         for modifier_mesh in analysis.modifier_meshes:
             # Building the scene node
@@ -441,7 +484,11 @@ class SmartSliceCloudJob(Job):
         self.connector._proxy.materialLength = material_extra_info[0][pos]
         self.connector._proxy.materialWeight = material_extra_info[1][pos]
         self.connector._proxy.materialCost = material_extra_info[2][pos]
-        self.connector._proxy.materialName = material_extra_info[3][pos]
+        # Below is commented out because we don't necessarily need it right now.
+        # We aren't sending multiple materials to optimize, so the material here
+        # won't change. And this assignment causes the "Lose Validation Results"
+        # pop-up to show.
+        #self.connector._proxy.materialName = material_extra_info[3][pos]
 
 
 class SmartSliceCloudVerificationJob(SmartSliceCloudJob):
@@ -458,7 +505,7 @@ class SmartSliceCloudOptimizeJob(SmartSliceCloudVerificationJob):
         super().__init__(connector)
 
         self.job_type = pywim.smartslice.job.JobType.optimization
-        
+
 
 
 class Force: # TODO - Move this or replace
@@ -467,14 +514,20 @@ class Force: # TODO - Move this or replace
         self.magnitude = magnitude
         self.pull = pull
 
-    def loadVector(self) -> Vector:
+    def loadVector(self, rotation : Matrix = None) -> Vector:
         scale = self.magnitude if self.pull else -self.magnitude
 
-        return Vector(
+        v = Vector(
             self.normal.x * scale,
             self.normal.y * scale,
             self.normal.z * scale,
         )
+
+        if rotation:
+            vT = numpy.dot(rotation.getData(), v.getData())
+            return Vector(vT[0], vT[1], vT[2])
+
+        return v
 
 class SmartSliceCloudConnector(QObject):
     http_protocol_preference = "smartslice/http_protocol"
@@ -495,10 +548,11 @@ class SmartSliceCloudConnector(QObject):
         self._jobs = {}
         self._current_job = 0
         self._jobs[self._current_job] = None
-        self.infill_pattern_cura_to_pywim_dict = {"grid": pywim.am.InfillType.grid,
-                                                  "triangles": pywim.am.InfillType.triangle,
-                                                  "cubic": pywim.am.InfillType.cubic
-                                                  }
+        self.infill_pattern_cura_to_pywim_dict = {
+            "grid": pywim.am.InfillType.grid,
+            "triangles": pywim.am.InfillType.triangle,
+            #"cubic": pywim.am.InfillType.cubic
+        }
         self.infill_pattern_pywim_to_cura_dict = {value: key for key, value in self.infill_pattern_cura_to_pywim_dict.items()}
 
         # Proxy
@@ -519,11 +573,7 @@ class SmartSliceCloudConnector(QObject):
 
         # Debug stuff
         self.app_preferences.addPreference(self.debug_save_smartslice_package_preference, False)
-        if Platform.isLinux():
-            default_save_smartslice_package_location = os.path.expandvars("$HOME")
-        elif Platform.isWindows():
-            default_save_smartslice_package_location = os.path.join("$HOMEDRIVE", "$HOMEPATH")
-            default_save_smartslice_package_location = os.path.expandvars(default_save_smartslice_package_location)
+        default_save_smartslice_package_location = str(Path.home())
         self.app_preferences.addPreference(self.debug_save_smartslice_package_location, default_save_smartslice_package_location)
         self.debug_save_smartslice_package_message = None
 
@@ -577,6 +627,26 @@ class SmartSliceCloudConnector(QObject):
     def getProxy(self, engine, script_engine):
         return self._proxy
 
+    def getNodeActiveExtruder(self, node : SceneNode) -> ExtruderStack:
+        active_extruder_position = node.callDecoration("getActiveExtruderPosition")
+        if active_extruder_position is None:
+            active_extruder_position = 0
+        else:
+            active_extruder_position = int(active_extruder_position)
+
+        # Only use the extruder that is active on our mesh_node
+        # The back end only supports a single extruder, currently.
+        # Ignore any extruder that is not the active extruder.
+        machine_extruders = list(filter(
+            lambda extruder: extruder.position == active_extruder_position,
+            self.active_machine.extruderList
+        ))
+
+        if len(machine_extruders) > 0:
+            return machine_extruders[0]
+
+        return None
+
     def _onEngineCreated(self):
         qmlRegisterSingletonType(SmartSliceCloudProxy,
                                  "SmartSlice",
@@ -604,8 +674,7 @@ class SmartSliceCloudConnector(QObject):
                                                                  ""  # description
                                                                  )
             self.debug_save_smartslice_package_message.actionTriggered.connect(self._onSaveDebugPackage)
-            self.debug_save_smartslice_package_message.show()            
-        
+            self.debug_save_smartslice_package_message.show()
 
     """
       showConfirmDialog()
@@ -620,66 +689,68 @@ class SmartSliceCloudConnector(QObject):
                                 Pushes to OPTIMIZE when the change is a requirement, e.g. Safety Factor/Maximum Displacement
                                 Pushes to VALIDATE otherwise
     """
-    def showConfirmDialog(self):
+    def showConfirmDialog(self, scene_node=None):
         validationMsg = "Modifying this setting will invalidate your results.\nDo you want to continue and lose the current\n validation results?"
         optimizationMsg = "Modifying this setting will invalidate your results.\nDo you want to continue and lose your \noptimization results?"
 
         #  Silence recursively opened windows, when reverting property values
-        if not self.propertyHandler._cancelChanges:
-            #  Create a Confirmation Dialog Component
-            if self.status is SmartSliceCloudStatus.BusyValidating:
-                index = len(self._confirmDialog)
-                self._confirmDialog.append(Message(title="Lose Validation Results?",
-                                  text=validationMsg,
-                                  lifetime=0,))
-                                  
-                self._confirmDialog[index].addAction("cancel",# action_id
-                                                     i18n_catalog.i18nc("@action",
-                                                                        "Cancel"
-                                                                        ), # name
-                                                     "", #icon
-                                                     "", #description
-                                                     button_style=Message.ActionButtonStyle.SECONDARY 
-                                                     )
-                self._confirmDialog[index].addAction("continue",# action_id
-                                                     i18n_catalog.i18nc("@action",
-                                                                        "Continue"
-                                                                        ), # name
-                                                     "", #icon
-                                                     "" #description
-                                                     )
-                self._confirmDialog[index].actionTriggered.connect(self.onConfirmAction_Validate)
-                if index == 0:
-                    self._confirmDialog[index].show()
-                
-            elif self.status is SmartSliceCloudStatus.BusyOptimizing or (self.status is SmartSliceCloudStatus.Optimized):
-                index = len(self._confirmDialog)
-                self._confirmDialog.append(Message(title="Lose Optimization Results?",
-                                  text=optimizationMsg,
-                                  lifetime=0,))
-                                  
-                self._confirmDialog[index].addAction("cancel",# action_id
-                                                     i18n_catalog.i18nc("@action",
-                                                                        "Cancel"
-                                                                        ), # name
-                                                     "", #icon
-                                                     "", #description
-                                                     button_style=Message.ActionButtonStyle.SECONDARY 
-                                                     )
-                self._confirmDialog[index].addAction("continue",# action_id
-                                                     i18n_catalog.i18nc("@action",
-                                                                        "Continue"
-                                                                        ), # name
-                                                     "", #icon
-                                                     "" #description
-                                                     )
-                self._confirmDialog[index].actionTriggered.connect(self.onConfirmAction_Optimize)
-                if index == 0:
-                    self._confirmDialog[index].show()
+        if self.propertyHandler._cancelChanges or len(self.propertyHandler._propertiesChanged) == 0:
+            return
+
+        #  Create a Confirmation Dialog Component
+        if self.status is SmartSliceCloudStatus.BusyValidating:
+            index = len(self._confirmDialog)
+            self._confirmDialog.append(Message(title="Lose Validation Results?",
+                                text=validationMsg,
+                                lifetime=0,))
+
+            self._confirmDialog[index].addAction("cancel",# action_id
+                                                    i18n_catalog.i18nc("@action",
+                                                                    "Cancel"
+                                                                    ), # name
+                                                    "", #icon
+                                                    "", #description
+                                                    button_style=Message.ActionButtonStyle.SECONDARY
+                                                    )
+            self._confirmDialog[index].addAction("continue",# action_id
+                                                    i18n_catalog.i18nc("@action",
+                                                                    "Continue"
+                                                                    ), # name
+                                                    "", #icon
+                                                    "" #description
+                                                    )
+            self._confirmDialog[index].actionTriggered.connect(self.onConfirmAction_Validate)
+            if index == 0:
+                self._confirmDialog[index].show()
+
+        elif self.status is SmartSliceCloudStatus.BusyOptimizing or (self.status is SmartSliceCloudStatus.Optimized):
+            index = len(self._confirmDialog)
+            self._confirmDialog.append(Message(title="Lose Optimization Results?",
+                                text=optimizationMsg,
+                                lifetime=0,))
+
+            self._confirmDialog[index].addAction("cancel",# action_id
+                                                    i18n_catalog.i18nc("@action",
+                                                                    "Cancel"
+                                                                    ), # name
+                                                    "", #icon
+                                                    "", #description
+                                                    button_style=Message.ActionButtonStyle.SECONDARY
+                                                    )
+            self._confirmDialog[index].addAction("continue",# action_id
+                                                    i18n_catalog.i18nc("@action",
+                                                                    "Continue"
+                                                                    ), # name
+                                                    "", #icon
+                                                    "" #description
+                                                    )
+            self._confirmDialog[index].actionTriggered.connect(self.onConfirmAction_Optimize)
+            if index == 0:
+                self._confirmDialog[index].show()
 
     """
       hideMessage()
-        When settings are cached/reverted, numerous other dialogs are often 
+        When settings are cached/reverted, numerous other dialogs are often
           raised by Cura, indicating a global/extruder property has been changed.
         hideMessage() silences the initial dialog and prepares for the next
           change by clearing the current list of dialogs
@@ -740,8 +811,6 @@ class SmartSliceCloudConnector(QObject):
                 #    self.propertyHandler.confirmRemoveModMesh()
                 #    return
                 self.prepareValidation()
-                self.confirmChanges()
-                return
             self.continueChanges()
         elif action == "cancel":
             self.cancelChanges()
@@ -905,10 +974,22 @@ class SmartSliceCloudConnector(QObject):
     def _onJobFinished(self, job):
         if self._jobs[self._current_job] is None:
             Logger.log("d", "Smart Slice Job was Cancelled")
-        elif not self._jobs[self._current_job].canceled:
-            self.propertyHandler._propertiesChanged = []
-            self._jobs[self._current_job] = None
-            self._proxy.shouldRaiseConfirmation = False
+        else:
+            error = self._jobs[self._current_job].getError()
+
+            if error:
+                self.prepareValidation()
+                Logger.logException("e", str(error))
+                Message(
+                    title='Smart Slice job unexpectedly failed',
+                    text=str(error)
+                ).show()
+                return
+
+            if not self._jobs[self._current_job].canceled:
+                self.propertyHandler._propertiesChanged = []
+                self._jobs[self._current_job] = None
+                self._proxy.shouldRaiseConfirmation = False
 
 
     #
@@ -925,9 +1006,9 @@ class SmartSliceCloudConnector(QObject):
         #  Make sure a property has actually changed before prompting
         if len(self.propertyHandler._propertiesChanged) > 0:
             self.showConfirmDialog()
-    
+
     '''
-      confirmChanges()
+      continueChanges()
         * Confirm change to Parameter/Setting
         * Store change to SmartSlice Cache
         * Close Confirmation Dialog
@@ -1073,26 +1154,13 @@ class SmartSliceCloudConnector(QObject):
         #       The lines below will partly need to be executed as "for model in models: bla bla.."
         mesh_node = mesh_nodes[0]
 
-        active_extruder_position = mesh_node.callDecoration("getActiveExtruderPosition")
-        if active_extruder_position is None:
-            active_extruder_position = 0
-        else:
-            active_extruder_position = int(active_extruder_position)
-
         # Only use the extruder that is active on our mesh_node
         # The back end only supports a single extruder, currently.
         # Ignore any extruder that is not the active extruder.
-        machine_extruders = list(filter(
-            lambda extruder: extruder.position == active_extruder_position,
-            self.active_machine.extruderList
-        ))
-
-        material_guids_per_extruder = []
-        for extruder in machine_extruders:
-            material_guids_per_extruder.append(extruder.material.getMetaData().get("GUID", ""))
+        machine_extruder = self.getNodeActiveExtruder(mesh_node)
 
         # TODO: Needs to be determined from the used model
-        guid = material_guids_per_extruder[active_extruder_position]
+        guid = machine_extruder.material.getMetaData().get("GUID", "")
 
         # Determine material properties from material database
         this_dir = os.path.split(__file__)[0]
@@ -1159,16 +1227,28 @@ class SmartSliceCloudConnector(QObject):
 
         # Add any other boundary conditions in a similar manner...
 
+        # Copied from Cura/plugins/3MFWriter/ThreeMFWriter.py
+        # The print coordinate system is different than what Cura uses internally (Y and Z flipped)
+        # so we need to transform the mesh transformation matrix
+        cura_to_print = Matrix()
+        cura_to_print._data[1, 1] = 0
+        cura_to_print._data[1, 2] = -1
+        cura_to_print._data[2, 1] = 1
+        cura_to_print._data[2, 2] = 0
+
+        mesh_transformation = mesh_node.getLocalTransformation()
+        mesh_transformation.preMultiply(cura_to_print)
+
+        # Decompose the transformation matrix but only pick out the rotation component
+        _, mesh_rotation, _, _ = mesh_transformation.decompose()
+
+        applied_load_vec = self.getForce0VectorPoc(mesh_rotation)
+
+        Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(applied_load_vec))
+
         # Create an applied force
         force1 = pywim.chop.model.Force(name='force1')
-
-        # Set the components on the force vector. In this example
-        # we have 100 N, 200 N, and 50 N in the x, y, and z
-        # directions respectfully.
-        Logger.log("d", "cloud_connector.getForce0VectorPoc(): {}".format(self.getForce0VectorPoc()))
-        force1.force.set(
-            self.getForce0VectorPoc()
-        )
+        force1.force.set(applied_load_vec)
 
         # Add the face Ids from the STL mesh that the user selected for
         # this force
@@ -1207,11 +1287,14 @@ class SmartSliceCloudConnector(QObject):
 
         # infill pattern - Cura vs. pywim
         infill_pattern = self.propertyHandler.getExtruderProperty("infill_pattern")
-        if infill_pattern in self.infill_pattern_cura_to_pywim_dict.keys():
-            print_config.infill.pattern = self.infill_pattern_cura_to_pywim_dict[infill_pattern]
-        else:
-            print_config.infill.pattern = pywim.am.InfillType.unknown
 
+        if infill_pattern not in self.infill_pattern_cura_to_pywim_dict.keys():
+            raise SmartSliceCloudJob.JobException(
+                "Smart Slice does not support the infill pattern: {}\n".format(infill_pattern) +
+                "Supported infill patterns are: {}".format(', '.join(self.infill_pattern_cura_to_pywim_dict.keys()))
+            )
+
+        print_config.infill.pattern = self.infill_pattern_cura_to_pywim_dict[infill_pattern]
         print_config.infill.density = self.propertyHandler.getExtruderProperty("infill_sparse_density")
 
         # infill_angles - Setting defaults from the CuraEngine
@@ -1237,7 +1320,7 @@ class SmartSliceCloudConnector(QObject):
         # Setup the slicer configuration. See each class for more
         # information.
         extruders = ()
-        for extruder_stack in machine_extruders:
+        for extruder_stack in [machine_extruder]:
             extruder_nr = extruder_stack.getProperty("extruder_nr", "value")
             extruder_object = pywim.chop.machine.Extruder(diameter=extruder_stack.getProperty("machine_nozzle_size",
                                                                                      "value"))
@@ -1257,7 +1340,7 @@ class SmartSliceCloudConnector(QObject):
             job.extruders.append(extruder_materials)
 
         if len(extruders) == 0:
-            Logger.error("Did not find the extruder with position %i", active_extruder_position)
+            Logger.log("e", "Did not find the extruder with position %i", machine_extruder.position)
 
         printer = pywim.chop.machine.Printer(name=self.active_machine.getName(),
                                              extruders=extruders
@@ -1293,8 +1376,8 @@ class SmartSliceCloudConnector(QObject):
             pull=self._proxy.reqsLoadDirection
         )
 
-    def getForce0VectorPoc(self):
-        vec = self._poc_force.loadVector()
+    def getForce0VectorPoc(self, rotation : Matrix = None):
+        vec = self._poc_force.loadVector(rotation=rotation)
         return [
             float(vec.x),
             float(vec.y),
