@@ -3,22 +3,12 @@ from UM.i18n import i18nCatalog
 
 from UM.Application import Application
 from UM.Version import Version
-from UM.PluginRegistry import PluginRegistry
 from UM.Logger import Logger
-from UM.Event import Event, MouseEvent, KeyEvent
 from UM.Tool import Tool
-from UM.Math.Vector import Vector
-from UM.Signal import Signal
 
 from UM.View.GL.OpenGL import OpenGL
 from UM.Scene.Selection import Selection
 from UM.Scene.SceneNode import SceneNode
-
-from cura.Scene.CuraSceneNode import CuraSceneNode
-
-#  QT / QML Imports
-from PyQt5.QtCore import Qt, QUrl
-from PyQt5.QtQml import QQmlComponent, QQmlContext # @UnresolvedImport
 
 #  Local Imports
 from ..utils import makeInteractiveMesh
@@ -37,8 +27,6 @@ class SmartSliceSelectTool(Tool):
         self.extension = extension
         self._handle = SmartSliceSelectHandle(self.extension)
 
-        #self._shortcut_key = Qt.Key_S
-
         self.setExposedProperties("AnchorSelectionActive",
                                   "LoadSelectionActive",
                                   "SelectionMode",
@@ -54,12 +42,6 @@ class SmartSliceSelectTool(Tool):
 
         self._controller.activeToolChanged.connect(self._onActiveStateChanged)
 
-    ##  Handle mouse and keyboard events
-    #
-    #   \param event type(Event)
-    def event(self, event):
-        return super().event(event)
-
     def _calculateMesh(self):
         scene = Application.getInstance().getController().getScene()
         nodes = Selection.getAllSelectedObjects()
@@ -74,7 +56,7 @@ class SmartSliceSelectTool(Tool):
 
                 if mesh_data:
                     Logger.log('d', 'Compute interactive mesh from SceneNode {}'.format(sn.getName()))
-                    
+
                     self._scene_node_name = sn.getName()
                     self._interactive_mesh = makeInteractiveMesh(mesh_data)
                     self._load_face = None
@@ -109,7 +91,7 @@ class SmartSliceSelectTool(Tool):
 
     def setFaceVisible(self, scene_node, face_id):
         ph = self._handle._connector.propertyHandler
-        
+
         if self.getAnchorSelectionActive():
             self._handle._arrow = False
             self._anchor_face = (ph._anchoredNode, ph._anchoredID)

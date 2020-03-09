@@ -1,9 +1,3 @@
-'''
-Created on 22.10.2019
-
-@author: thopiekar
-'''
-
 import copy
 from string import Formatter
 import time
@@ -21,18 +15,11 @@ import numpy
 
 import pywim  # @UnresolvedImport
 
-from PyQt5.QtWidgets import QMessageBox
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtCore import QTime
-from PyQt5.QtNetwork import QNetworkReply
-from PyQt5.QtNetwork import QNetworkRequest
-from PyQt5.QtNetwork import QNetworkAccessManager
+from PyQt5.QtCore import pyqtSignal, pyqtSlot
+from PyQt5.QtCore import QTime, QUrl, QObject
+from PyQt5.QtNetwork import QNetworkReply, QNetworkRequest, QNetworkAccessManager
 from PyQt5.QtQml import qmlRegisterSingletonType
-from PyQt5.QtCore import QUrl, QObject
-from PyQt5.QtQml import QQmlComponent, QQmlContext
 
-# Uranium
 from UM.i18n import i18nCatalog
 from UM.Application import Application
 from UM.Job import Job
@@ -46,13 +33,9 @@ from UM.Operations.GroupedOperation import GroupedOperation
 from UM.PluginRegistry import PluginRegistry
 from UM.Scene.SceneNode import SceneNode
 from UM.Scene.Iterator.DepthFirstIterator import DepthFirstIterator
-from UM.Settings.SettingInstance import SettingInstance, InstanceState
+from UM.Settings.SettingInstance import SettingInstance
 from UM.Signal import Signal
 
-from UM.Platform import Platform
-
-# Cura
-from cura.CuraApplication import CuraApplication
 from cura.OneAtATimeIterator import OneAtATimeIterator
 from cura.Operations.SetParentOperation import SetParentOperation
 from cura.Settings.ExtruderManager import ExtruderManager
@@ -62,7 +45,6 @@ from cura.Scene.SliceableObjectDecorator import SliceableObjectDecorator
 from cura.Settings.ExtruderStack import ExtruderStack
 from cura.UI.PrintInformation import PrintInformation
 
-# Our extension
 from .SmartSliceCloudProxy import SmartSliceCloudStatus
 from .SmartSliceCloudProxy import SmartSliceCloudProxy
 from .SmartSliceProperty import SmartSliceProperty

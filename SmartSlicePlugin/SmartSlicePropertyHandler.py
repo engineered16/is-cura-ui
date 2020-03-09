@@ -1,6 +1,3 @@
-#   SmartSlicePropertyHandler.py
-#   Teton Simulation
-
 #
 #  Contains procedures for handling Cura Properties in accordance with SmartSlice
 #
@@ -9,7 +6,6 @@ import time, threading
 
 from PyQt5.QtCore import QObject
 
-#  Cura
 from UM.i18n import i18nCatalog
 from UM.Application import Application
 from UM.Scene.SceneNode import SceneNode
@@ -24,7 +20,6 @@ from UM.Operations.GroupedOperation import GroupedOperation
 
 from cura.CuraApplication import CuraApplication
 
-#  Smart Slice
 from .SmartSliceCloudProxy import SmartSliceCloudStatus
 from .SmartSliceProperty import SmartSliceProperty, SmartSliceContainerProperties
 from .select_tool.SmartSliceSelectHandle import SelectionMode
@@ -37,9 +32,9 @@ i18n_catalog = i18nCatalog("smartslice")
     connector: CloudConnector, used for interacting with rest of SmartSlice plugin
 
     The Property Handler contains functionality for manipulating all settings that
-      affect Smart Slice validation/optimization results.  
+      affect Smart Slice validation/optimization results.
 
-    It manages a cache of properties including Global/Extruder container properties 
+    It manages a cache of properties including Global/Extruder container properties
       retrieved from Cura's backend, as well as SmartSlice settings (e.g. Load/Anchor)
 """
 class SmartSlicePropertyHandler(QObject):
@@ -50,7 +45,7 @@ class SmartSlicePropertyHandler(QObject):
         self.connector = connector
         self.proxy = connector._proxy
         self._initialized = False
-        
+
         #  General Purpose Cache Space
         self._propertiesChanged  = []
         self._changedValues      = []
@@ -74,11 +69,11 @@ class SmartSlicePropertyHandler(QObject):
         self._loadedID = None
         self._loadedNode = None
         self._loadedTris = None
-        
+
         #  Cura Setup
         self._activeMachineManager = CuraApplication.getInstance().getMachineManager()
         self._globalStack = self._activeMachineManager.activeMachine
-        
+
         #  Check that a printer has been set-up by the wizard.
         #  TODO:  Add a signal listener for when Machine is added
         if self._globalStack is not None:
@@ -101,7 +96,7 @@ class SmartSlicePropertyHandler(QObject):
     #
     #   CACHE HANDLING
     #
-            
+
     """
       prepareCache()
         Clears any pending changes to cache and silences confirmation prompt
@@ -137,7 +132,7 @@ class SmartSlicePropertyHandler(QObject):
         self._propertiesChanged = [
             p for p in self._propertiesChanged if p != SmartSliceProperty.GlobalProperty
         ]
-            
+
     """
       cacheExtruder()
         Caches properties that are used for the active extruder
@@ -210,7 +205,7 @@ class SmartSlicePropertyHandler(QObject):
 
             i += 0
         self.prepareCache()
-        
+
         #  Refresh Buffered Property Values
         self.proxy.setLoadMagnitude()
         self.proxy.setLoadDirection()
@@ -305,7 +300,7 @@ class SmartSlicePropertyHandler(QObject):
     """
       confirmOptimizeModMesh()
         This raises a prompt which tells the user that their modifier mesh will be removed
-         for Smart Slice part optimization.  
+         for Smart Slice part optimization.
 
         * On Cancel: Cancels the user's most recent action and leaves Modifier Mesh in scene
         * On Confirm: Removes the modifier mesh and proceeds with Optimization run (NOTE: CURRENTLY VALIDATION)
@@ -340,9 +335,9 @@ class SmartSlicePropertyHandler(QObject):
 
     """
       confirmRemoveModMesh()
-        This raises a prompt which tells the user that the current modifier mesh will 
+        This raises a prompt which tells the user that the current modifier mesh will
          be removed if they would like to proceed with their most recent action.
-        
+
         * On Cancel: Cancels their most recent action and reverts any affected settings
         * On Confirm: Removes the Modifier Mesh and proceeds with the desired action
     """
@@ -361,7 +356,7 @@ class SmartSlicePropertyHandler(QObject):
                                             ),
                          "",
                          "",
-                         button_style=Message.ActionButtonStyle.SECONDARY 
+                         button_style=Message.ActionButtonStyle.SECONDARY
                          )
         dialog.addAction("continueModMesh",       #  action_id
                          i18n_catalog.i18nc("@action",
@@ -438,7 +433,7 @@ class SmartSlicePropertyHandler(QObject):
     #
     #   FACE SELECTION
     #
-    
+
     #  Signal for Interfacing with Face Selection
     selectedFacesChanged = Signal()
 
@@ -460,7 +455,7 @@ class SmartSlicePropertyHandler(QObject):
 
         select_tool = Application.getInstance().getController().getTool("SmartSlicePlugin_SelectTool")
         selected_triangles = list(select_tool._interactive_mesh.select_planar_face(face_id))
-                
+
         #  If busy, add it to 'pending changes' and ask user to confirm
         if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
             self._propertiesChanged.append(SmartSliceProperty.SelectedFace)
@@ -482,7 +477,7 @@ class SmartSlicePropertyHandler(QObject):
                 self.proxy._loadsApplied = 1     #  TODO:  Change this when > 1 loads in Use Case
                 self.applyLoad()
             self.connector.prepareValidation()
-        
+
     """
       applyAnchor()
         * Sets the anchor data for the pending job
@@ -496,7 +491,7 @@ class SmartSlicePropertyHandler(QObject):
         self.connector.resetAnchor0FacesPoc()
         self.connector.appendAnchor0FacesPoc(self._anchoredTris)
 
-        self._drawAnchor()   
+        self._drawAnchor()
         Logger.log ("d", "PropertyHandler Anchored Face ID:  " + str(self._anchoredID))
 
     """
@@ -565,10 +560,10 @@ class SmartSlicePropertyHandler(QObject):
     """
       _resetCancelCheck()
         Silences second 'Confirm Changes' prompt after a user cancels
-    """ 
+    """
     def _resetCancelCheck(self):
-        #  NOTE: Increase delay if a setting change 
-        #         erroneously raises a second confirmation prompt 
+        #  NOTE: Increase delay if a setting change
+        #         erroneously raises a second confirmation prompt
         time.sleep(0.35)
         self._cancelChanges = False
         self._addProperties = True
@@ -629,7 +624,7 @@ class SmartSlicePropertyHandler(QObject):
 
     def setMaterial(self):
        self._activeExtruder.material = self._material
-       
+
     def _onMaterialChanged(self):
         if self.connector.status in {SmartSliceCloudStatus.BusyValidating, SmartSliceCloudStatus.BusyOptimizing, SmartSliceCloudStatus.Optimized}:
             if self._material is not self._activeExtruder.material:
@@ -644,7 +639,7 @@ class SmartSlicePropertyHandler(QObject):
       _onSceneChanged()
         When the root scene is changed, this signal is used to ensure that all
          settings regarding the model are cached and correct.
-        
+
         Affected Settings:
           * Scale
           * Rotation
@@ -652,7 +647,7 @@ class SmartSlicePropertyHandler(QObject):
     """
     def _onSceneChanged(self, changed_node):
         i = 0
-        _root = self._sceneRoot 
+        _root = self._sceneRoot
         self.hasModMesh = False
 
         #  Loaded Model immediately follows the node named "3d" in Root Scene
@@ -666,12 +661,12 @@ class SmartSlicePropertyHandler(QObject):
                     self.meshScale    = self._sceneNode.getScale()
                     self.meshRotation = self._sceneNode.getOrientation()
                     i += 1
-            if node.getName() == "SmartSliceMeshModifier":        
+            if node.getName() == "SmartSliceMeshModifier":
                 self._cachedModMesh = node
                 self._positionModMesh = self._cachedModMesh.getWorldPosition()
                 self.hasModMesh = True
             i += 1
-            
+
         #  Check if Modifier Mesh has been Removed
         if self._cachedModMesh:
             if not self.hasModMesh:

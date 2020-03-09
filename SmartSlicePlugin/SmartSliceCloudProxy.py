@@ -1,31 +1,14 @@
-'''
-Created on 22.10.2019
-
-@author: thopiekar
-'''
-
 import copy
 
-#  Standard Imports
 from enum import Enum
 
-#  Python/QML
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtCore import pyqtProperty
-from PyQt5.QtCore import QObject
-from PyQt5.QtCore import QTime
-from PyQt5.QtCore import QUrl
+from PyQt5.QtCore import pyqtSignal, pyqtProperty
+from PyQt5.QtCore import QObject, QTime, QUrl
 
-#  Ultimaker / Cura
 from UM.i18n import i18nCatalog
 from UM.Application import Application
 from UM.Logger import Logger
-from UM.Message import Message
 
-from cura.CuraApplication import CuraApplication
-from cura.Settings.MachineManager import MachineManager
-
-#  Smart Slice
 from .SmartSliceProperty import SmartSliceProperty, SmartSlicePropertyColor
 
 i18n_catalog = i18nCatalog("smartslice")

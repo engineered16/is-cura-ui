@@ -1,11 +1,6 @@
 import os
 import json
 
-from PyQt5.QtCore import QUrl
-from PyQt5.QtQml import qmlRegisterSingletonType
-from PyQt5.QtQml import QQmlContext
-from PyQt5.QtQml import QQmlComponent
-
 from UM.i18n import i18nCatalog
 from UM.Application import Application
 from UM.Extension import Extension
@@ -28,7 +23,7 @@ class SmartSliceExtension(Extension):
         # About Dialog
         self._about_dialog = None
         self.addMenuItem(i18n_catalog.i18nc("@item:inmenu", "About"), self._openAboutDialog)
-        
+
         # Login Window
         self._login_dialog = None
         #self.addMenuItem(i18n_catalog.i18n("Login"),

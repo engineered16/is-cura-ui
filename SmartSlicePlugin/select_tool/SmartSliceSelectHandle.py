@@ -33,7 +33,7 @@ class SmartSliceSelectHandle(ToolHandle):
         self._arrow_total_length = self._arrow_head_length + self._arrow_tail_length
         self._arrow_head_width = 2.8
         self._arrow_tail_width = 0.8
-        
+
         #  Disable auto scale
         self._auto_scale = False
 
@@ -105,14 +105,14 @@ class SmartSliceSelectHandle(ToolHandle):
         n = Vector(n.r, n.s, n.t) # pywim Vector to UM Vector
         invert_arrow = self._connector._proxy.loadDirection
         center = self.findFaceCenter(face_list)
-        
+
         p_base0 = Vector(center.x + n.x * self._arrow_head_length,
                          center.y + n.y * self._arrow_head_length,
                          center.z + n.z * self._arrow_head_length)
         p_tail0 = Vector(center.x + n.x * self._arrow_total_length,
                          center.y + n.y * self._arrow_total_length,
                          center.z + n.z * self._arrow_total_length)
-        
+
         if invert_arrow:
             p_base0 = Vector(center.x + n.x * self._arrow_tail_length,
                              center.y + n.y * self._arrow_tail_length,
@@ -128,7 +128,7 @@ class SmartSliceSelectHandle(ToolHandle):
         p_base4 = Vector(p_base0.x - self._arrow_head_width, p_base0.y, p_base0.z)
         p_base5 = Vector(p_base0.x, p_base0.y, p_base0.z + self._arrow_head_width)
         p_base6 = Vector(p_base0.x, p_base0.y, p_base0.z - self._arrow_head_width)
-        
+
         mb.addFace(p_base1, p_head, p_base3, color=self.YAxisSelectionColor)
         mb.addFace(p_base3, p_head, p_base2, color=self.YAxisSelectionColor)
         mb.addFace(p_base2, p_head, p_base4, color=self.YAxisSelectionColor)
@@ -141,21 +141,21 @@ class SmartSliceSelectHandle(ToolHandle):
         mb.addFace(p_base5, p_head, p_base4, color=self.YAxisSelectionColor)
         mb.addFace(p_base4, p_head, p_base6, color=self.YAxisSelectionColor)
         mb.addFace(p_base6, p_head, p_base3, color=self.YAxisSelectionColor)
-        
+
         p_tail1 = Vector(p_tail0.x, p_tail0.y + self._arrow_tail_width, p_tail0.z)
         p_tail2 = Vector(p_tail0.x, p_tail0.y - self._arrow_tail_width, p_tail0.z)
         p_tail3 = Vector(p_tail0.x + self._arrow_tail_width, p_tail0.y, p_tail0.z)
         p_tail4 = Vector(p_tail0.x - self._arrow_tail_width, p_tail0.y, p_tail0.z)
         p_tail5 = Vector(p_tail0.x, p_tail0.y, p_tail0.z + self._arrow_tail_width)
         p_tail6 = Vector(p_tail0.x, p_tail0.y, p_tail0.z - self._arrow_tail_width)
-        
+
         p_tail_base1 = Vector(p_base0.x, p_base0.y + self._arrow_tail_width, p_base0.z)
         p_tail_base2 = Vector(p_base0.x, p_base0.y - self._arrow_tail_width, p_base0.z)
         p_tail_base3 = Vector(p_base0.x + self._arrow_tail_width, p_base0.y, p_base0.z)
         p_tail_base4 = Vector(p_base0.x - self._arrow_tail_width, p_base0.y, p_base0.z)
         p_tail_base5 = Vector(p_base0.x, p_base0.y, p_base0.z + self._arrow_tail_width)
         p_tail_base6 = Vector(p_base0.x, p_base0.y, p_base0.z - self._arrow_tail_width)
-        
+
         mb.addFace(p_tail1, p_tail_base1, p_tail3, color=self.YAxisSelectionColor)
         mb.addFace(p_tail3, p_tail_base3, p_tail2, color=self.YAxisSelectionColor)
         mb.addFace(p_tail2, p_tail_base2, p_tail4, color=self.YAxisSelectionColor)
@@ -168,7 +168,7 @@ class SmartSliceSelectHandle(ToolHandle):
         mb.addFace(p_tail5, p_tail_base5, p_tail4, color=self.YAxisSelectionColor)
         mb.addFace(p_tail4, p_tail_base4, p_tail6, color=self.YAxisSelectionColor)
         mb.addFace(p_tail6, p_tail_base6, p_tail3, color=self.YAxisSelectionColor)
-        
+
         mb.addFace(p_tail_base1, p_tail_base3, p_tail3, color=self.YAxisSelectionColor)
         mb.addFace(p_tail_base3, p_tail_base2, p_tail2, color=self.YAxisSelectionColor)
         mb.addFace(p_tail_base2, p_tail_base4, p_tail4, color=self.YAxisSelectionColor)
@@ -209,14 +209,14 @@ class SmartSliceSelectHandle(ToolHandle):
         for tri in triangles:
             if SmartSliceSelectHandle._triangleContainsPoint(tri, c_point):
                 return c_point
-        
+
         # When center point is not on face, choose instead center point of middle triangle.
         index = len(triangles) // 2
         tri = triangles[index]
         return self.findPointsCenter(tri.points)
 
     def clearSelection(self):
-        self.setSolidMesh(MeshBuilder().build())  
+        self.setSolidMesh(MeshBuilder().build())
 
     @staticmethod
     def _triangleContainsPoint(triangle, point):
@@ -232,7 +232,7 @@ class SmartSliceSelectHandle(ToolHandle):
         total = alpha + beta + gamma
 
         return total > 0.99 and total < 1.01
-    
+
     @staticmethod
     def _threePointArea2(p, q, r):
         pq = (q.x - p.x, q.y - p.y, q.z - p.z)
