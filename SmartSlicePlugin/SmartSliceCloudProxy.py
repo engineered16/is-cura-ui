@@ -38,9 +38,6 @@ class SmartSliceCloudProxy(QObject):
         super().__init__()
 
         self.connector = connector
-        self._activeMachineManager = None
-        self._activeExtruder = None
-        self.shouldRaiseWarning = False
 
         # Properties (mainly) for the login window
         self._loginStatus = "Please log in with your credentials below."

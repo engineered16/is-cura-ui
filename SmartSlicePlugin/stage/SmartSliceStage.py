@@ -17,7 +17,6 @@ from UM.Logger import Logger
 from UM.Application import Application
 from UM.PluginRegistry import PluginRegistry
 from UM.Message import Message
-from UM.Scene.SceneNode import SceneNode
 from UM.Scene.Selection import Selection
 from UM.Scene.Iterator.DepthFirstIterator import DepthFirstIterator
 
@@ -134,17 +133,13 @@ class SmartSliceStage(CuraStage):
         if self._previous_tool:
             controller.setActiveTool(use_tool)
 
-        #  Set the Active Extruder for the Cloud interactions
-        self._connector._proxy._activeMachineManager = CuraApplication.getInstance().getMachineManager()
-        self._connector._proxy._activeExtruder = self._connector._proxy._activeMachineManager._global_container_stack.extruderList[0]
-
         if not self._connector.propertyHandler._initialized:
             self._connector.propertyHandler.cacheChanges()
             self._connector.propertyHandler._initialized = True
 
         self._connector.updateSliceWidget()
 
-        
+
 
     #   onStageDeselected:
     #       Sets attributes that allow the Smart Slice Stage to properly deactivate
@@ -230,7 +225,7 @@ class SmartSliceStage(CuraStage):
         # Slicing windows in lower right corner
         component_path = os.path.join(base_path, "stage", "ui", "SmartSliceMain.qml")
         self.addDisplayComponent("main", component_path)
-        
+
 
         # Top menu bar of stage
         component_path = os.path.join(base_path, "stage", "ui", "SmartSliceMenu.qml")
